@@ -1,5 +1,7 @@
 import os
 import sys
+import json
+from datetime import datetime
 import yaml
 from dotenv import load_dotenv
 
@@ -9,6 +11,57 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 from src.scraper import scrape_linkedin_jobs
 from src.matcher import analyze_match
 from src.reporter import generate_report
+from src.contract_classifier import ContractClassifier
+
+
+def load_job_history(history_path):
+    if not os.path.exists(history_path):
+        return {}
+
+    try:
+        with open(history_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            return data
+    except Exception as e:
+        print(f"[Historico] Nao foi possivel carregar '{history_path}': {e}")
+
+    return {}
+
+
+def save_job_history(history_path, history, vagas_analisadas):
+    now = datetime.now().isoformat(timespec="seconds")
+
+    for vaga in vagas_analisadas:
+        link = vaga.get("link_vaga")
+        if not link:
+            continue
+
+        history[link] = {
+            "titulo_vaga": vaga.get("titulo_vaga", "N/A"),
+            "empresa": vaga.get("empresa", "N/A"),
+            "localizacao": vaga.get("localizacao", "N/A"),
+            "tipo_contratacao": vaga.get("tipo_contratacao", "N/A"),
+            "tipo_contratacao_inferido": vaga.get("tipo_contratacao_inferido", "N/A"),
+            "score_clt": vaga.get("score_clt", "N/A"),
+            "score_nao_clt": vaga.get("score_nao_clt", "N/A"),
+            "margem_contratacao": vaga.get("margem_contratacao", "N/A"),
+            "evidencias_contratacao": vaga.get("evidencias_contratacao", "N/A"),
+            "modelo_trabalho": vaga.get("modelo_trabalho", "N/A"),
+            "nota_match": vaga.get("nota_match", 0),
+            "primeira_vez_vista_em": history.get(link, {}).get("primeira_vez_vista_em", now),
+            "ultima_vez_processada_em": now,
+        }
+
+    try:
+        with open(history_path, "w", encoding="utf-8") as f:
+            json.dump(history, f, ensure_ascii=False, indent=2)
+        print(f"[Historico] Historico atualizado em '{history_path}' ({len(history)} vagas conhecidas).")
+        return True
+    except Exception as e:
+        print(f"[Historico] Falha ao salvar '{history_path}': {e}")
+        return False
+
 
 def main():
     print("=" * 60)
@@ -56,6 +109,27 @@ def main():
     print(f"[Config] Tipo de contratação: {tipo_contratacao}")
     print(f"[Config] Filtros de busca: {filtros_busca}")
     print(f"[Config] Perfil do candidato carregado ({len(perfil_candidato)} caracteres).")
+
+    contract_classifier = None
+    if str(tipo_contratacao).strip().lower() == "clt":
+        contract_config_path = "config/contract_examples.yaml"
+        if not os.path.exists(contract_config_path):
+            print(f"[Erro] Arquivo de protótipos '{contract_config_path}' não encontrado!")
+            sys.exit(1)
+
+        try:
+            with open(contract_config_path, "r", encoding="utf-8") as f:
+                contract_config = yaml.safe_load(f)
+            contract_classifier = ContractClassifier(contract_config)
+        except Exception as e:
+            print(f"[Erro Contrato] Falha ao inicializar classificador local de contratação: {e}")
+            print("Instale as dependências e garanta que o modelo de embeddings esteja disponível localmente.")
+            sys.exit(1)
+
+    history_path = "vagas_historico.json"
+    historico_vagas = load_job_history(history_path)
+    links_historico = set(historico_vagas.keys())
+    print(f"[Historico] Vagas conhecidas carregadas: {len(links_historico)}")
     
     # 3. Executa o Scraper para coletar vagas do LinkedIn
     # Limitamos a 3 vagas por termo de busca para ser ágil e evitar bloqueios, mas pode ser expandido
@@ -73,7 +147,9 @@ def main():
                     location=localizacao_filtro,
                     max_jobs=max_vagas_por_termo,
                     contract_type=tipo_contratacao,
-                    workplace_type=modelo_trabalho
+                    workplace_type=modelo_trabalho,
+                    excluded_links=links_historico | links_coletados,
+                    contract_classifier=contract_classifier
                 )
                 for vaga in vagas:
                     link_vaga = vaga.get("link_vaga")
@@ -90,7 +166,7 @@ def main():
     print(f"\n[Scraper] Busca concluída! Total de vagas coletadas de todas as buscas: {total_vagas}")
     
     if total_vagas == 0:
-        print("[Fim] Nenhuma vaga pôde ser coletada. Encerrando pipeline.")
+        print("[Fim] Nenhuma vaga nova pôde ser coletada. Encerrando pipeline.")
         sys.exit(0)
         
     # 4. Executa o Matcher para analisar cada vaga coletada
@@ -135,16 +211,18 @@ def main():
         
         print(f"  -> Resultado: Nota {vaga_analisada['nota_match']}/100")
         
-    # 5. Executa o Reporter para gerar o arquivo Excel de saída
-    vagas_salvas = generate_report(vagas_analisadas, output_path="vagas_filtradas.xlsx")
+    # 5. Executa o Reporter para gerar o arquivo Markdown de saída
+    vagas_salvas = generate_report(vagas_analisadas, output_path="vagas_filtradas.md")
+    historico_salvo = save_job_history(history_path, historico_vagas, vagas_analisadas)
     
-    if vagas_salvas:
+    if vagas_salvas and historico_salvo:
         print("\n" + "=" * 60)
         print("   PIPELINE CONCLUÍDO COM SUCESSO!")
-        print("   O relatório 'vagas_filtradas.xlsx' está disponível na raiz do projeto.")
+        print("   O relatório 'vagas_filtradas.md' está disponível na raiz do projeto.")
+        print("   O histórico 'vagas_historico.json' foi atualizado.")
         print("=" * 60)
     else:
-        print("\n[Erro] Falha ao gerar o relatório final.")
+        print("\n[Erro] Falha ao gerar o relatório final ou atualizar o histórico.")
         sys.exit(1)
 
 if __name__ == "__main__":

@@ -1,0 +1,18 @@
+modelo_embedding: "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+limiar_minimo_clt: 0.55
+margem_minima_clt: 0.08
+top_k_prototipos: 3
+
+prototipos_clt:
+  - "Vaga efetiva CLT com vale-refeicao, vale-alimentacao, plano de saude, plano odontologico, ferias remuneradas e decimo terceiro salario."
+  - "Contratacao CLT, jornada de 40 horas semanais, segunda a sexta, horario fixo, banco de horas e horas extras."
+  - "Funcionario contratado com carteira assinada, beneficios corporativos, vale-transporte, previdencia privada e assistencia medica."
+  - "Colaborador efetivo integrado ao time interno, reportando diretamente ao gestor, com beneficios de empresa e vinculo empregaticio."
+  - "Modelo hibrido com dias no escritorio, estrutura corporativa, beneficios como Gympass, TotalPass, VR, VA e plano de saude."
+
+prototipos_nao_clt:
+  - "Contrato PJ, necessario CNPJ ativo, emissao de nota fiscal e remuneracao por hora ou faturamento mensal."
+  - "Atuacao freelancer por projeto, horario totalmente flexivel, foco em entregas e sem vinculo empregaticio."
+  - "Prestador de servicos como pessoa juridica, contrato por escopo, budget definido e necessidade de emitir nota fiscal."
+  - "Consultor autonomo ou cooperado, trabalho por demanda, sem beneficios CLT e com pagamento por projeto."
+  - "Vaga temporaria, estagio ou contrato sem carteira assinada, com recesso ou paid time off em vez de ferias remuneradas."

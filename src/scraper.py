@@ -26,51 +26,14 @@ def get_headers():
         "Upgrade-Insecure-Requests": "1"
     }
 
+
 def normalize_text(text):
-    """Normaliza texto para comparacoes simples e tolerantes a acentos."""
     if not text:
         return ""
     text = unicodedata.normalize("NFKD", str(text))
     text = "".join(ch for ch in text if not unicodedata.combining(ch))
     return text.lower()
 
-def contract_matches(text, contract_type="CLT"):
-    """
-    Valida se a vaga parece compativel com o tipo de contratacao desejado.
-    Para CLT, aceita mencoes a CLT/efetivo/carteira assinada e descarta
-    formatos tipicamente nao-CLT.
-    """
-    if not contract_type:
-        return True
-
-    normalized = normalize_text(text)
-    desired = normalize_text(contract_type)
-
-    if desired != "clt":
-        return desired in normalized
-
-    blocked_patterns = [
-        r"\bpj\b",
-        "pessoa juridica",
-        "prestador de servico",
-        "prestacao de servico",
-        "freelancer",
-        "freela",
-        "autonomo",
-        "cooperado",
-        "estagio",
-        "temporario",
-    ]
-    if any(re.search(pattern, normalized) for pattern in blocked_patterns):
-        return False
-
-    accepted_patterns = [
-        r"\bclt\b",
-        "efetivo",
-        "carteira assinada",
-        "contratacao direta",
-    ]
-    return any(re.search(pattern, normalized) for pattern in accepted_patterns)
 
 def workplace_matches(location_text, description_text, workplace_type, search_location):
     """
@@ -101,14 +64,6 @@ def workplace_matches(location_text, description_text, workplace_type, search_lo
     return True
 
 def job_matches_filters(job_info, contract_type, workplace_type, search_location):
-    searchable_text = " ".join([
-        job_info.get("titulo_vaga", ""),
-        job_info.get("empresa", ""),
-        job_info.get("localizacao", ""),
-        job_info.get("descricao_completa", ""),
-    ])
-    if not contract_matches(searchable_text, contract_type):
-        return False
     return workplace_matches(
         job_info.get("localizacao", ""),
         job_info.get("descricao_completa", ""),
@@ -205,17 +160,26 @@ def fetch_job_description(job_id):
         print(f"  [Erro Exception] Falha ao buscar descrição da vaga ID {job_id}: {e}")
         return "Erro ao extrair descrição da vaga."
 
-def scrape_linkedin_jobs(keyword, location="Brasil", max_jobs=5, contract_type=None, workplace_type=None):
+def scrape_linkedin_jobs(
+    keyword,
+    location="Brasil",
+    max_jobs=5,
+    contract_type=None,
+    workplace_type=None,
+    excluded_links=None,
+    contract_classifier=None,
+):
     """
     Busca vagas no LinkedIn utilizando o Guest API de busca pública.
     Retorna uma lista de dicionários com as informações coletadas.
     """
-    search_keyword = f"{keyword} {contract_type}".strip() if contract_type else keyword
+    search_keyword = keyword
     print(f"\n[Scraper] Iniciando busca pública para: '{search_keyword}' em '{location}' (Modelo: {workplace_type or 'qualquer'} | Limite: {max_jobs} vagas)")
     
     jobs = []
     start = 0
     headers = get_headers()
+    excluded_links = set(excluded_links or [])
     
     # URL de busca Guest do LinkedIn
     encoded_keyword = urllib.parse.quote(search_keyword)
@@ -277,25 +241,61 @@ def scrape_linkedin_jobs(keyword, location="Brasil", max_jobs=5, contract_type=N
                         # Se não conseguir o ID da vaga, descarta ou tenta usar o link como fallback
                         print(f"  [Aviso] Não foi possível extrair ID para a vaga: {title} - {company}. Pulando.")
                         continue
+
+                    job_link = f"https://www.linkedin.com/jobs/view/{job_id}"
+                    if job_link in excluded_links:
+                        print(f"  [Historico] Vaga ja conhecida, pulando: {title} | {company} ({job_id})")
+                        continue
                         
                     print(f"  -> Coletando descrição da vaga: {title} | {company} (ID: {job_id})...")
                     descricao = fetch_job_description(job_id)
+                    contract_inference = {
+                        "tipo_contratacao_inferido": contract_type or "N/A",
+                        "aceita": True,
+                        "score_clt": "N/A",
+                        "score_nao_clt": "N/A",
+                        "margem_contratacao": "N/A",
+                        "evidencias_contratacao": "Classificador de contratacao nao configurado.",
+                    }
+                    if normalize_text(contract_type) == "clt":
+                        if not contract_classifier:
+                            raise RuntimeError("Classificador local de contratacao CLT nao foi inicializado.")
+                        contract_inference = contract_classifier.classify(descricao)
                     
                     job_info = {
                         "titulo_vaga": title,
                         "empresa": company,
                         "localizacao": loc,
                         "modelo_trabalho": workplace_type or "N/A",
-                        "tipo_contratacao": contract_type or "N/A",
-                        "link_vaga": f"https://www.linkedin.com/jobs/view/{job_id}",
+                        "tipo_contratacao": contract_inference.get("tipo_contratacao_inferido", contract_type or "N/A"),
+                        "tipo_contratacao_inferido": contract_inference.get("tipo_contratacao_inferido", "N/A"),
+                        "score_clt": contract_inference.get("score_clt", "N/A"),
+                        "score_nao_clt": contract_inference.get("score_nao_clt", "N/A"),
+                        "margem_contratacao": contract_inference.get("margem_contratacao", "N/A"),
+                        "inferencia_contratacao": contract_inference.get("evidencias_contratacao", "N/A"),
+                        "evidencias_contratacao": contract_inference.get("evidencias_contratacao", "N/A"),
+                        "link_vaga": job_link,
                         "descricao_completa": descricao
                     }
+
+                    if not contract_inference.get("aceita", True):
+                        print(f"  [Filtro] Vaga descartada por contratacao {job_info['tipo_contratacao_inferido']}: {title} | {company}")
+                        print(
+                            "           Scores: CLT {clt} | Nao-CLT {nao_clt} | Margem {margem}. {evidencias}".format(
+                                clt=job_info["score_clt"],
+                                nao_clt=job_info["score_nao_clt"],
+                                margem=job_info["margem_contratacao"],
+                                evidencias=job_info["evidencias_contratacao"],
+                            )
+                        )
+                        continue
 
                     if not job_matches_filters(job_info, contract_type, workplace_type, location):
                         print(f"  [Filtro] Vaga descartada por não atender CLT/modelo/localidade: {title} | {company} | {loc}")
                         continue
 
                     jobs.append(job_info)
+                    excluded_links.add(job_link)
                     
                 except Exception as card_err:
                     print(f"  [Erro] Falha ao processar um card de vaga: {card_err}")
