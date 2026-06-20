@@ -1,0 +1,36 @@
+termos_busca:
+  - "Data Scientist"
+  - "Cientista de Dados Pleno"
+  - "AI Engineer"
+  - "Engenheiro de IA"
+  - "Machine Learning Engineer"
+  - "Analista de Dados"
+
+tipo_contratacao: "CLT"
+
+filtros_busca:
+  - modelo_trabalho: "remoto"
+    localizacao: "Brasil"
+  - modelo_trabalho: "hibrido"
+    localizacao: "São José, Santa Catarina, Brasil"
+  - modelo_trabalho: "hibrido"
+    localizacao: "Florianópolis, Santa Catarina, Brasil"
+
+perfil_candidato: |
+  Resumo Profissional:
+  Cientista de Dados e Engenheiro de IA Pleno com Mestrado (UFSC) e sólida experiência no desenvolvimento de sistemas de IA de ponta a ponta (end-to-end). Especialista na criação de Agentes de IA baseados em LLMs, arquiteturas RAG avançadas, servidores MCP e busca vetorial. Histórico comprovado no desenvolvimento de pipelines de dados eficientes (ETL/ELT), APIs REST estruturadas e implantação de soluções de Machine Learning em ambientes de nuvem (Azure/AWS). Combina forte base estatística e de pesquisa com boas práticas de engenharia de software para entregar soluções escaláveis e orientadas à produção.
+
+  Competências Técnicas (Hard Skills):
+  - IA & LLMs: Agentes de IA, RAG pipelines, LangChain, MCP servers, Bancos Vetoriais (Qdrant), Engenharia de Prompt, Orquestração de ferramentas.
+  - Machine Learning & NLP: Processamento de Linguagem Natural, Deep Learning, Modelos de Classificação/Regressão (SVM, Random Forest, Naive Bayes), Clusterização (KMeans), Otimização de Hiperparâmetros e Validação de Modelos.
+  - Linguagens & Backend: Python, SQL (PostgreSQL, MySQL), R, JavaScript, APIs RESTful, Pandas, Scikit-learn, PyTorch, Keras, SQLAlchemy.
+  - Engenharia de Dados & Cloud: Pipelines ETL/ELT, Azure Data Factory, Docker, Cloud-Edge Integration, AWS (S3, EC2, RDS, Lambda), CI/CD (GitHub Actions).
+  - Governança & Documentação: HLD (High-Level Design), LLD, FSD, LGPD, ISO 27001, conceitos de ISO 22400 (OEE).
+
+  Soft Skills:
+  - Liderança técnica e gestão de projetos de Data Science e pesquisa.
+  - Tradução de requisitos analíticos complexos em arquitetura de software confiável.
+  - Comunicação clara e colaboração interfuncional para ambientes industriais e corporativos.
+  - Perfil autodidata com forte capacidade analítica e de resolução de problemas complexos.
+
+  Nível de Experiência: Pleno / Senior.
