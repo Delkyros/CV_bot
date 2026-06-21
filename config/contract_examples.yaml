@@ -1,6 +1,6 @@
 modelo_embedding: "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-limiar_minimo_clt: 0.55
-margem_minima_clt: 0.08
+limiar_minimo_clt: 0.30
+margem_minima_clt: 0.05
 top_k_prototipos: 3
 
 prototipos_clt:

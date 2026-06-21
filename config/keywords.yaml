@@ -8,13 +8,25 @@ termos_busca:
 
 tipo_contratacao: "CLT"
 
+# Filtro de tempo de publicacao da vaga (parametro f_TPR do LinkedIn).
+# Valores aceitos: "24h", "semana", "mes". Deixe vazio para nao filtrar por data.
+tempo_publicacao: "24h"
+
+# geo_id e o identificador de localizacao do LinkedIn (geoId). E ele que
+# restringe o pais de forma confiavel na Guest API; o texto `localizacao`
+# sozinho retorna vagas dos EUA. 106057199 = Brasil. Para os filtros hibridos
+# usamos o geoId do Brasil e refinamos a cidade-alvo (Sao Jose/Floripa) pelo
+# texto da localizacao da vaga.
 filtros_busca:
   - modelo_trabalho: "remoto"
     localizacao: "Brasil"
+    geo_id: "106057199"
   - modelo_trabalho: "hibrido"
     localizacao: "São José, Santa Catarina, Brasil"
+    geo_id: "106057199"
   - modelo_trabalho: "hibrido"
     localizacao: "Florianópolis, Santa Catarina, Brasil"
+    geo_id: "106057199"
 
 perfil_candidato: |
   Resumo Profissional:

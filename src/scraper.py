@@ -39,27 +39,36 @@ def workplace_matches(location_text, description_text, workplace_type, search_lo
     """
     Confirma os modelos aceitos: remoto no Brasil ou hibrido em Sao Jose-SC
     ou Florianopolis-SC.
+
+    O modelo de trabalho (remoto/hibrido) ja e filtrado pelo parametro f_WT na
+    URL de busca do LinkedIn, entao aqui validamos apenas a LOCALIZACAO real da
+    vaga (que o LinkedIn nao restringe de forma confiavel pelo parametro
+    location). Exigir a palavra literal "hibrido"/"remoto" no texto descartava
+    vagas validas, e aceitar "brasil" vindo da busca deixava passar vagas dos EUA.
     """
     if not workplace_type:
         return True
 
     normalized_workplace = normalize_text(workplace_type)
-    combined = normalize_text(f"{location_text} {description_text}")
-    normalized_location = normalize_text(search_location)
+    location_norm = normalize_text(location_text)
 
     if normalized_workplace == "remoto":
-        is_remote = any(token in combined for token in ["remoto", "remote", "home office"])
-        is_brazil = any(token in combined for token in ["brasil", "brazil"]) or "brasil" in normalized_location
-        return is_remote and is_brazil
+        # O pais ja e garantido pelo geoId na URL de busca (Brasil). Aqui apenas
+        # rejeitamos vagas cuja localizacao mencione explicitamente outro pais,
+        # sem exigir a palavra "brasil" (cidades como "Campinas, SP" nao a contem).
+        foreign = [
+            "estados unidos", "united states", "canada", "espanha", "spain",
+            "portugal", "india", "mexico", "argentina", "reino unido",
+            "republica dominicana", "alemanha", "franca",
+        ]
+        return not any(token in location_norm for token in foreign)
 
     if normalized_workplace in ("hibrido", "hybrid"):
-        is_hybrid = any(token in combined for token in ["hibrido", "hybrid"])
-        allowed_city = any(
-            token in combined or token in normalized_location
-            for token in ["sao jose", "florianopolis", "floripa"]
+        # Mantem apenas vagas hibridas em Sao Jose-SC / Florianopolis-SC.
+        return any(
+            token in location_norm
+            for token in ["sao jose", "florianopolis", "floripa", "santa catarina"]
         )
-        allowed_state = any(token in combined or token in normalized_location for token in ["santa catarina", " sc", "-sc"])
-        return is_hybrid and allowed_city and allowed_state
 
     return True
 
@@ -70,6 +79,27 @@ def job_matches_filters(job_info, contract_type, workplace_type, search_location
         workplace_type,
         search_location,
     )
+
+def linkedin_time_filter(period):
+    """
+    Mapeia um periodo amigavel para o parametro f_TPR (time posted range) do
+    LinkedIn, em segundos. Retorna None quando nao ha filtro de tempo.
+    """
+    normalized = normalize_text(period)
+    mapping = {
+        "24h": "r86400",
+        "24 horas": "r86400",
+        "dia": "r86400",
+        "diario": "r86400",
+        "semana": "r604800",
+        "7 dias": "r604800",
+        "semanal": "r604800",
+        "mes": "r2592000",
+        "30 dias": "r2592000",
+        "mensal": "r2592000",
+    }
+    return mapping.get(normalized)
+
 
 def linkedin_workplace_filter(workplace_type):
     normalized = normalize_text(workplace_type)
@@ -168,29 +198,43 @@ def scrape_linkedin_jobs(
     workplace_type=None,
     excluded_links=None,
     contract_classifier=None,
+    geo_id=None,
+    time_filter=None,
+    max_pages=10,
 ):
     """
     Busca vagas no LinkedIn utilizando o Guest API de busca pública.
     Retorna uma lista de dicionários com as informações coletadas.
+
+    O parametro geo_id (geoId do LinkedIn) e o que realmente restringe o pais da
+    busca; o parametro de texto `location` sozinho nao e respeitado de forma
+    confiavel pela Guest API (retorna vagas dos EUA mesmo com location=Brasil).
     """
     search_keyword = keyword
     print(f"\n[Scraper] Iniciando busca pública para: '{search_keyword}' em '{location}' (Modelo: {workplace_type or 'qualquer'} | Limite: {max_jobs} vagas)")
-    
+
     jobs = []
     start = 0
+    pages = 0
     headers = get_headers()
     excluded_links = set(excluded_links or [])
-    
+
     # URL de busca Guest do LinkedIn
     encoded_keyword = urllib.parse.quote(search_keyword)
     encoded_location = urllib.parse.quote(location)
     workplace_filter = linkedin_workplace_filter(workplace_type)
-    
-    while len(jobs) < max_jobs:
+    tpr_filter = linkedin_time_filter(time_filter)
+
+    while len(jobs) < max_jobs and pages < max_pages:
+        pages += 1
         url = f"https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords={encoded_keyword}&location={encoded_location}&start={start}"
+        if geo_id:
+            url += f"&geoId={geo_id}"
         if workplace_filter:
             url += f"&f_WT={workplace_filter}"
-        
+        if tpr_filter:
+            url += f"&f_TPR={tpr_filter}"
+
         try:
             time.sleep(random.uniform(1.5, 3.0))
             response = requests.get(url, headers=headers, timeout=15)
@@ -205,7 +249,11 @@ def scrape_linkedin_jobs(
                 break
                 
             soup = BeautifulSoup(response.content, "html.parser")
-            cards = soup.find_all(class_=re.compile(r"base-card|base-search-card"))
+            # Seleciona apenas os contêineres de vaga de nível superior. A âncora ^...$
+            # evita casar elementos-filhos como "base-card__full-link" ou
+            # "base-search-card__title", que antes inflavam a lista com ~5 fantasmas
+            # por vaga e geravam avisos de "ID não encontrado" em massa.
+            cards = soup.find_all(class_=re.compile(r"^(base-card|base-search-card)$"))
             
             if not cards:
                 print("  [Aviso] Nenhuma vaga encontrada nesta página de busca ou fim dos resultados.")
@@ -246,7 +294,14 @@ def scrape_linkedin_jobs(
                     if job_link in excluded_links:
                         print(f"  [Historico] Vaga ja conhecida, pulando: {title} | {company} ({job_id})")
                         continue
-                        
+
+                    # Filtra modelo/localizacao ANTES de baixar a descricao: a
+                    # localizacao ja vem no card, entao evitamos requests (e risco
+                    # de 429) baixando descricoes de vagas que serao descartadas.
+                    if not workplace_matches(loc, "", workplace_type, location):
+                        print(f"  [Filtro] Vaga fora do modelo/localidade alvo, pulando: {title} | {company} | {loc}")
+                        continue
+
                     print(f"  -> Coletando descrição da vaga: {title} | {company} (ID: {job_id})...")
                     descricao = fetch_job_description(job_id)
                     contract_inference = {
@@ -290,19 +345,16 @@ def scrape_linkedin_jobs(
                         )
                         continue
 
-                    if not job_matches_filters(job_info, contract_type, workplace_type, location):
-                        print(f"  [Filtro] Vaga descartada por não atender CLT/modelo/localidade: {title} | {company} | {loc}")
-                        continue
-
                     jobs.append(job_info)
                     excluded_links.add(job_link)
-                    
+
                 except Exception as card_err:
                     print(f"  [Erro] Falha ao processar um card de vaga: {card_err}")
                     continue
-                    
-            # Prepara para ir para a próxima página de resultados
-            start += 25
+
+            # Avanca exatamente pelo numero de cards vistos. Antes incrementava
+            # +25 fixo enquanto a pagina retornava ~10 vagas, pulando resultados.
+            start += len(cards)
             
         except Exception as e:
             print(f"  [Erro Exception] Falha ao realizar requisição de busca: {e}")

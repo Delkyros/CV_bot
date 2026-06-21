@@ -94,6 +94,7 @@ def main():
     termos_busca = config.get("termos_busca", [])
     localizacao = config.get("localizacao", "Brasil")
     tipo_contratacao = config.get("tipo_contratacao", "CLT")
+    tempo_publicacao = config.get("tempo_publicacao")
     filtros_busca = config.get("filtros_busca") or [{"modelo_trabalho": None, "localizacao": localizacao}]
     perfil_candidato = config.get("perfil_candidato", "")
     
@@ -107,6 +108,7 @@ def main():
         
     print(f"[Config] Termos de busca encontrados: {termos_busca}")
     print(f"[Config] Tipo de contratação: {tipo_contratacao}")
+    print(f"[Config] Filtro de tempo de publicação: {tempo_publicacao or 'sem filtro'}")
     print(f"[Config] Filtros de busca: {filtros_busca}")
     print(f"[Config] Perfil do candidato carregado ({len(perfil_candidato)} caracteres).")
 
@@ -141,6 +143,7 @@ def main():
         for filtro in filtros_busca:
             localizacao_filtro = filtro.get("localizacao", localizacao)
             modelo_trabalho = filtro.get("modelo_trabalho")
+            geo_id_filtro = filtro.get("geo_id")
             try:
                 vagas = scrape_linkedin_jobs(
                     termo,
@@ -149,7 +152,9 @@ def main():
                     contract_type=tipo_contratacao,
                     workplace_type=modelo_trabalho,
                     excluded_links=links_historico | links_coletados,
-                    contract_classifier=contract_classifier
+                    contract_classifier=contract_classifier,
+                    geo_id=geo_id_filtro,
+                    time_filter=tempo_publicacao,
                 )
                 for vaga in vagas:
                     link_vaga = vaga.get("link_vaga")
