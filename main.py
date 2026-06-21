@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 # Garante que os arquivos do pacote src/ possam ser importados corretamente
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
-from src.scraper import scrape_linkedin_jobs
+from src.scraper import scrape_linkedin_jobs, normalize_text
 from src.matcher import analyze_match
 from src.reporter import generate_report
 from src.contract_classifier import ContractClassifier
@@ -86,6 +86,34 @@ def format_candidate_profile(perfil):
         secoes.append(f"Nível de Experiência: {nivel}")
 
     return "\n\n".join(secoes).strip()
+
+
+def dedupe_vagas(vagas):
+    """
+    Remove quase-duplicatas (mesmo titulo + empresa, ignorando localizacao/ID)
+    antes de enviar ao LLM. O LinkedIn frequentemente republica a mesma vaga com
+    IDs diferentes em varias cidades; sem isso, cada copia consumiria uma chamada
+    do Gemini. Mantem a primeira ocorrencia (que ja tem a descricao baixada).
+
+    O dedup por link/ID exato ja acontece na coleta; aqui tratamos as repostagens
+    com IDs distintos.
+    """
+    vistas = set()
+    unicas = []
+    for vaga in vagas:
+        chave = (
+            normalize_text(vaga.get("titulo_vaga", "")),
+            normalize_text(vaga.get("empresa", "")),
+        )
+        if chave in vistas:
+            logger.info(
+                "Duplicata (mesmo título+empresa) descartada antes do match: "
+                f"{vaga.get('titulo_vaga')} | {vaga.get('empresa')} | {vaga.get('localizacao')}"
+            )
+            continue
+        vistas.add(chave)
+        unicas.append(vaga)
+    return unicas
 
 
 def load_job_history(history_path):
@@ -241,8 +269,16 @@ def main():
                 logger.exception(f"Erro ao buscar vagas para o termo '{termo}' com filtro {filtro}")
                 continue
 
+    total_coletadas = len(vagas_coletadas)
+    logger.info(f"Busca concluída! Total de vagas coletadas de todas as buscas: {total_coletadas}")
+
+    # Deduplicacao antes do LLM: colapsa repostagens da mesma vaga (mesmo
+    # titulo+empresa) que vieram com IDs diferentes, economizando chamadas ao Gemini.
+    vagas_coletadas = dedupe_vagas(vagas_coletadas)
     total_vagas = len(vagas_coletadas)
-    logger.info(f"Busca concluída! Total de vagas coletadas de todas as buscas: {total_vagas}")
+    removidas = total_coletadas - total_vagas
+    if removidas:
+        logger.info(f"Deduplicação: {removidas} quase-duplicata(s) removida(s). Vagas únicas para análise: {total_vagas}")
 
     if total_vagas == 0:
         logger.info("Nenhuma vaga nova pôde ser coletada. Encerrando pipeline.")
