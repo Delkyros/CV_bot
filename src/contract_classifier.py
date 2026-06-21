@@ -1,7 +1,10 @@
 import re
+import logging
 import unicodedata
 
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 def normalize_text(text):
@@ -56,7 +59,7 @@ class ContractClassifier:
         if not self.clt_examples or not self.non_clt_examples:
             raise ValueError("Configure prototipos_clt e prototipos_nao_clt em config/contract_examples.yaml.")
 
-        print(f"[Contrato] Carregando modelo local de embeddings: {self.model_name}")
+        logger.info(f"Carregando modelo local de embeddings: {self.model_name}")
         self.model = SentenceTransformer(self.model_name)
         self.clt_embeddings = self._encode(self.clt_examples)
         self.non_clt_embeddings = self._encode(self.non_clt_examples)

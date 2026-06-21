@@ -1,11 +1,23 @@
 termos_busca:
-  - "Data Scientist"
-  - "Cientista de Dados Pleno"
   - "AI Engineer"
-  - "Engenheiro de IA"
+  - "Generative AI Engineer"
+  - "GenAI Engineer"
+  - "LLM Engineer"
   - "Machine Learning Engineer"
-  - "Analista de Dados"
-
+  - "MLOps Engineer"
+  - "Data Scientist"
+  - "Senior Data Scientist"
+  - "Research Data Scientist"
+  - "AI/ML Software Engineer"
+  - "Engenheiro de IA"
+  - "Engenheiro de Inteligência Artificial"
+  - "Engenheiro de IA Generativa"
+  - "Engenheiro de Machine Learning"
+  - "Cientista de Dados"
+  - "Cientista de Dados Sênior"
+  - "Cientista de Dados de Pesquisa"
+  - "Engenheiro de Software focado em IA/ML"
+  
 tipo_contratacao: "CLT"
 
 # Filtro de tempo de publicacao da vaga (parametro f_TPR do LinkedIn).
@@ -28,21 +40,46 @@ filtros_busca:
     localizacao: "Florianópolis, Santa Catarina, Brasil"
     geo_id: "106057199"
 
-perfil_candidato: |
-  Resumo Profissional:
-  Cientista de Dados e Engenheiro de IA Pleno com Mestrado (UFSC) e sólida experiência no desenvolvimento de sistemas de IA de ponta a ponta (end-to-end). Especialista na criação de Agentes de IA baseados em LLMs, arquiteturas RAG avançadas, servidores MCP e busca vetorial. Histórico comprovado no desenvolvimento de pipelines de dados eficientes (ETL/ELT), APIs REST estruturadas e implantação de soluções de Machine Learning em ambientes de nuvem (Azure/AWS). Combina forte base estatística e de pesquisa com boas práticas de engenharia de software para entregar soluções escaláveis e orientadas à produção.
+perfil_candidato:
+  nivel_experiencia: "Pleno / Sênior"
 
-  Competências Técnicas (Hard Skills):
-  - IA & LLMs: Agentes de IA, RAG pipelines, LangChain, MCP servers, Bancos Vetoriais (Qdrant), Engenharia de Prompt, Orquestração de ferramentas.
-  - Machine Learning & NLP: Processamento de Linguagem Natural, Deep Learning, Modelos de Classificação/Regressão (SVM, Random Forest, Naive Bayes), Clusterização (KMeans), Otimização de Hiperparâmetros e Validação de Modelos.
-  - Linguagens & Backend: Python, SQL (PostgreSQL, MySQL), R, JavaScript, APIs RESTful, Pandas, Scikit-learn, PyTorch, Keras, SQLAlchemy.
-  - Engenharia de Dados & Cloud: Pipelines ETL/ELT, Azure Data Factory, Docker, Cloud-Edge Integration, AWS (S3, EC2, RDS, Lambda), CI/CD (GitHub Actions).
-  - Governança & Documentação: HLD (High-Level Design), LLD, FSD, LGPD, ISO 27001, conceitos de ISO 22400 (OEE).
+  resumo_profissional: |
+    Cientista de Dados e Engenheiro de Machine Learning / IA com Mestrado (UFSC) e sólida experiência no desenvolvimento de soluções de inteligência artificial de ponta a ponta (end-to-end). Especialista na criação de Agentes de IA autônomos baseados em LLMs, arquiteturas RAG avançadas, servidores MCP e busca vetorial voltados para a produção. Histórico comprovado no desenho de pipelines de dados escaláveis (ETL/ELT), desenvolvimento de APIs REST estruturadas e implantação de modelos em ambientes de nuvem (Azure/AWS). Combina forte base estatística e de pesquisa científica com rigorosas práticas de engenharia de software para entregar sistemas robustos e orientados a resultados de negócio.
 
-  Soft Skills:
-  - Liderança técnica e gestão de projetos de Data Science e pesquisa.
-  - Tradução de requisitos analíticos complexos em arquitetura de software confiável.
-  - Comunicação clara e colaboração interfuncional para ambientes industriais e corporativos.
-  - Perfil autodidata com forte capacidade analítica e de resolução de problemas complexos.
+  competencias_tecnicas:
+    ia_e_llms:
+      - "Agentes de IA e Sistemas Autônomos"
+      - "Pipelines RAG (Retrieval-Augmented Generation)"
+      - "LangChain"
+      - "MCP Servers (Model Context Protocol)"
+      - "Bancos Vetoriais (Qdrant)"
+      - "Engenharia de Prompt e Orquestração de Ferramentas"
+    machine_learning_e_nlp:
+      - "Processamento de Linguagem Natural (NLP)"
+      - "Deep Learning"
+      - "Modelos de Classificação e Regressão (SVM, Random Forest, Naive Bayes)"
+      - "Clusterização (KMeans)"
+      - "Otimização de Hiperparâmetros e Validação de Modelos"
+    linguagens_e_backend:
+      - "Python"
+      - "SQL (PostgreSQL, MySQL)"
+      - "R"
+      - "JavaScript"
+      - "APIs RESTful"
+      - "Pandas, Scikit-learn, PyTorch, Keras, SQLAlchemy"
+    engenharia_de_dados_e_cloud:
+      - "Pipelines ETL/ELT"
+      - "Azure Data Factory"
+      - "Docker e Integração Cloud-Edge"
+      - "AWS (S3, EC2, RDS, Lambda)"
+      - "CI/CD (GitHub Actions)"
+    governanca_e_documentacao:
+      - "Documentação Técnica (HLD, LLD, FSD)"
+      - "Conformidade com LGPD e ISO 27001"
+      - "Analytics Industrial e Conceitos de ISO 22400 (OEE)"
 
-  Nível de Experiência: Pleno / Senior.
+  soft_skills:
+    - "Liderança técnica e gestão de projetos de Data Science e pesquisa aplicada."
+    - "Tradução de requisitos de negócio e analíticos complexos em arquitetura de software confiável."
+    - "Comunicação clara e colaboração interfuncional entre times de engenharia, negócios e ambientes industriais."
+    - "Perfil autodidata com forte capacidade analítica focado na resolução de problemas complexos."

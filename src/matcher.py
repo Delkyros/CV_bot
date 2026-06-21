@@ -1,8 +1,11 @@
 import os
 import json
 import re
+import logging
 from google import genai
 from google.genai import types
+
+logger = logging.getLogger(__name__)
 
 def analyze_match(vaga_info, perfil_candidato):
     """
@@ -13,7 +16,7 @@ def analyze_match(vaga_info, perfil_candidato):
     # Verifica se a chave de API está definida
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key or api_key == "sua_chave_do_gemini_aqui":
-        print("  [Erro Matcher] GEMINI_API_KEY não configurada ou inválida no .env")
+        logger.error("GEMINI_API_KEY não configurada ou inválida no .env")
         return None
 
     try:
@@ -89,9 +92,9 @@ Estrutura desejada da resposta:
         }
         
     except json.JSONDecodeError as jde:
-        print(f"  [Erro Matcher] Resposta da API não continha um JSON válido: {jde}")
+        logger.error(f"Resposta da API não continha um JSON válido: {jde}")
         # Tentativa de consertar ou retornar fallback em vez de crashar o pipeline inteiro
         return None
-    except Exception as e:
-        print(f"  [Erro Matcher] Erro ao analisar vaga '{vaga_info.get('titulo_vaga')}': {e}")
+    except Exception:
+        logger.exception(f"Erro ao analisar vaga '{vaga_info.get('titulo_vaga')}'")
         return None

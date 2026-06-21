@@ -1,10 +1,13 @@
 import time
 import random
 import re
+import logging
 import urllib.parse
 import unicodedata
 import requests
 from bs4 import BeautifulSoup
+
+logger = logging.getLogger(__name__)
 
 # Lista de User-Agents realistas para alternar nas requisições
 USER_AGENTS = [
@@ -25,6 +28,48 @@ def get_headers():
         "Connection": "keep-alive",
         "Upgrade-Insecure-Requests": "1"
     }
+
+
+# Parametros de retentativa para contornar bloqueios temporarios (429) sem
+# recorrer a paralelismo. Retentativa serial, aguardando RETRY_WAIT segundos.
+MAX_RETRIES = 5
+RETRY_WAIT = 5.0
+
+
+def request_with_retry(url, headers=None, timeout=15, max_retries=MAX_RETRIES, retry_wait=RETRY_WAIT):
+    """
+    Faz GET com retentativa em caso de 429 (Too Many Requests) ou erro de rede,
+    aguardando retry_wait segundos entre cada tentativa (sem paralelismo).
+
+    Retorna o objeto Response (mesmo com status != 200, p. ex. ainda 429 apos
+    esgotar as tentativas) ou None se todas as tentativas falharem por rede.
+    """
+    headers = headers or get_headers()
+    last_response = None
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            response = requests.get(url, headers=headers, timeout=timeout)
+            last_response = response
+
+            if response.status_code == 429:
+                if attempt < max_retries:
+                    logger.warning(f"429 (Too Many Requests). Tentativa {attempt}/{max_retries}. Aguardando {retry_wait:.0f}s e retentando...")
+                    time.sleep(retry_wait)
+                    continue
+                logger.warning(f"429 persistente apos {max_retries} tentativas. Desistindo desta requisicao.")
+                return response
+
+            return response
+
+        except requests.RequestException as exc:
+            if attempt < max_retries:
+                logger.warning(f"Falha de rede (tentativa {attempt}/{max_retries}): {exc}. Aguardando {retry_wait:.0f}s e retentando...")
+                time.sleep(retry_wait)
+                continue
+            logger.error(f"Falha de rede apos {max_retries} tentativas: {exc}")
+
+    return last_response
 
 
 def normalize_text(text):
@@ -146,14 +191,15 @@ def fetch_job_description(job_id):
     """
     url = f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
     headers = get_headers()
-    
+
     try:
         # Pausa amigável antes de buscar a descrição para evitar 429
         time.sleep(random.uniform(1.0, 2.5))
-        
-        response = requests.get(url, headers=headers, timeout=15)
-        if response.status_code != 200:
-            print(f"  [Erro] Falha ao obter detalhes da vaga ID {job_id}. Status: {response.status_code}")
+
+        response = request_with_retry(url, headers=headers, timeout=15)
+        if response is None or response.status_code != 200:
+            status = response.status_code if response is not None else "sem resposta"
+            logger.warning(f"Falha ao obter detalhes da vaga ID {job_id}. Status: {status}")
             return "Descrição não disponível devido a erro de conexão pública."
             
         soup = BeautifulSoup(response.content, "html.parser")
@@ -186,8 +232,8 @@ def fetch_job_description(job_id):
             
         return "Descrição indisponível no HTML retornado."
         
-    except Exception as e:
-        print(f"  [Erro Exception] Falha ao buscar descrição da vaga ID {job_id}: {e}")
+    except Exception:
+        logger.exception(f"Falha ao buscar descrição da vaga ID {job_id}")
         return "Erro ao extrair descrição da vaga."
 
 def scrape_linkedin_jobs(
@@ -211,7 +257,7 @@ def scrape_linkedin_jobs(
     confiavel pela Guest API (retorna vagas dos EUA mesmo com location=Brasil).
     """
     search_keyword = keyword
-    print(f"\n[Scraper] Iniciando busca pública para: '{search_keyword}' em '{location}' (Modelo: {workplace_type or 'qualquer'} | Limite: {max_jobs} vagas)")
+    logger.info(f"Iniciando busca pública para: '{search_keyword}' em '{location}' (Modelo: {workplace_type or 'qualquer'} | Limite: {max_jobs} vagas)")
 
     jobs = []
     start = 0
@@ -237,17 +283,17 @@ def scrape_linkedin_jobs(
 
         try:
             time.sleep(random.uniform(1.5, 3.0))
-            response = requests.get(url, headers=headers, timeout=15)
-            
-            if response.status_code == 429:
-                print("  [Alerta] LinkedIn retornou status 429 (Too Many Requests). Aguardando pausa maior...")
-                time.sleep(10)
-                continue
-                
-            if response.status_code != 200:
-                print(f"  [Erro] Falha na busca. Status code: {response.status_code}")
+            # Retentativa serial em 429/erro de rede (sem paralelismo).
+            response = request_with_retry(url, headers=headers, timeout=15)
+
+            if response is None:
+                logger.error("Falha na busca apos multiplas tentativas. Encerrando este termo.")
                 break
-                
+
+            if response.status_code != 200:
+                logger.error(f"Falha na busca. Status code: {response.status_code}")
+                break
+
             soup = BeautifulSoup(response.content, "html.parser")
             # Seleciona apenas os contêineres de vaga de nível superior. A âncora ^...$
             # evita casar elementos-filhos como "base-card__full-link" ou
@@ -256,10 +302,10 @@ def scrape_linkedin_jobs(
             cards = soup.find_all(class_=re.compile(r"^(base-card|base-search-card)$"))
             
             if not cards:
-                print("  [Aviso] Nenhuma vaga encontrada nesta página de busca ou fim dos resultados.")
+                logger.info("Nenhuma vaga encontrada nesta página de busca ou fim dos resultados.")
                 break
-                
-            print(f"  [Scraper] Encontrados {len(cards)} cards na página atual. Processando...")
+
+            logger.info(f"Encontrados {len(cards)} cards na página atual. Processando...")
             
             for card in cards:
                 if len(jobs) >= max_jobs:
@@ -287,22 +333,22 @@ def scrape_linkedin_jobs(
                     
                     if not job_id:
                         # Se não conseguir o ID da vaga, descarta ou tenta usar o link como fallback
-                        print(f"  [Aviso] Não foi possível extrair ID para a vaga: {title} - {company}. Pulando.")
+                        logger.warning(f"Não foi possível extrair ID para a vaga: {title} - {company}. Pulando.")
                         continue
 
                     job_link = f"https://www.linkedin.com/jobs/view/{job_id}"
                     if job_link in excluded_links:
-                        print(f"  [Historico] Vaga ja conhecida, pulando: {title} | {company} ({job_id})")
+                        logger.info(f"Vaga ja conhecida (histórico), pulando: {title} | {company} ({job_id})")
                         continue
 
                     # Filtra modelo/localizacao ANTES de baixar a descricao: a
                     # localizacao ja vem no card, entao evitamos requests (e risco
                     # de 429) baixando descricoes de vagas que serao descartadas.
                     if not workplace_matches(loc, "", workplace_type, location):
-                        print(f"  [Filtro] Vaga fora do modelo/localidade alvo, pulando: {title} | {company} | {loc}")
+                        logger.info(f"Vaga fora do modelo/localidade alvo, pulando: {title} | {company} | {loc}")
                         continue
 
-                    print(f"  -> Coletando descrição da vaga: {title} | {company} (ID: {job_id})...")
+                    logger.info(f"Coletando descrição da vaga: {title} | {company} (ID: {job_id})...")
                     descricao = fetch_job_description(job_id)
                     contract_inference = {
                         "tipo_contratacao_inferido": contract_type or "N/A",
@@ -334,9 +380,12 @@ def scrape_linkedin_jobs(
                     }
 
                     if not contract_inference.get("aceita", True):
-                        print(f"  [Filtro] Vaga descartada por contratacao {job_info['tipo_contratacao_inferido']}: {title} | {company}")
-                        print(
-                            "           Scores: CLT {clt} | Nao-CLT {nao_clt} | Margem {margem}. {evidencias}".format(
+                        logger.info(
+                            "Vaga descartada por contratacao {tipo}: {titulo} | {empresa}. "
+                            "Scores: CLT {clt} | Nao-CLT {nao_clt} | Margem {margem}. {evidencias}".format(
+                                tipo=job_info["tipo_contratacao_inferido"],
+                                titulo=title,
+                                empresa=company,
                                 clt=job_info["score_clt"],
                                 nao_clt=job_info["score_nao_clt"],
                                 margem=job_info["margem_contratacao"],
@@ -348,17 +397,17 @@ def scrape_linkedin_jobs(
                     jobs.append(job_info)
                     excluded_links.add(job_link)
 
-                except Exception as card_err:
-                    print(f"  [Erro] Falha ao processar um card de vaga: {card_err}")
+                except Exception:
+                    logger.exception("Falha ao processar um card de vaga")
                     continue
 
             # Avanca exatamente pelo numero de cards vistos. Antes incrementava
             # +25 fixo enquanto a pagina retornava ~10 vagas, pulando resultados.
             start += len(cards)
             
-        except Exception as e:
-            print(f"  [Erro Exception] Falha ao realizar requisição de busca: {e}")
+        except Exception:
+            logger.exception("Falha ao realizar requisição de busca")
             break
-            
-    print(f"[Scraper] Concluído! Total de vagas coletadas para '{search_keyword}': {len(jobs)}")
+
+    logger.info(f"Concluído! Total de vagas coletadas para '{search_keyword}': {len(jobs)}")
     return jobs

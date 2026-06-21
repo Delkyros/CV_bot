@@ -1,4 +1,7 @@
+import logging
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 
 def format_list(items):
@@ -15,10 +18,10 @@ def generate_report(vagas_analisadas, output_path="vagas_filtradas.md"):
     """
     Gera um relatorio consolidado em Markdown, ordenado por melhor match.
     """
-    print(f"\n[Reporter] Gerando relatorio Markdown para {len(vagas_analisadas)} vagas analisadas...")
+    logger.info(f"Gerando relatorio Markdown para {len(vagas_analisadas)} vagas analisadas...")
 
     if not vagas_analisadas:
-        print("  [Aviso] Nenhuma vaga analisada com sucesso para gerar o relatorio.")
+        logger.warning("Nenhuma vaga analisada com sucesso para gerar o relatorio.")
         return False
 
     vagas_ordenadas = sorted(
@@ -94,8 +97,8 @@ def generate_report(vagas_analisadas, output_path="vagas_filtradas.md"):
     try:
         with open(output_path, "w", encoding="utf-8") as f:
             f.write("\n".join(linhas).strip() + "\n")
-        print(f"[Reporter] Sucesso! Relatorio salvo em '{output_path}'.")
+        logger.info(f"Sucesso! Relatorio salvo em '{output_path}'.")
         return True
-    except Exception as e:
-        print(f"  [Erro Reporter] Falha ao gerar relatorio Markdown: {e}")
+    except Exception:
+        logger.exception("Falha ao gerar relatorio Markdown")
         return False
