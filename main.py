@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 from src.scraper import scrape_linkedin_jobs, normalize_text
-from src.matcher import analyze_match
+from src.matcher import analyze_match, has_provider
 from src.reporter import generate_report
 from src.contract_classifier import ContractClassifier
 from src.logging_config import setup_logging
@@ -174,12 +174,12 @@ def main():
     # 1. Carrega variáveis de ambiente (.env)
     load_dotenv()
 
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key or api_key == "sua_chave_do_gemini_aqui":
-        logger.warning("GEMINI_API_KEY não configurada ou com valor padrão no arquivo .env.")
-        logger.warning("Configure sua chave de API do Gemini para rodar a etapa de match de inteligência artificial.")
+    # Verifica provedores de LLM disponíveis (OpenRouter principal, Gemini fallback).
+    tem_provedor_llm = has_provider()
+    if not tem_provedor_llm:
+        logger.warning("Nenhum provedor de LLM configurado (OPENROUTER_API_KEY/GEMINI_API_KEY) no arquivo .env.")
         logger.warning("O script continuará com a busca de vagas, mas a etapa de match usará uma nota padrão (simulada).")
-    
+
     # 2. Carrega configurações do arquivo YAML
     config_path = "config/keywords.yaml"
     if not os.path.exists(config_path):
@@ -296,19 +296,20 @@ def main():
 
         resultado_analysis = None
 
-        # Só executa a análise se a chave de API do Gemini for real/configurada
-        if api_key and api_key != "sua_chave_do_gemini_aqui":
+        # Executa a análise se houver ao menos um provedor de LLM configurado
+        # (OpenRouter como principal, Gemini como fallback).
+        if tem_provedor_llm:
             try:
                 resultado_analysis = analyze_match(vaga, perfil_candidato)
             except Exception:
-                logger.exception("Falha na chamada da API para esta vaga")
+                logger.exception("Falha na chamada do LLM para esta vaga")
 
-        # Fallback inteligente (Resiliência) caso a API falhe ou a chave não esteja disponível
+        # Fallback inteligente (Resiliência) caso a análise falhe ou não haja provedor
         if not resultado_analysis:
-            if not api_key or api_key == "sua_chave_do_gemini_aqui":
-                logger.warning("Usando análise simulada de fallback devido à falta da GEMINI_API_KEY.")
+            if not tem_provedor_llm:
+                logger.warning("Usando análise simulada de fallback: nenhum provedor de LLM configurado (OPENROUTER_API_KEY/GEMINI_API_KEY).")
             else:
-                logger.warning("Usando análise simulada de fallback devido a uma falha na chamada do Gemini.")
+                logger.warning("Usando análise simulada de fallback devido a falha de todos os provedores de LLM.")
                 
             # Cria um resultado amigável de simulação/fallback para que o pipeline não quebre
             # E para que o usuário possa testar o pipeline completo sem a chave se quiser

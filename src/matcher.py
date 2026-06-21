@@ -3,6 +3,8 @@ import json
 import re
 import time
 import logging
+
+import requests
 from google import genai
 from google.genai import types
 
@@ -10,18 +12,37 @@ logger = logging.getLogger(__name__)
 
 GEMINI_MODEL = "gemini-2.5-flash"
 
-# Espera padrao (segundos) entre retentativas quando a quota do Gemini estoura.
-# A API costuma sugerir um retryDelay proprio; quando presente, ele e respeitado
-# (limitado por QUOTA_MAX_WAIT). Caso contrario, usamos QUOTA_RETRY_WAIT.
-QUOTA_RETRY_WAIT = 60.0
-QUOTA_MAX_WAIT = 300.0
+# Provedor principal: OpenRouter (modelos gratuitos). Gemini fica como fallback.
+# A ordem pode ser ajustada aqui; ambos sao tentados em cada ciclo.
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-# Palavras-chave que indicam erro recuperavel (quota/limite/sobrecarga), no qual
-# vale a pena esperar e retentar indefinidamente em vez de cair no fallback.
+# Lista de modelos gratuitos do OpenRouter, tentados em ordem. Os modelos mais
+# populares (Llama 70B, Qwen) vivem em 429 ("rate-limited upstream") por
+# congestionamento do pool gratuito, entao priorizamos modelos fortes porem
+# menos disputados. Em caso de 429 num modelo, passamos para o proximo.
+# Pode-se sobrescrever por uma unica escolha via env OPENROUTER_MODEL.
+DEFAULT_OPENROUTER_MODELS = (
+    "openai/gpt-oss-120b:free",
+    "nvidia/nemotron-3-super-120b-a12b:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "qwen/qwen3-next-80b-a3b-instruct:free",
+)
+PROVIDER_ORDER = ("openrouter", "gemini")
+
+# Quantas vezes percorrer a cadeia inteira de provedores antes de desistir e
+# cair na analise simulada do main. Aumente para um valor alto se quiser um
+# comportamento praticamente "infinito ate processar". Entre ciclos, espera
+# QUOTA_RETRY_WAIT segundos.
+MAX_PROVIDER_CYCLES = 3
+QUOTA_RETRY_WAIT = 60.0
+
+# Palavras-chave que indicam erro transitorio (quota/limite/sobrecarga). Para
+# esses casos vale tentar o proximo provedor / repetir o ciclo em vez de falhar.
 _QUOTA_KEYWORDS = (
     "resource_exhausted", "resource exhausted", "quota", "rate limit",
-    "rate-limit", "ratelimit", "too many requests", "overloaded",
-    "unavailable", "try again later",
+    "rate-limit", "ratelimit", "too many requests", "too many sessions",
+    "overloaded", "unavailable", "try again later",
+    "http 429", "http 500", "http 502", "http 503", "http 529",
 )
 
 _client = None
@@ -35,73 +56,36 @@ def _get_client():
     return _client
 
 
+def _openrouter_key():
+    return os.getenv("OPENROUTER_API_KEY")
+
+
+def _gemini_key():
+    key = os.getenv("GEMINI_API_KEY")
+    if key and key != "sua_chave_do_gemini_aqui":
+        return key
+    return None
+
+
+def _openrouter_models():
+    # Se OPENROUTER_MODEL estiver definido no .env, usa só ele; senão, a lista padrão.
+    override = os.getenv("OPENROUTER_MODEL")
+    if override:
+        return [override]
+    return list(DEFAULT_OPENROUTER_MODELS)
+
+
 def _is_retryable_quota_error(exc):
-    """True para erros transitorios de quota/limite/sobrecarga do Gemini."""
+    """True para erros transitorios de quota/limite/sobrecarga (qualquer provedor)."""
     code = getattr(exc, "code", None) or getattr(exc, "status_code", None)
-    if code in (429, 500, 503):
+    if code in (429, 500, 502, 503, 529):
         return True
     text = str(exc).lower()
     return any(keyword in text for keyword in _QUOTA_KEYWORDS)
 
 
-def _suggested_retry_seconds(exc, default):
-    """Extrai o retryDelay sugerido pela API (ex.: 'retryDelay': '37s'),
-    limitado por QUOTA_MAX_WAIT. Sem sugestao, retorna o default."""
-    match = re.search(r"retry[-_ ]?delay['\"]?\s*[:=]\s*['\"]?(\d+(?:\.\d+)?)\s*s?", str(exc), re.IGNORECASE)
-    if match:
-        try:
-            return min(float(match.group(1)), QUOTA_MAX_WAIT)
-        except ValueError:
-            pass
-    return default
-
-
-def _generate_with_retry(client, prompt):
-    """
-    Chama o Gemini com retentativa INFINITA em caso de quota/limite/sobrecarga,
-    aguardando o tempo sugerido pela API (ou QUOTA_RETRY_WAIT) entre as tentativas.
-    Erros nao-recuperaveis (ex.: prompt invalido) sao propagados imediatamente.
-    """
-    attempt = 0
-    while True:
-        attempt += 1
-        try:
-            return client.models.generate_content(
-                model=GEMINI_MODEL,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    temperature=0.1,
-                ),
-            )
-        except Exception as exc:
-            if not _is_retryable_quota_error(exc):
-                raise
-            wait = _suggested_retry_seconds(exc, QUOTA_RETRY_WAIT)
-            logger.warning(
-                f"Quota/limite do Gemini atingido (tentativa {attempt}). "
-                f"Aguardando {wait:.0f}s antes de retentar... [{type(exc).__name__}: {exc}]"
-            )
-            time.sleep(wait)
-
-
-def analyze_match(vaga_info, perfil_candidato):
-    """
-    Compara uma vaga com o perfil do candidato utilizando o Gemini 2.5.
-    Retorna um dicionário com: nota_match, pontos_fortes, gaps, veredicto.
-    Retorna None ou um dicionário de fallback em caso de erro individual da API.
-    """
-    # Verifica se a chave de API está definida
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key or api_key == "sua_chave_do_gemini_aqui":
-        logger.error("GEMINI_API_KEY não configurada ou inválida no .env")
-        return None
-
-    try:
-        # Reutiliza o cliente do Google GenAI entre as vagas
-        client = _get_client()
-
-        prompt = f"""
+def _build_prompt(vaga_info, perfil_candidato):
+    return f"""
 Você é um especialista sênior em Recrutamento e Seleção na área de Tecnologia (Tech Recruiter).
 Sua missão é analisar de forma crítica e realista se um candidato possui aderência para uma determinada vaga de emprego.
 
@@ -134,38 +118,203 @@ Estrutura desejada da resposta:
 }}
 """
 
-        # Envia ao Gemini com retentativa infinita em caso de estouro de quota
-        response = _generate_with_retry(client, prompt)
 
-        # Limpa o texto de possíveis blocos markdown extras (```json ... ```) se houver
-        raw_text = response.text.strip()
-        if raw_text.startswith("```"):
-            # Remove blocos markdown de início e fim
-            raw_text = re.sub(r"^```(?:json)?\n", "", raw_text)
-            raw_text = re.sub(r"\n```$", "", raw_text)
-            raw_text = raw_text.strip()
-            
-        # Faz o parse da resposta em JSON
-        resultado = json.loads(raw_text)
-        
-        # Garante que os campos obrigatórios existam com tipos corretos
+def _call_openrouter(prompt):
+    """Chama o OpenRouter (API compativel com OpenAI), tentando cada modelo da
+    lista em ordem e pulando os que estiverem congestionados (429). Retorna o
+    texto cru da primeira resposta valida ou levanta a ultima excecao."""
+    key = _openrouter_key()
+    if not key:
+        raise RuntimeError("OPENROUTER_API_KEY ausente")
+
+    headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+    last_error = RuntimeError("Nenhum modelo OpenRouter disponivel")
+
+    for model in _openrouter_models():
+        try:
+            resp = requests.post(
+                OPENROUTER_URL,
+                headers=headers,
+                json={
+                    "model": model,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.1,
+                    "response_format": {"type": "json_object"},
+                    # Espaco generoso de saida: modelos de reasoning (ex.: gpt-oss)
+                    # gastam tokens "pensando" e, sem isso, o JSON sai truncado.
+                    "max_tokens": 2000,
+                    # Minimiza o reasoning para sobrar orcamento para o JSON final.
+                    "reasoning": {"effort": "low"},
+                },
+                timeout=60,
+            )
+            if resp.status_code != 200:
+                last_error = RuntimeError(f"OpenRouter HTTP {resp.status_code} ({model}): {resp.text[:200]}")
+                logger.warning(f"[openrouter:{model}] HTTP {resp.status_code}, tentando próximo modelo...")
+                continue
+            data = resp.json()
+            content = data["choices"][0]["message"]["content"]
+            if model != _openrouter_models()[0]:
+                logger.info(f"[openrouter] usando modelo alternativo: {model}")
+            return content
+        except (KeyError, IndexError, TypeError) as exc:
+            last_error = RuntimeError(f"OpenRouter resposta inesperada ({model}): {exc}")
+            continue
+        except requests.RequestException as exc:
+            last_error = RuntimeError(f"OpenRouter erro de rede ({model}): {exc}")
+            continue
+
+    raise last_error
+
+
+def _call_gemini(prompt):
+    """Chama o Gemini. Retorna o texto cru da resposta ou levanta excecao."""
+    client = _get_client()
+    response = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+            temperature=0.1,
+        ),
+    )
+    return response.text
+
+
+_PROVIDER_CALLS = {
+    "openrouter": (_openrouter_key, _call_openrouter),
+    "gemini": (_gemini_key, _call_gemini),
+}
+
+
+def _available_providers():
+    """Lista (nome, funcao) dos provedores com chave configurada, na ordem definida."""
+    disponiveis = []
+    for name in PROVIDER_ORDER:
+        key_fn, call_fn = _PROVIDER_CALLS[name]
+        if key_fn():
+            disponiveis.append((name, call_fn))
+    return disponiveis
+
+
+def has_provider():
+    """True se ao menos um provedor de LLM esta configurado."""
+    return bool(_available_providers())
+
+
+def _extract_json_object(text):
+    """Extrai o primeiro objeto JSON balanceado {...} de um texto, ignorando
+    chaves dentro de strings. Util quando o modelo embrulha o JSON em prosa."""
+    start = text.find("{")
+    if start == -1:
+        return None
+    depth = 0
+    in_string = False
+    escape = False
+    for i in range(start, len(text)):
+        ch = text[i]
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+        else:
+            if ch == '"':
+                in_string = True
+            elif ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    return text[start:i + 1]
+    return None
+
+
+def _parse_result(raw_text):
+    """Converte o texto cru do LLM no dicionario padronizado, ou None se invalido."""
+    if not raw_text:
+        return None
+
+    text = raw_text.strip()
+    if text.startswith("```"):
+        text = re.sub(r"^```(?:json)?\n", "", text)
+        text = re.sub(r"\n```$", "", text).strip()
+
+    resultado = None
+    try:
+        resultado = json.loads(text)
+    except json.JSONDecodeError:
+        # Modelos como gpt-oss as vezes embrulham o JSON em texto/raciocinio;
+        # tenta extrair o primeiro objeto {...} balanceado.
+        bloco = _extract_json_object(text)
+        if bloco:
+            try:
+                resultado = json.loads(bloco)
+            except json.JSONDecodeError:
+                resultado = None
+    if not isinstance(resultado, dict):
+        return None
+
+    try:
         nota = int(resultado.get("nota_match", 0))
-        pontos_fortes = resultado.get("pontos_fortes", [])
-        gaps = resultado.get("gaps", [])
-        veredicto = resultado.get("veredicto", "Sem veredicto.")
-        
-        # Garante estrutura padronizada
-        return {
-            "nota_match": max(0, min(100, nota)), # Garante valor entre 0 e 100
-            "pontos_fortes": [str(x) for x in pontos_fortes] if isinstance(pontos_fortes, list) else [],
-            "gaps": [str(x) for x in gaps] if isinstance(gaps, list) else [],
-            "veredicto": str(veredicto)
-        }
-        
-    except json.JSONDecodeError as jde:
-        logger.error(f"Resposta da API não continha um JSON válido: {jde}")
-        # Tentativa de consertar ou retornar fallback em vez de crashar o pipeline inteiro
+    except (ValueError, TypeError):
+        nota = 0
+
+    pontos_fortes = resultado.get("pontos_fortes", [])
+    gaps = resultado.get("gaps", [])
+    veredicto = resultado.get("veredicto", "Sem veredicto.")
+
+    return {
+        "nota_match": max(0, min(100, nota)),
+        "pontos_fortes": [str(x) for x in pontos_fortes] if isinstance(pontos_fortes, list) else [],
+        "gaps": [str(x) for x in gaps] if isinstance(gaps, list) else [],
+        "veredicto": str(veredicto),
+    }
+
+
+def analyze_match(vaga_info, perfil_candidato):
+    """
+    Compara uma vaga com o perfil do candidato usando uma cadeia de provedores
+    de LLM (OpenRouter como principal, Gemini como fallback). Em cada ciclo tenta
+    cada provedor disponivel; erros de quota/limite fazem cair para o proximo. Se
+    todos falharem, espera e repete a cadeia ate MAX_PROVIDER_CYCLES vezes.
+
+    Retorna o dicionario {nota_match, pontos_fortes, gaps, veredicto} ou None
+    (para que o main use a analise simulada de fallback).
+    """
+    providers = _available_providers()
+    if not providers:
+        logger.error("Nenhum provedor de LLM configurado (defina OPENROUTER_API_KEY e/ou GEMINI_API_KEY no .env).")
         return None
-    except Exception:
-        logger.exception(f"Erro ao analisar vaga '{vaga_info.get('titulo_vaga')}'")
-        return None
+
+    prompt = _build_prompt(vaga_info, perfil_candidato)
+    primario = providers[0][0]
+
+    for cycle in range(1, MAX_PROVIDER_CYCLES + 1):
+        for name, call in providers:
+            try:
+                raw = call(prompt)
+            except Exception as exc:
+                nivel = "quota/limite" if _is_retryable_quota_error(exc) else "falha não-recuperável"
+                logger.warning(f"[{name}] {nivel}: {exc}. Tentando próximo provedor...")
+                continue
+
+            resultado = _parse_result(raw)
+            if resultado is not None:
+                if name != primario or cycle > 1:
+                    logger.info(f"Análise obtida via fallback [{name}] (ciclo {cycle}).")
+                return resultado
+
+            logger.warning(f"[{name}] retornou JSON inválido. Tentando próximo provedor...")
+
+        if cycle < MAX_PROVIDER_CYCLES:
+            logger.warning(
+                f"Todos os provedores falharam (ciclo {cycle}/{MAX_PROVIDER_CYCLES}). "
+                f"Aguardando {QUOTA_RETRY_WAIT:.0f}s e repetindo a cadeia..."
+            )
+            time.sleep(QUOTA_RETRY_WAIT)
+
+    logger.error("Todos os provedores de LLM falharam após os ciclos de retentativa.")
+    return None
