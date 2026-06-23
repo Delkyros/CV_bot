@@ -6,7 +6,6 @@ termos_busca:
   - "Machine Learning Engineer"
   - "MLOps Engineer"
   - "Data Scientist"
-  - "Senior Data Scientist"
   - "Research Data Scientist"
   - "AI/ML Software Engineer"
   - "Engenheiro de IA"
@@ -14,9 +13,7 @@ termos_busca:
   - "Engenheiro de IA Generativa"
   - "Engenheiro de Machine Learning"
   - "Cientista de Dados"
-  - "Cientista de Dados Sênior"
   - "Cientista de Dados de Pesquisa"
-  - "Engenheiro de Software focado em IA/ML"
   
 tipo_contratacao: "CLT"
 
