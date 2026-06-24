@@ -4,18 +4,18 @@ import sys
 
 def setup_logging(level=logging.INFO, log_file=None):
     """
-    Configura o logging do pipeline: handler de console (stdout) e, opcionalmente,
-    um arquivo. Idempotente — chamadas repetidas nao duplicam handlers.
+    Configure the pipeline logging: a console handler (stdout) and, optionally, a
+    file. Idempotent — repeated calls do not duplicate handlers.
 
-    Cada modulo deve obter seu logger com `logging.getLogger(__name__)`; a
-    configuracao dos handlers fica centralizada aqui e e acionada uma vez no
-    ponto de entrada (main.py).
+    Each module should get its logger with `logging.getLogger(__name__)`; handler
+    configuration is centralized here and triggered once at the entry point
+    (main.py).
     """
     root = logging.getLogger()
     root.setLevel(level)
 
     if getattr(setup_logging, "_configured", False):
-        # Permite reajustar o nivel em reexecucoes sem recriar handlers.
+        # Allow readjusting the level on re-runs without recreating handlers.
         root.setLevel(level)
         return root
 

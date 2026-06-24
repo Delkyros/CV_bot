@@ -1,1143 +1,1143 @@
 # Vagas filtradas
 
-Gerado em: 2026-06-23 07:46:07
+Gerado em: 2026-06-24 18:15:04
 Total de vagas novas analisadas: 38
 
 | Nota | Score CLT | Score Nao-CLT | Margem | Vaga | Empresa | Contratacao | Modelo | Localizacao |
 | ---: | ---: | ---: | ---: | --- | --- | --- | --- | --- |
-| 85 | 0.3562 | 0.3052 | 0.051 | [Machine Learning Engineer (Python) - Remote Work](https://www.linkedin.com/jobs/view/4430555110) | BairesDev | CLT | remoto | Brasil |
-| 85 | 0.3954 | 0.3279 | 0.0676 | [IA Engineer (Sr.)](https://www.linkedin.com/jobs/view/4428956102) | PagBank | CLT | remoto | Brasil |
-| 85 | 0.3192 | 0.244 | 0.0752 | [GenAI Engineer \| Machine Learning Engineer](https://www.linkedin.com/jobs/view/4428928773) | Skopia Digital | CLT | remoto | Brasil |
-| 85 | 0.3946 | 0.3039 | 0.0907 | [Engenheiro de Soluções de IA  - Trabalho Remoto](https://www.linkedin.com/jobs/view/4430567941) | BairesDev | CLT | remoto | Goiânia, GO |
-| 82 | 0.3562 | 0.3052 | 0.051 | [AI Engineer - Remote Work](https://www.linkedin.com/jobs/view/4430591048) | BairesDev | CLT | remoto | Brasil |
-| 82 | 0.3347 | 0.236 | 0.0987 | [Especialista de Dados/IA](https://www.linkedin.com/jobs/view/4432034034) | iFood | CLT | remoto | Brasil |
-| 78 | 0.3299 | 0.2251 | 0.1048 | [AI Engineer](https://www.linkedin.com/jobs/view/4430840294) | TRACTIAN | CLT | remoto | São Paulo, SP |
-| 78 | 0.3676 | 0.2747 | 0.0928 | [ANALISTA DE DESENVOLVIMENTO DE SOFTWARE PL (34958)](https://www.linkedin.com/jobs/view/4430801251) | Bosch Brasil | CLT | remoto | Curitiba e Região |
-| 78 | 0.4114 | 0.3497 | 0.0617 | [Cientista de dados SR](https://www.linkedin.com/jobs/view/4429409521) | Grupo Recovery | CLT | remoto | São Paulo, SP |
-| 78 | 0.3166 | 0.2309 | 0.0858 | [CIENTISTA DE DADOS](https://www.linkedin.com/jobs/view/4429410493) | Biolab & Co | CLT | remoto | São Paulo, Brasil |
-| 78 | 0.3072 | 0.2211 | 0.0861 | [Analista IA](https://www.linkedin.com/jobs/view/4430576831) | Topaz | CLT | remoto | São Paulo, SP |
-| 78 | 0.3101 | 0.2445 | 0.0656 | [Especialista em IA & Automação Inteligente](https://www.linkedin.com/jobs/view/4429403429) | SQ Química | CLT | remoto | Vinhedo, SP |
-| 75 | 0.3946 | 0.3039 | 0.0907 | [Cientista de Dados - Trabalho Remoto](https://www.linkedin.com/jobs/view/4431748398) | BairesDev | CLT | remoto | Brasil |
-| 75 | 0.3599 | 0.299 | 0.0608 | [Engineer – Collection](https://www.linkedin.com/jobs/view/4428959742) | CloudWalk, Inc. | CLT | remoto | São Paulo, SP |
-| 70 | 0.3946 | 0.3039 | 0.0907 | [Engenheiro de Dados (Junior) - Trabalho Remoto](https://www.linkedin.com/jobs/view/4430597197) | BairesDev | CLT | remoto | Goiânia, GO |
-| 68 | 0.4332 | 0.3425 | 0.0907 | [Data Engineer / EF / São Jose dos Campos/SP](https://www.linkedin.com/jobs/view/4431704214) | Bayer | CLT | hibrido | São José dos Campos, SP |
-| 65 | 0.3946 | 0.3039 | 0.0907 | [Desenvolvedor Python / Pesquisa + Desenvolvimento - Trabalho Remoto](https://www.linkedin.com/jobs/view/4430551936) | BairesDev | CLT | remoto | Brasília, DF |
-| 65 | 0.4341 | 0.3346 | 0.0995 | [Especialista de Dados [AL 46699-11395295]](https://www.linkedin.com/jobs/view/4423249227) | AI/R WEBJUMP | CLT | remoto | Brasil |
-| 65 | 0.3094 | 0.2316 | 0.0778 | [AI Systems Engineer - Forward-Deployed Builder](https://www.linkedin.com/jobs/view/4431734225) | AI Acquisition | CLT | remoto | Brasil |
-| 65 | 0.3946 | 0.3039 | 0.0907 | [Engenheiro de Big Data - Trabalho Remoto](https://www.linkedin.com/jobs/view/4431749604) | BairesDev | CLT | remoto | Brasil |
-| 65 | 0.3397 | 0.2681 | 0.0716 | [Analista de Dados - Uberlândia](https://www.linkedin.com/jobs/view/4428998672) | Uberlândia Refrescos | CLT | remoto | Uberlândia, MG |
-| 55 | 0.4332 | 0.3425 | 0.0907 | [Data Engineer - Semantic Modeler / EF / São Jose dos Campos/SP](https://www.linkedin.com/jobs/view/4431729485) | Bayer | CLT | hibrido | São José dos Campos, SP |
-| 55 | 0.3884 | 0.3177 | 0.0707 | [Power BI Data Analyst \| Senior](https://www.linkedin.com/jobs/view/4432086916) | Jobgether | CLT | remoto | Brasil |
-| 55 | 0.3946 | 0.3039 | 0.0907 | [Desenvolvedor Python - Trabalho Remoto](https://www.linkedin.com/jobs/view/4430567727) | BairesDev | CLT | remoto | Rio de Janeiro, RJ |
-| 55 | 0.3286 | 0.2301 | 0.0985 | [Forward Deployed Engineer (AI & Creative Transformation) - Marketing](https://www.linkedin.com/jobs/view/4432009369) | Truelogic Software | CLT | remoto | São Paulo, SP |
-| 55 | 0.3751 | 0.3067 | 0.0684 | [AI Automation & Systems Specialist](https://www.linkedin.com/jobs/view/4430554320) | Jobgether | CLT | remoto | Brasil |
-| 55 | 0.3347 | 0.236 | 0.0987 | [Analista Growth Pleno (Produtos)](https://www.linkedin.com/jobs/view/4432032075) | iFood | CLT | remoto | Brasil |
-| 50 | 0.3946 | 0.3039 | 0.0907 | [Engenheiro Flutter - Trabalho Remoto](https://www.linkedin.com/jobs/view/4430594804) | BairesDev | CLT | remoto | Florianópolis, SC |
-| 45 | 0.4121 | 0.3493 | 0.0628 | [Engenheiro de Analytics Sênior](https://www.linkedin.com/jobs/view/4429429060) | RB Consult RH | CLT | remoto | Brasil |
-| 45 | 0.3202 | 0.2525 | 0.0677 | [Profissional de Liderança Técnica Fullstack (React e Python)](https://www.linkedin.com/jobs/view/4428966758) | Radix | CLT | remoto | Brasil |
-| 40 | 0.3946 | 0.3039 | 0.0907 | [Desenvolvedor Junior Node.js - Trabalho Remoto](https://www.linkedin.com/jobs/view/4430583488) | BairesDev | CLT | remoto | São Paulo, SP |
-| 38 | 0.3898 | 0.3314 | 0.0583 | [Engenheiro de Dados Sênior - Microsoft Fabric](https://www.linkedin.com/jobs/view/4431709086) | ilegra | CLT | remoto | Brasil |
-| 35 | 0.3241 | 0.2372 | 0.0868 | [QA Automation, Brazil](https://www.linkedin.com/jobs/view/4431220065) | CI&T | CLT | remoto | Brasil |
-| 32 | 0.3946 | 0.3039 | 0.0907 | [Engenheiro MATLAB - Trabalho Remoto](https://www.linkedin.com/jobs/view/4430555143) | BairesDev | CLT | remoto | Cuiabá, MT |
-| 32 | 0.3946 | 0.3039 | 0.0907 | [Engenheiro Golang - Trabalho Remoto](https://www.linkedin.com/jobs/view/4430802251) | BairesDev | CLT | remoto | Florianópolis, SC |
-| 30 | 0.3562 | 0.3052 | 0.051 | [MATLAB Engineer - Remote Work](https://www.linkedin.com/jobs/view/4430542987) | BairesDev | CLT | remoto | Campo Grande, SP |
-| 30 | 0.3772 | 0.3081 | 0.0692 | [Pesquisador Doutor - Indústria Automotiva - Automação Inteligente e Dados \| Doutores Inovando IEL PR](https://www.linkedin.com/jobs/view/4429406242) | IEL Paraná | CLT | hibrido | São José dos Pinhais, PR |
-| 15 | 0.3768 | 0.2813 | 0.0955 | [DYNAMICS ENGINEER (PROPULSION SYSTEMS VIRTUAL ENGINEERING) - 34875](https://www.linkedin.com/jobs/view/4430529795) | Bosch Brasil | CLT | remoto | Campinas, SP |
+| 92 | 0.7 | N/A | N/A | [AI Engineer (Python) - Remote Work](https://www.linkedin.com/jobs/view/4431812670) | BairesDev | CLT | remoto | Brasil |
+| 88 | 0.92 | N/A | N/A | [Machine Learning Engineer (Python) - Remote Work](https://www.linkedin.com/jobs/view/4431851421) | BairesDev | CLT | remoto | Brasil |
+| 86 | N/A | N/A | N/A | [Data Scientist (Python + AI) - Remote Work](https://www.linkedin.com/jobs/view/4431862501) | BairesDev | INDEFINIDO | remoto | Brasil |
+| 85 | 0.95 | N/A | N/A | [Engenheiro(a) de Prompt com foco em IA - Sênior](https://www.linkedin.com/jobs/view/4413778812) | Stefanini Brasil | CLT | remoto | Brasil |
+| 85 | 0.99 | N/A | N/A | [ANALISTA DE INTELIGÊNCIA ARTIFICIAL PL](https://www.linkedin.com/jobs/view/4432476876) | Instituto Hardware BR - HBR | CLT | remoto | Campinas e Região |
+| 85 | 0.99 | N/A | N/A | [CLT: Cientista de Dados – Sênior (Remoto) \| Instituto Atlântico – BR (Remoto)](https://www.linkedin.com/jobs/view/4432544828) | Portal Vagas Terceiro Setor | CLT | remoto | Agudos, SP |
+| 85 | 0.95 | N/A | N/A | [Cientista de Dados Pleno (Vaga Mista)](https://www.linkedin.com/jobs/view/4429483487) | Domo Inovação | CLT | remoto | Brasil |
+| 85 | 0.92 | N/A | N/A | [Engenheiro(a) de IA Generativa Pleno](https://www.linkedin.com/jobs/view/4429477405) | Meta | CLT | remoto | Brasil |
+| 85 | 0.7 | N/A | N/A | [AI Agent Engineer (Remote)](https://www.linkedin.com/jobs/view/4432570362) | Quik Hire Staffing | CLT | remoto | Brasil |
+| 85 | 0.96 | N/A | N/A | [Cientista de Dados ( Machine Learning)](https://www.linkedin.com/jobs/view/4429845791) | RCB Investimentos | CLT | remoto | São Paulo, SP |
+| 82 | 0.96 | N/A | N/A | [Machine Learning Engineer](https://www.linkedin.com/jobs/view/4432591728) | TRACTIAN | CLT | remoto | São Paulo, SP |
+| 82 | 0.98 | N/A | N/A | [Lead/Staff Data Scientist](https://www.linkedin.com/jobs/view/4364186972) | Nubank | CLT | remoto | Campinas, SP |
+| 80 | 0.9 | N/A | N/A | [Analista de Dados & IA - Joinville](https://www.linkedin.com/jobs/view/4432483756) | RotaExata | CLT | remoto | Joinville, SC |
+| 78 | 1.0 | N/A | N/A | [Analista de Inteligência Artificial](https://www.linkedin.com/jobs/view/4432471969) | Grupo Fácil | CLT | remoto | Belo Horizonte e Região |
+| 78 | 0.96 | N/A | N/A | [AI Developer Engineer (DEV Python)](https://www.linkedin.com/jobs/view/4432577284) | CI&T | CLT | remoto | Brasil |
+| 78 | 0.7 | N/A | N/A | [Data Scientist (Remote)](https://www.linkedin.com/jobs/view/4432597032) | Hire Feed | CLT | remoto | Brasil |
+| 78 | N/A | N/A | N/A | [Data Scientist (Remote)](https://www.linkedin.com/jobs/view/4432569561) | Quik Hire Staffing | INDEFINIDO | remoto | Brasil |
+| 78 | 0.55 | N/A | N/A | [Conversational AI Engineer (Remote)](https://www.linkedin.com/jobs/view/4432582885) | Hire Feed | CLT | remoto | Brasil |
+| 78 | 0.72 | N/A | N/A | [Data Science specialist](https://www.linkedin.com/jobs/view/4431437955) | Lenovo | CLT | remoto | Indaiatuba, SP |
+| 75 | 0.65 | N/A | N/A | [Expert Engineer (Remote)](https://www.linkedin.com/jobs/view/4432588738) | Hire Feed | CLT | remoto | Brasil |
+| 75 | 1.0 | N/A | N/A | [Data Scientist](https://www.linkedin.com/jobs/view/4432836269) | Syngenta | CLT | remoto | São Paulo, SP |
+| 73 | 0.9 | N/A | N/A | [Machine Learning Engineer - ML Applications](https://www.linkedin.com/jobs/view/4422446261) | HP | CLT | remoto | Porto Alegre e Região |
+| 70 | 0.85 | N/A | N/A | [Engenheiro de IA Generativa](https://www.linkedin.com/jobs/view/4429806447) | innolevels | CLT | remoto | Rio de Janeiro e Região |
+| 70 | 0.78 | N/A | N/A | [Senior Data Scientist and/or Staff Data Scientist](https://www.linkedin.com/jobs/view/4413909258) | iFood | CLT | remoto | Brasil |
+| 70 | 0.6 | N/A | N/A | [AIS Engineer](https://www.linkedin.com/jobs/view/4429865474) | UltraCon Consultoria | CLT | remoto | Brasil |
+| 70 | 0.9 | N/A | N/A | [Líder de Aquisição de Dados/ Leader Data Acquisition](https://www.linkedin.com/jobs/view/4432493536) | EEmovel | CLT | remoto | Brasil |
+| 68 | 0.96 | N/A | N/A | [Data Scientist Senior (Machine Learning e LLM)](https://www.linkedin.com/jobs/view/4432805987) | CI&T | CLT | remoto | Brasil |
+| 68 | 0.78 | N/A | N/A | [Desenvolvedor(a) LLM/Backend (GenAI & Graph Data)- COM INGLÊS - Remoto](https://www.linkedin.com/jobs/view/4338398752) | Capco | CLT | remoto | São Paulo, SP |
+| 65 | 0.97 | N/A | N/A | [Cloud Platform Engineer Sr](https://www.linkedin.com/jobs/view/4430206000) | Itaú Unibanco | CLT | remoto | São Paulo, SP |
+| 65 | 0.95 | N/A | N/A | [Engenheiro de Soluções de IA](https://www.linkedin.com/jobs/view/4429881795) | DOT Digital Group | CLT | remoto | Brasil |
+| 65 | 0.85 | N/A | N/A | [Cientista de Dados Pleno \| Inteligência Social](https://www.linkedin.com/jobs/view/4429890342) | Globo | CLT | remoto | Rio de Janeiro e Região |
+| 55 | 0.88 | N/A | N/A | [Senior Machine Learning Engineer](https://www.linkedin.com/jobs/view/4431478241) | Search Wizards | CLT | remoto | Brasil |
+| 48 | 0.8 | N/A | N/A | [Senior Software Engineer GitHub Governance](https://www.linkedin.com/jobs/view/4432568580) | Exadel | CLT | remoto | Brasil |
+| 48 | 0.65 | N/A | N/A | [Senior Backend Developer \| International Project](https://www.linkedin.com/jobs/view/4432587987) | Reply | CLT | remoto | Brasil |
+| 38 | N/A | N/A | N/A | [(Senior) BESS Engineer](https://www.linkedin.com/jobs/view/4431465895) | Jobgether | INDEFINIDO | remoto | Brasil |
+| 30 | 0.95 | N/A | N/A | [Engenheiro de Software Sênior  (Java, Cloud & IA)](https://www.linkedin.com/jobs/view/4432458452) | banco BV | CLT | remoto | São Paulo, Brasil |
+| 30 | 0.95 | N/A | N/A | [Engenharia de Segurança Cibernética Sênior\| RD Station](https://www.linkedin.com/jobs/view/4429816932) | Jobgether | CLT | remoto | Brasil |
+| 25 | 0.95 | N/A | N/A | [Palantir Foundry Engineer - Remote Work](https://www.linkedin.com/jobs/view/4431437126) | BairesDev | CLT | remoto | São Paulo, Brasil |
 
 ---
 
-## 1. Machine Learning Engineer (Python) - Remote Work - BairesDev
+## 1. AI Engineer (Python) - Remote Work - BairesDev
 
-- Nota de match: 85/100
-- Link: https://www.linkedin.com/jobs/view/4430555110
+- Nota de match: 92/100
+- Link: https://www.linkedin.com/jobs/view/4431812670
 - Tipo de contratacao inferido: CLT
-- Score CLT: 0.3562
-- Score Nao-CLT: 0.3052
-- Margem contratacao: 0.051
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
+- Score CLT: 0.7
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.70. Paid parental leaves, vacations, and national holidays
 - Modelo de trabalho: remoto
 - Localizacao: Brasil
 
 ### Pontos fortes
-- Sólida experiência no desenvolvimento e implantação de soluções de Machine Learning e IA de ponta a ponta (end-to-end) em ambientes de produção.
-- Proficiência avançada em Python e frameworks de Deep Learning como PyTorch e Keras (TensorFlow), essenciais para a vaga.
-- Experiência comprovada na construção de pipelines de dados escaláveis (ETL/ELT) e implantação em ambientes de nuvem (Azure/AWS, Docker).
-- Conhecimento em IA moderna, incluindo Agentes de IA, RAG e bancos vetoriais, demonstrando alinhamento com tecnologias de ponta.
+- Especialista em LLMs, Agentes de IA e arquiteturas RAG avançadas, diretamente alinhado às responsabilidades centrais da vaga.
+- Proficiência em Python e experiência prática com LangChain, além de bancos vetoriais como Qdrant.
+- Experiência comprovada na integração de sistemas de IA em ambientes de nuvem (AWS/Azure) e desenvolvimento de APIs RESTful para produção.
+- Sólida base em engenharia de dados, com desenho de pipelines ETL/ELT escaláveis, essencial para ingestão de dados em fluxos de trabalho de IA/ML.
+
+### Gaps
+- A proficiência avançada em inglês, um requisito obrigatório da vaga, não é explicitamente mencionada no perfil.
+
+### Veredicto
+Seu perfil é um match quase perfeito para a vaga de AI Engineer na BairesDev, com expertise profunda em LLMs, RAG e Python para produção. Recomendo fortemente que se candidate, destacando sua proficiência avançada em inglês. Você possui as competências técnicas e experiência para se destacar neste processo.
+
+---
+
+## 2. Machine Learning Engineer (Python) - Remote Work - BairesDev
+
+- Nota de match: 88/100
+- Link: https://www.linkedin.com/jobs/view/4431851421
+- Tipo de contratacao inferido: CLT
+- Score CLT: 0.92
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.92. Paid parental leaves, vacations, and national holidays; hardware and software setup; flexible hours – indica benefícios típicos de vínculo CLT
+- Modelo de trabalho: remoto
+- Localizacao: Brasil
+
+### Pontos fortes
+- Experiência comprovada no desenho, treinamento e implantação de modelos de Machine Learning de ponta a ponta em ambientes de produção.
+- Proficiência avançada em Python e frameworks de Deep Learning como PyTorch e Keras, essenciais para a vaga.
+- Sólida experiência com pipelines de dados escaláveis (ETL/ELT) e implantação em nuvem (Azure/AWS), fundamental para ML em escala.
+- Conhecimento de ponta em Agentes de IA, LLMs, RAG e bancos vetoriais, alinhado com o foco em inovação da BairesDev.
 
 ### Gaps
 - Experiência prática com Databricks para gerenciamento e escalonamento de cargas de trabalho de Machine Learning.
-- Proficiência avançada em inglês não explicitamente mencionada no perfil do candidato.
+- Proficiência avançada em inglês não explicitamente mencionada no perfil.
 
 ### Veredicto
-O candidato possui um perfil robusto e altamente alinhado com os requisitos de Engenharia de Machine Learning, Python e Deep Learning em produção. Embora a experiência com Databricks e a proficiência em inglês não estejam explícitas, as demais competências e a experiência end-to-end são muito fortes. Recomendo a candidatura, enfatizando a adaptabilidade a novas ferramentas e a experiência em ambientes de alta performance.
+Este candidato possui um perfil excepcional e altamente alinhado com os requisitos centrais da vaga de Machine Learning Engineer, especialmente em Python, Deep Learning e implantação em produção. Embora a experiência com Databricks e a proficiência em inglês não estejam explícitas, a profundidade técnica e a expertise em LLMs são um grande diferencial. Recomendo fortemente a candidatura, enfatizando a capacidade de aprendizado rápido para novas ferramentas.
 
 ---
 
-## 2. IA Engineer (Sr.) - PagBank
+## 3. Data Scientist (Python + AI) - Remote Work - BairesDev
 
-- Nota de match: 85/100
-- Link: https://www.linkedin.com/jobs/view/4428956102
-- Tipo de contratacao inferido: CLT
-- Score CLT: 0.3954
-- Score Nao-CLT: 0.3279
-- Margem contratacao: 0.0676
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
+- Nota de match: 86/100
+- Link: https://www.linkedin.com/jobs/view/4431862501
+- Tipo de contratacao inferido: INDEFINIDO
+- Score CLT: N/A
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: LLM indisponivel; vaga mantida por padrao (CLT presumido).
 - Modelo de trabalho: remoto
 - Localizacao: Brasil
 
 ### Pontos fortes
-- Experiência comprovada em desenvolvimento de agentes de IA autônomos e uso de LangChain
-- Conhecimento avançado em RAG, embeddings e bancos vetoriais (Qdrant)
-- Prática com implantação de modelos em ambientes Cloud (AWS e Azure) e pipelines de CI/CD
-- Forte background em engenharia de software e documentação técnica, alinhado à governança
+- Experiência comprovada em desenvolvimento de modelos preditivos e soluções de IA usando Python e SQL, com domínio de scikit-learn, PyTorch e Keras.
+- Especialização em LLMs e IA generativa: construção de agentes autônomos, pipelines RAG avançados, integração com APIs de LLMs e orquestração de ferramentas.
+- Histórico sólido em engenharia de dados e cloud: pipelines ETL/ELT com Azure Data Factory, AWS services, Docker e CI/CD, além de deploy de modelos em produção.
+- Habilidade de traduzir requisitos de negócio em soluções técnicas, com comunicação clara e liderança em projetos multidisciplinares.
 
 ### Gaps
-- Ausência de menção explícita a testes A/B de prompts e avaliação sistemática de respostas
-- Nenhuma referência a frameworks como SpringAI ou experiência com OCI (Oracle Cloud)
-- Detalhes limitados sobre implementação de observabilidade, logging e auditoria em produção
-- Não citada experiência específica em mitigação de prompt injection e segurança de prompts
+- Não há menção explícita de proficiência avançada em inglês, requisito obrigatório da vaga.
+- O perfil não especifica claramente o número de anos de experiência (4+ anos), embora indique nível pleno/sênior.
 
 ### Veredicto
-O candidato tem um perfil muito alinhado ao core da vaga, especialmente em agentes de IA e arquitetura RAG. Para aumentar as chances, destaque projetos de A/B testing, observabilidade e segurança de prompts no currículo ou na entrevista. Vale a pena se candidatar, focando nos gaps identificados.
+O candidato possui forte aderência aos requisitos técnicos; vale a pena se candidatar, destacando a fluência em inglês e quantificando os anos de experiência no currículo ou na carta de apresentação.
 
 ---
 
-## 3. GenAI Engineer | Machine Learning Engineer - Skopia Digital
+## 4. Engenheiro(a) de Prompt com foco em IA - Sênior - Stefanini Brasil
 
 - Nota de match: 85/100
-- Link: https://www.linkedin.com/jobs/view/4428928773
+- Link: https://www.linkedin.com/jobs/view/4413778812
 - Tipo de contratacao inferido: CLT
-- Score CLT: 0.3192
-- Score Nao-CLT: 0.244
-- Margem contratacao: 0.0752
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT. Sinais textuais observados: PJ/pessoa juridica
+- Score CLT: 0.95
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.95. Benefícios típicos de CLT mencionados: vale-alimentação/refeição, assistência médica, odontológica, academia, clube de vantagens.
 - Modelo de trabalho: remoto
 - Localizacao: Brasil
 
 ### Pontos fortes
-- Experiência sólida em Python para desenvolvimento de IA
-- Conhecimento comprovado em IA Generativa, LLMs, RAG e uso de LangChain
-- Experiência prática com bancos de dados vetoriais (Qdrant) e implantação em AWS
-- Histórico de integração de APIs e construção de pipelines end‑to‑end
+- Experiência avançada com LLMs, agentes autônomos e engenharia de prompt
+- Histórico comprovado de criação, teste e otimização de pipelines RAG e fluxos conversacionais
+- Sólida prática de documentação técnica e comunicação interfuncional
+- Formação acadêmica (Mestrado em Ciência de Dados) e experiência end‑to‑end em IA generativa
 
 ### Gaps
-- Não menciona experiência com a ferramenta LlamaGraph
-- Ausência de referência explícita ao consumo de APIs da Anthropic ou OpenAI
-- Nenhuma menção a certificação ou aprofundamento específico em serviços avançados da AWS
-- Não destaca experiência com S3 Vectors ou armazenamento vetorial específico da AWS
+- Não há menção explícita ao uso de ferramentas de gestão como Jira, Confluence, Miro ou Figma
+- Experiência direta com times de UX/UI ou design de jornadas de usuário não está detalhada
+- Ausência de referência clara a metodologias ágeis (Scrum/Kanban) e certificações relacionadas
+- Nenhuma indicação de atuação prévia em ambientes de suporte ao cliente interno/externo da Stefanini
 
 ### Veredicto
-O candidato tem forte aderência ao core da vaga, especialmente em Python, LLMs e orquestração com LangChain. Para aumentar as chances, destaque projetos que usaram Anthropic/OpenAI e, se possível, adquira familiaridade com LlamaGraph ou mencione aprendizado rápido. Vale se candidatar, focando nos gaps nas entrevistas.
+O candidato possui forte aderência técnica ao core da vaga, especialmente em LLMs e engenharia de prompt. Para aumentar as chances, destaque experiências com ferramentas de gestão e metodologias ágeis, e evidencie colaboração com times de UX ou produto. Vale a pena se candidatar, focando nos gaps citados.
 
 ---
 
-## 4. Engenheiro de Soluções de IA  - Trabalho Remoto - BairesDev
+## 5. ANALISTA DE INTELIGÊNCIA ARTIFICIAL PL - Instituto Hardware BR - HBR
 
 - Nota de match: 85/100
-- Link: https://www.linkedin.com/jobs/view/4430567941
+- Link: https://www.linkedin.com/jobs/view/4432476876
 - Tipo de contratacao inferido: CLT
-- Score CLT: 0.3946
-- Score Nao-CLT: 0.3039
-- Margem contratacao: 0.0907
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
+- Score CLT: 0.99
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.99. Regime: CLT (Consolidação das Leis do Trabalho).
 - Modelo de trabalho: remoto
-- Localizacao: Goiânia, GO
+- Localizacao: Campinas e Região
 
 ### Pontos fortes
-- Mais de 3 anos de experiência prática em IA/ML, incluindo desenvolvimento e deployment de modelos em produção
-- Proficiência avançada em Python e bibliotecas de IA/ML (PyTorch, Scikit‑learn, Keras)
-- Experiência comprovada com plataformas cloud (AWS, Azure) e pipelines de deployment/CI‑CD
-- Capacidade de traduzir requisitos de negócio em arquiteturas técnicas, liderando projetos end‑to‑end
+- Experiência consolidada em desenvolvimento end‑to‑end de IA/ML, incluindo LLMs e pipelines RAG
+- Domínio de Python, R e SQL, além de frameworks PyTorch e scikit‑learn
+- Implantação de modelos em ambientes de nuvem (Azure e AWS) e prática com CI/CD/Docker
+- Conhecimento e aplicação de governança, LGPD e documentação técnica
 
 ### Gaps
-- Não há menção explícita de nível avançado de inglês
-- Falta de referência direta a frameworks de IA como TensorFlow ou a ferramentas de monitoramento de modelos em produção
-- Nenhuma evidência de experiência prévia em projetos para clientes globais de grande porte (ex.: Google, Rolls‑Royce)
-- Ausência de detalhes sobre trabalho colaborativo com equipes multifuncionais em ambientes corporativos internacionais
+- Não menciona experiência com TensorFlow
+- Ausência de experiência explícita com ferramentas Big Data (Spark, Hadoop)
+- Prática de MLOps/DevOps não detalhada além de CI/CD básico
+- Integração específica com sistemas de hardware ou plataformas embarcadas
 
 ### Veredicto
-O candidato possui forte aderência técnica à vaga, mas deve evidenciar seu nível de inglês e experiência em colaboração global. Reforce esses pontos no currículo ou na carta de apresentação antes de se candidatar.
+O candidato possui forte aderência técnica e experiência relevante em IA, mas deve reforçar conhecimentos em TensorFlow, Spark/Hadoop e integração hardware para maximizar a compatibilidade com a vaga.
 
 ---
 
-## 5. AI Engineer - Remote Work - BairesDev
+## 6. CLT: Cientista de Dados – Sênior (Remoto) | Instituto Atlântico – BR (Remoto) - Portal Vagas Terceiro Setor
+
+- Nota de match: 85/100
+- Link: https://www.linkedin.com/jobs/view/4432544828
+- Tipo de contratacao inferido: CLT
+- Score CLT: 0.99
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.99. "- CLT" explicitado na descrição
+- Modelo de trabalho: remoto
+- Localizacao: Agudos, SP
+
+### Pontos fortes
+- Experiência avançada em Python e bibliotecas de ciência de dados (Pandas, SQLAlchemy, Scikit‑learn, PyTorch)
+- Atuação comprovada em projetos de NLP e LLMs, incluindo pipelines RAG e agentes autônomos
+- Desenvolvimento de pipelines ETL/ELT e implantação de modelos em ambientes de nuvem (Azure/AWS) com CI/CD
+- Forte background em estatística, modelagem de dados e ciclo de vida completo de projetos de Data Science
+
+### Gaps
+- Não menciona experiência específica com ferramentas de visualização como Power BI, Plotly ou Seaborn
+- Ausência de referência a ferramentas de observabilidade/logs (ElasticSearch, Kibana, Splunk)
+- Não há indicação clara de nível de proficiência em inglês
+- Falta de menção a trabalhos com SQL avançado focado em CTEs, subqueries complexas
+
+### Veredicto
+O candidato possui a maioria das competências essenciais e diferenciais da vaga, mas deve reforçar seu portfólio em visualização de dados e evidenciar proficiência em inglês. Vale a pena se candidatar, destacando projetos de NLP e pipelines de produção.
+
+---
+
+## 7. Cientista de Dados Pleno (Vaga Mista) - Domo Inovação
+
+- Nota de match: 85/100
+- Link: https://www.linkedin.com/jobs/view/4429483487
+- Tipo de contratacao inferido: CLT
+- Score CLT: 0.95
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.95. Oferece plano de saúde, vale transporte, vale alimentação/refeição, previdência privada e outros benefícios típicos de vínculo empregatício.
+- Modelo de trabalho: remoto
+- Localizacao: Brasil
+
+### Pontos fortes
+- Proficiência em Python, SQL e frameworks de Machine Learning (scikit-learn, PyTorch, Keras)
+- Experiência prática com implantação de modelos em produção (MLOps) e uso de plataformas cloud (AWS, Azure)
+- Conhecimento avançado em engenharia de prompt e LLMs, alinhado ao requisito de GenAI
+- Forte base estatística e experiência em todo o ciclo de projetos de Data Science (ETL, modelagem, monitoramento)
+
+### Gaps
+- Experiência específica no setor financeiro ou em projetos bancários
+- Conhecimento demonstrado em ferramentas de BI self‑service (ex.: Power BI, Tableau, Looker)
+- Familiaridade com Google Cloud Platform, que é citado como diferencial
+- Certificações ou pós‑graduação adicional focada em Business Intelligence ou Data Science
+
+### Veredicto
+O candidato atende muito bem aos requisitos técnicos essenciais e tem boa aderência ao perfil de pleno/sênior. Para aumentar as chances, destaque projetos relevantes de negócio e, se possível, adquira alguma experiência ou certificação em BI e Google Cloud. Vale a pena se candidatar.
+
+---
+
+## 8. Engenheiro(a) de IA Generativa Pleno - Meta
+
+- Nota de match: 85/100
+- Link: https://www.linkedin.com/jobs/view/4429477405
+- Tipo de contratacao inferido: CLT
+- Score CLT: 0.92
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.92. Descrição detalhada de benefícios implícitos, cultura corporativa e vínculo típico de funcionário, sem menção a CNPJ ou nota fiscal.
+- Modelo de trabalho: remoto
+- Localizacao: Brasil
+
+### Pontos fortes
+- Experiência prática com APIs de LLMs e engenharia de prompt
+- Conhecimento avançado em RAG e uso de frameworks como LangChain
+- Experiência com bancos de dados vetoriais (Qdrant) e integração via APIs REST
+- Forte background em cloud (AWS e Azure) e pipelines ETL/ELT
+
+### Gaps
+- Nenhuma menção a ferramentas de voz TTS/STT como ElevenLabs
+- Não citou experiência com bancos vetoriais específicos da vaga (Pinecone, Weaviate, FAISS)
+- Falta de experiência explícita em Data Warehouse/Datalake e migração de dados legados
+- Não descreve atuação em testes de desempenho ou otimização de pipelines de big data
+
+### Veredicto
+O candidato tem forte aderência nas competências centrais de IA generativa e integração, mas precisa evidenciar experiência em voz, bancos vetoriais específicos e projetos de data warehouse para maximizar a candidatura.
+
+---
+
+## 9. AI Agent Engineer (Remote) - Quik Hire Staffing
+
+- Nota de match: 85/100
+- Link: https://www.linkedin.com/jobs/view/4432570362
+- Tipo de contratacao inferido: CLT
+- Score CLT: 0.7
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.70. Não há menção explícita a PJ, freelancer, estágio ou temporário; portanto, aplica-se o regime CLT como padrão no Brasil.
+- Modelo de trabalho: remoto
+- Localizacao: Brasil
+
+### Pontos fortes
+- Proficiência avançada em Python, linguagem principal requerida
+- Experiência sólida em desenvolvimento de APIs e boas práticas de engenharia de software
+- Forte atenção a detalhes, análise crítica e documentação técnica
+- Conhecimento profundo de IA e LLMs, facilitando a avaliação de código gerado por IA
+
+### Gaps
+- Nenhuma experiência explícita em revisão e rating de código gerado por IA
+- Não menciona familiaridade com outras linguagens listadas (Java, TypeScript, C++, Swift, Rust)
+- Ausência de referência a trabalho assíncrono e flexível em projetos de curto prazo
+
+### Veredicto
+Seu perfil técnico supera os requisitos da vaga, mas destaque sua capacidade de revisar código e sua disponibilidade para trabalhos assíncronos. Vale a pena se candidatar, enfatizando a experiência em Python e boas práticas de engenharia.
+
+---
+
+## 10. Cientista de Dados ( Machine Learning) - RCB Investimentos
+
+- Nota de match: 85/100
+- Link: https://www.linkedin.com/jobs/view/4429845791
+- Tipo de contratacao inferido: CLT
+- Score CLT: 0.96
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.96. Oferta inclui plano de saúde, vale refeição, bônus por performance e outros benefícios típicos de contrato CLT
+- Modelo de trabalho: remoto
+- Localizacao: São Paulo, SP
+
+### Pontos fortes
+- Sólida experiência em desenvolvimento e implantação de modelos de machine learning (regressão, classificação, NLP) em produção
+- Domínio de Python e R, além de pipelines de dados end‑to‑end (ETL/ELT) e ambientes cloud (Azure/AWS)
+- Forte background em matemática, estatística e abstração de conceitos em linguagem matemática
+- Experiência comprovada em colaboração interfuncional e comunicação de resultados analíticos
+
+### Gaps
+- Experiência específica no setor financeiro/recuperação de crédito
+- Conhecimento prático em ferramentas de visualização de dados (ex.: PowerBI, Tableau)
+- Experiência formal em monitoramento e governança de modelos (ML‑Ops) dentro de ambientes regulados
+
+### Veredicto
+O candidato tem alta aderência técnica à vaga, mas deve evidenciar familiaridade com o domínio financeiro e ferramentas de visualização. Reforce projetos que envolvam monitoramento de modelos e destaque qualquer contato com o setor de crédito. Vale a pena se candidatar, focando nesses pontos no currículo e na entrevista.
+
+---
+
+## 11. Machine Learning Engineer - TRACTIAN
 
 - Nota de match: 82/100
-- Link: https://www.linkedin.com/jobs/view/4430591048
+- Link: https://www.linkedin.com/jobs/view/4432591728
 - Tipo de contratacao inferido: CLT
-- Score CLT: 0.3562
-- Score Nao-CLT: 0.3052
-- Margem contratacao: 0.051
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
+- Score CLT: 0.96
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.96. Benefícios como 30 dias de férias remuneradas, plano de saúde e vale‑refeição indicam vínculo CLT
 - Modelo de trabalho: remoto
-- Localizacao: Brasil
+- Localizacao: São Paulo, SP
 
 ### Pontos fortes
-- Mais de 3 anos de experiência prática em engenharia de IA/ML, desenvolvendo e implantando modelos end‑to‑end.
-- Proficiência avançada em Python e nas principais bibliotecas de ML (PyTorch, Scikit‑learn, Pandas).
-- Experiência consolidada em pipelines de dados, ETL/ELT e implantação em nuvem (AWS/Azure), alinhada ao requisito de preparação e treinamento de dados.
-- Histórico de trabalho colaborativo e liderança técnica, facilitando a integração de soluções de IA em aplicações existentes.
+- Sólida experiência em implantação de modelos de ML em produção e soluções end-to-end em ambientes de nuvem (Azure/AWS).
+- Proficiência em Python e bibliotecas de ML como scikit-learn e PyTorch, com forte base em matemática e estatística.
+- Experiência com Docker, CI/CD (GitHub Actions) e desenvolvimento de APIs RESTful.
+- Habilidade em liderança técnica, arquitetura de software e colaboração interfuncional.
 
 ### Gaps
-- Não há menção explícita de nível avançado de inglês, requisito obrigatório da vaga.
-- Falta referência direta a frameworks como TensorFlow ou a ferramentas de MLOps específicas (ex.: Kubeflow, MLflow).
-- Nenhuma evidência clara de experiência sistemática em teste e otimização de performance de modelos em produção.
-- Ausência de destaque para experiência prévia em ambientes 100% remotos ou cultura de trabalho distribuído.
+- Ausência de experiência explícita com Golang.
+- Familiaridade com Kafka e plataformas event-driven não mencionada.
+- Experiência com FastAPI ou Flask não detalhada.
+- Conforto ou experiência direta com dados de streaming/séries temporais de sensores industriais e mecanismos de monitoramento de sistemas ML não explicitados.
 
 ### Veredicto
-O candidato possui forte aderência técnica ao cargo, mas deve evidenciar seu nível de inglês e experiência com MLOps/testes de modelo. Atualize o CV com esses detalhes e candidate‑se; há boa chance de avançar no processo.
+O candidato possui um perfil muito robusto e alinhado com a essência da vaga de Machine Learning Engineer, especialmente na implantação de modelos em produção e engenharia de software. Embora haja alguns gaps pontuais em tecnologias específicas como Golang e Kafka, e a necessidade de explicitar mais a experiência com dados de streaming/séries temporais, a base técnica e a experiência em MLOps são impressionantes. Definitivamente vale a pena se candidatar, focando em como sua experiência em "Analytics Industrial" e "Integração Cloud-Edge" se relaciona com dados de sensores e sistemas em tempo real.
 
 ---
 
-## 6. Especialista de Dados/IA - iFood
+## 12. Lead/Staff Data Scientist - Nubank
 
 - Nota de match: 82/100
-- Link: https://www.linkedin.com/jobs/view/4432034034
+- Link: https://www.linkedin.com/jobs/view/4364186972
 - Tipo de contratacao inferido: CLT
-- Score CLT: 0.3347
-- Score Nao-CLT: 0.236
-- Margem contratacao: 0.0987
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
+- Score CLT: 0.98
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.98. A descrição lista benefícios típicos de CLT, como 'Food/ Meal Card (Vale-Refeição and/or Vale Alimentação)', 'Public Transportation Commuting Benefit (Vale-Transporte)', 'Medical Plan' e '30 days of paid vacation'.
 - Modelo de trabalho: remoto
-- Localizacao: Brasil
+- Localizacao: Campinas, SP
 
 ### Pontos fortes
-- Especialista na criação de Agentes de IA autônomos baseados em LLMs, arquiteturas RAG e LangChain, que são o cerne da vaga.
-- Sólida experiência em engenharia de dados, incluindo desenho de pipelines ETL/ELT escaláveis e implantação de modelos em ambientes de nuvem (AWS).
-- Proficiência em Python e SQL, linguagens essenciais para o desenvolvimento de soluções de dados e IA.
-- Combina forte base estatística e de pesquisa científica com rigorosas práticas de engenharia de software, garantindo soluções robustas e orientadas a resultados.
+- Experiência completa no ciclo de vida de ML: pipelines ETL/ELT, desenvolvimento de modelos (scikit-learn, PyTorch, Keras), implantação via APIs REST e cloud (Azure/AWS) com CI/CD.
+- Domínio da stack Python científica (pandas, scikit-learn, PyTorch, Keras) e SQL, além de conhecimento em bancos vetoriais e sistemas baseados em LLMs.
+- Habilidade comprovada de transformar requisitos de negócio em arquiteturas de software confiáveis e comunicar conceitos técnicos a públicos diversos.
+- Base sólida em estatística, pesquisa e boas práticas de engenharia de software, garantindo modelos robustos e prontos para produção.
 
 ### Gaps
-- Não há menção explícita a PySpark para processamento distribuído ou Airflow para orquestração de pipelines.
-- O perfil não detalha experiência prática em ambientes de adquirência/subadquirência ou prevenção a fraude, que são desejáveis e muito relevantes para a vaga.
-- Embora tenha experiência com LLMs, não menciona familiaridade específica com Claude, GPT, Gemini ou NotebookLM.
-- A experiência em MLOps/LLMOps aplicada a agentes em produção poderia ser mais explícita, apesar de ter 'voltados para a produção' e CI/CD.
+- Não há menção explícita a experiência com bibliotecas de árvores de decisão gradient boosted (XGBoost, LightGBM, CatBoost), amplamente usadas em produção.
+- Falta evidência de compreensão aprofundada da teoria de aprendizado e das implicações de causalidade ao aplicar ML a problemas do mundo real.
+- Não demonstra claramente estar atualizado com desenvolvimentos recentes de ML além de LLMs/TensorFlow‑PyTorch (ex.: novas arquiteturas, métodos de meta‑learning, etc.).
 
 ### Veredicto
-O candidato possui um perfil extremamente promissor e alinhado com o core da vaga em IA e LLMs, sendo um excelente match para as responsabilidades de desenvolvimento de agentes. Sugiro enfatizar a escalabilidade de suas soluções e como suas habilidades se aplicam ao contexto de Big Data e prevenção a fraude. Definitivamente vale a pena se candidatar.
+Seu perfil é muito forte para a vaga, especialmente pela experiência em pipelines de produção e comunicação de resultados. Para aumentar suas chances, destaque conhecimento em árvores de decisão gradient boosted e aprofunde seu entendimento de causalidade e teoria de aprendizado. Vale a pena se candidatar, desde que você complemente esses pontos na entrevista.
 
 ---
 
-## 7. AI Engineer - TRACTIAN
+## 13. Analista de Dados & IA - Joinville - RotaExata
+
+- Nota de match: 80/100
+- Link: https://www.linkedin.com/jobs/view/4432483756
+- Tipo de contratacao inferido: CLT
+- Score CLT: 0.9
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.90. A descrição é de uma vaga de emprego padrão, sem menção explícita a outros regimes de contratação, indicando um vínculo empregatício.
+- Modelo de trabalho: remoto
+- Localizacao: Joinville, SC
+
+### Pontos fortes
+- Experiência sólida com SQL e modelagem de dados
+- Especialização em LLMs, agentes autônomos e pipelines RAG avançados
+- Histórico comprovado na construção de pipelines ETL/ELT e integração cloud (Azure/AWS)
+- Experiência em desenvolvimento de APIs REST e automações/CI/CD
+
+### Gaps
+- Experiência explícita com ferramentas de BI/dashboard (Power BI, Tableau, etc.)
+- Não menciona uso direto de APIs OpenAI, Claude ou Gemini
+- Não cita experiência com MongoDB
+- Não possui vivência no setor de logística/telemetria/frotas
+
+### Veredicto
+Seu perfil é muito forte nos requisitos técnicos de dados e IA, especialmente em LLMs e pipelines de dados. Para aumentar suas chances, destaque qualquer experiência com ferramentas de BI e projetos no setor de logística ou frotas. Vale a pena se candidatar, pois seus diferenciais alinham bem com a vaga e você pode aprender rapidamente o que faltar.
+
+---
+
+## 14. Analista de Inteligência Artificial - Grupo Fácil
 
 - Nota de match: 78/100
-- Link: https://www.linkedin.com/jobs/view/4430840294
+- Link: https://www.linkedin.com/jobs/view/4432471969
 - Tipo de contratacao inferido: CLT
-- Score CLT: 0.3299
-- Score Nao-CLT: 0.2251
-- Margem contratacao: 0.1048
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
+- Score CLT: 1.0
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=1.00. A vaga oferece um pacote completo de benefícios típicos de um vínculo empregatício, como assistência médica e odontológica, vale-refeição, PLR, seguro de vida, auxílio creche e vale-transporte.
 - Modelo de trabalho: remoto
-- Localizacao: São Paulo, SP
+- Localizacao: Belo Horizonte e Região
 
 ### Pontos fortes
-- Experiência comprovada com LLMs, incluindo agentes autônomos e pipelines RAG
-- Domínio de Python e desenvolvimento de APIs RESTful (FastAPI/Flask/Django)
-- Conhecimento em bancos vetoriais (Qdrant) e ferramentas como LangChain
-- Histórico de implantação de soluções em produção na nuvem (AWS/Azure) com Docker e CI/CD
+- Experiência sólida com LLMs, LangChain, RAG e engenharia de prompts, alinhada ao foco da vaga em IA generativa
+- Proficiência em Python e desenvolvimento de APIs RESTful, essenciais para integração de sistemas e parceiros
+- Histórico de implantação de modelos em produção (Azure/AWS) e uso de pipelines CI/CD, aproximando-se das práticas de MLOps
+- Capacidade comprovada de transformar protótipos em soluções robustas e escaláveis, atendendo ao ciclo de build‑to‑scale da vaga
 
 ### Gaps
-- Não menciona experiência específica com OCR ou processamento avançado de documentos
-- Nenhuma referência direta a Golang ou microserviços além de Docker
-- Falta de menção a otimização e fine‑tuning de LLMs
-- Não cita uso de Redis ou outras bases de dados vetoriais além de Qdrant
+- Não menciona experiência com ferramentas específicas desejáveis como COGFY, N8N ou plataformas de RPA/Low‑Code
+- Falta de referência explícita a ferramentas de MLOps como MLflow ou Kubeflow
+- Nenhuma menção a experiência com GraphQL, embora tenha experiência com APIs REST
+- Ausência de exemplos de comunicação de conceitos técnicos complexos para stakeholders de negócio
 
 ### Veredicto
-O candidato tem forte aderência nas áreas centrais de LLMs e APIs, mas precisa evidenciar experiência com OCR e microserviços. Vale a pena se candidatar, destacando projetos de produção e, se possível, adquirir algum conhecimento rápido em OCR e otimização de modelos.
+O candidato tem forte aderência técnica ao core da vaga, especialmente em LLMs e integração de APIs, mas carece de algumas ferramentas desejáveis e experiência explícita em MLOps. Vale a pena se candidatar, destacando projetos de produção e preparando exemplos de comunicação com negócios.
 
 ---
 
-## 8. ANALISTA DE DESENVOLVIMENTO DE SOFTWARE PL (34958) - Bosch Brasil
+## 15. AI Developer Engineer (DEV Python) - CI&T
 
 - Nota de match: 78/100
-- Link: https://www.linkedin.com/jobs/view/4430801251
+- Link: https://www.linkedin.com/jobs/view/4432577284
 - Tipo de contratacao inferido: CLT
-- Score CLT: 0.3676
-- Score Nao-CLT: 0.2747
-- Margem contratacao: 0.0928
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
+- Score CLT: 0.96
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.96. Benefícios típicos de CLT como plano de saúde, vale alimentação, PLR, seguro de vida e licença parental
 - Modelo de trabalho: remoto
-- Localizacao: Curitiba e Região
+- Localizacao: Brasil
 
 ### Pontos fortes
-- Experiência avançada com LLMs, pipelines RAG e bancos vetoriais (Qdrant), atendendo ao diferencial desejado.
-- Histórico comprovado de desenvolvimento de soluções de IA end-to-end, incluindo pipelines ETL/ELT e implantação de modelos em Azure/AWS.
-- Proficiência em Python, Pandas, scikit-learn e construção de APIs RESTful (incluindo FastAPI-like).
-- Familiaridade com práticas DevOps: CI/CD via GitHub Actions, uso de Azure Data Factory e Docker.
+- Domínio avançado em Python e experiência com desenvolvimento de APIs e orquestradores de IA
+- Experiência comprovada com agentes de IA generativa, LLMs e pipelines RAG, alinhado ao foco da vaga
+- Conhecimento sólido em Azure e implantação de modelos em ambientes de nuvem
+- Familiaridade com servidores MCP e integração de sistemas corporativos
 
 ### Gaps
-- Não há menção explícita de inglês fluente (requisito mínimo).
-- Ausência de experiência comprovada com Elastic Search (requisito obrigatório).
-- Não citado uso de SonarQube nas pipelines de CI/CD.
-- Não há referência direta ao idioma alemão (desejável).
+- Não menciona experiência específica com canais de voz (speech-to-text, TTS) e baixa latência para atendimento
+- Ausência de referência ao Microsoft Agent Framework ou Microsoft Foundry
+- Não citou uso da ferramenta de observabilidade Langfuse para rastreamento de custos e desempenho
+- Não há menção explícita a configuração de camadas de segurança para ambientes GPU
 
 ### Veredicto
-Seu perfil é muito forte em LLMs, vetores e pipelines de dados, com boa experiência em Azure e CI/CD. Porém, falta experiência explícita em Elastic Search e menção clara de inglês fluente e uso de SonarQube. Se você puder complementar esses pontos ou destacar experiências relacionadas, vale muito a pena se candidatar.
+O candidato possui a base técnica necessária e forte experiência em IA generativa, mas precisa reforçar conhecimentos em voz, Microsoft Agent Framework e observabilidade Langfuse. Vale a pena se candidatar, destacando projetos relevantes e buscando fechar esses gaps nas entrevistas.
 
 ---
 
-## 9. Cientista de dados SR - Grupo Recovery
+## 16. Data Scientist (Remote) - Hire Feed
 
 - Nota de match: 78/100
-- Link: https://www.linkedin.com/jobs/view/4429409521
+- Link: https://www.linkedin.com/jobs/view/4432597032
 - Tipo de contratacao inferido: CLT
-- Score CLT: 0.4114
-- Score Nao-CLT: 0.3497
-- Margem contratacao: 0.0617
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
-- Modelo de trabalho: remoto
-- Localizacao: São Paulo, SP
-
-### Pontos fortes
-- Domínio avançado de Python e SQL para construção de pipelines e modelos analíticos
-- Experiência comprovada em desenvolvimento end‑to‑end de modelos de Machine Learning e sua operacionalização em ambientes de nuvem (AWS/Azure)
-- Conhecimento sólido em versionamento de código, CI/CD e boas práticas de engenharia de software
-- Boa comunicação e habilidade de traduzir requisitos de negócio em soluções técnicas
-
-### Gaps
-- Experiência prática com Databricks ou plataformas equivalentes de lakehouse
-- Conhecimento específico em Streamlit para criação de aplicações interativas
-- Experiência com MLflow ou ferramentas de MLOps voltadas para governança e monitoramento de modelos em produção
-- Vivência no setor de crédito, cobrança, recuperação ou serviços financeiros
-
-### Veredicto
-O candidato tem forte aderência técnica, mas falta experiência nas ferramentas e no domínio de crédito exigidos. Vale a pena se candidatar, destacando projetos de pipelines e MLOps, e preparando-se para aprender Databricks/MLflow rapidamente.
-
----
-
-## 10. CIENTISTA DE DADOS - Biolab & Co
-
-- Nota de match: 78/100
-- Link: https://www.linkedin.com/jobs/view/4429410493
-- Tipo de contratacao inferido: CLT
-- Score CLT: 0.3166
-- Score Nao-CLT: 0.2309
-- Margem contratacao: 0.0858
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
-- Modelo de trabalho: remoto
-- Localizacao: São Paulo, Brasil
-
-### Pontos fortes
-- Experiência Avançada em IA e LLMs: O candidato possui expertise em Agentes de IA, LLMs, RAG e bancos vetoriais, o que é um diferencial significativo e alinhado com a busca por inovação da Biolab.
-- Domínio de Python, SQL e Estatística Aplicada: Demonstra uma base técnica sólida nas linguagens e conceitos fundamentais exigidos para análise de dados e modelagem de Machine Learning.
-- Vivência em Engenharia de Dados e Cloud Computing (Azure/AWS): Sua experiência com pipelines ETL/ELT, Docker e plataformas de nuvem como Azure e AWS é crucial para a operacionalização e escalabilidade das soluções analíticas.
-- Liderança Técnica e Governança de Dados: O perfil inclui liderança técnica, gestão de projetos e conhecimento em governança de dados (LGPD, ISO 27001), essenciais para atuar como referência e garantir a rastreabilidade e conformidade dos modelos.
-
-### Gaps
-- Experiência com Spark e Databricks: A vaga menciona essas plataformas repetidamente como ferramentas-chave para atuação como referência técnica e liderança de iniciativas, e o candidato não as lista em seu perfil.
-- Ferramentas de Visualização de Dados e BI (e.g., Power BI): Embora o candidato tenha forte base analítica, não há menção explícita a ferramentas ou experiência em visualização de dados para comunicação de insights, nem a ferramentas de BI como Power BI (diferencial).
-- Localização e Disponibilidade Presencial: A vaga exige atuação presencial em Pinheiros, São Paulo, e o perfil do candidato não informa sua localização ou disponibilidade para este formato.
-- Metodologias Ágeis (Scrum, Kanban) e DevOps Boards: Embora o candidato tenha experiência em gestão de projetos, não há menção explícita a metodologias ágeis ou à ferramenta DevOps Boards, citada na vaga para priorização de iniciativas.
-
-### Veredicto
-O candidato possui um perfil extremamente robusto e inovador, com forte alinhamento nas competências essenciais de Data Science e um diferencial notável em IA/LLMs. Seria crucial explorar sua familiaridade com Spark/Databricks e confirmar a disponibilidade para o modelo de trabalho presencial em São Paulo. Recomendo fortemente a candidatura, destacando sua expertise em IA e a capacidade de aprendizado rápido para as ferramentas específicas.
-
----
-
-## 11. Analista IA - Topaz
-
-- Nota de match: 78/100
-- Link: https://www.linkedin.com/jobs/view/4430576831
-- Tipo de contratacao inferido: CLT
-- Score CLT: 0.3072
-- Score Nao-CLT: 0.2211
-- Margem contratacao: 0.0861
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
-- Modelo de trabalho: remoto
-- Localizacao: São Paulo, SP
-
-### Pontos fortes
-- Experiência comprovada em projetos end‑to‑end de IA, incluindo desenvolvimento, implantação e monitoramento de modelos em produção
-- Domínio avançado de Python e principais frameworks de ML/DL (PyTorch, Keras, Scikit‑learn)
-- Conhecimento sólido em pipelines de dados, ETL/ELT e implantação em nuvem (Azure/AWS)
-- Especialização em LLMs, agentes autônomos e arquiteturas RAG, alinhado ao foco em IA generativa da vaga
-
-### Gaps
-- Nenhuma menção a ferramentas de visualização/BI (Power BI, Tableau, Looker) para criação de dashboards interativos
-- Ausência de experiência explícita em visão computacional ou projetos de IA generativa além de LLMs
-- Não indica fluência em Inglês ou Espanhol, requisitos desejáveis para projetos globais
-- Falta de referência direta a atuação em ambientes de BackOffice ou desenvolvimento de produtos financeiros
-
-### Veredicto
-O candidato tem forte aderência técnica, especialmente em ML, LLMs e cloud, mas carece de experiência em BI e fluência em idiomas. Recomendo reforçar esses pontos no currículo e, se possível, adquirir algum projeto de visualização ou idioma, pois ainda vale a pena se candidatar.
-
----
-
-## 12. Especialista em IA & Automação Inteligente - SQ Química
-
-- Nota de match: 78/100
-- Link: https://www.linkedin.com/jobs/view/4429403429
-- Tipo de contratacao inferido: CLT
-- Score CLT: 0.3101
-- Score Nao-CLT: 0.2445
-- Margem contratacao: 0.0656
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
-- Modelo de trabalho: remoto
-- Localizacao: Vinhedo, SP
-
-### Pontos fortes
-- Experiência comprovada na criação de agentes de IA autônomos baseados em LLMs e pipelines RAG avançados para produção.
-- Histórico sólido no desenvolvimento de pipelines ETL/ELT escaláveis, APIs RESTful e implantação de modelos em nuvem (Azure/AWS) com CI/CD.
-- Conhecimento aprofundado de governança de dados, LGPD, ISO 27001 e práticas de engenharia de software para soluções sustentáveis.
-- Proficiência em Python, SQL, bancos vetoriais (Qdrant), LangChain, MCP servers e engenharia de prompt para resultados confiáveis.
-
-### Gaps
-- Ausência de menção explícita às ferramentas de orquestração low‑code/no‑code da vaga (n8n, Supabase, Lovable, Hostinger, Easypanel, Make, Power Automate, UiPath).
-- Não há referência direta ao uso de Claude Cowork/Code ou plataformas específicas de multi‑LLM indicadas como ambiente principal.
-- Experiência limitada ou não declarada em integrações com sistemas ERP/CRM críticos.
-- Detalhes insuficientes sobre práticas de monitoramento, logging, tratamento de webhooks e padrões de erro em integrações de produção.
-
-### Veredicto
-O candidato é um forte match para a vaga, especialmente pela expertise em agentes LLM e pipelines de dados; para melhorar a aderência, vale destacar qualquer trabalho com plataformas semelhantes ao Claude Cowork, ferramentas de automação visual e integrações ERP/CRM, bem como experiência com observabilidade e suporte em produção.
-
----
-
-## 13. Cientista de Dados - Trabalho Remoto - BairesDev
-
-- Nota de match: 75/100
-- Link: https://www.linkedin.com/jobs/view/4431748398
-- Tipo de contratacao inferido: CLT
-- Score CLT: 0.3946
-- Score Nao-CLT: 0.3039
-- Margem contratacao: 0.0907
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
-- Modelo de trabalho: remoto
-- Localizacao: Brasil
-
-### Pontos fortes
-- Mais de 3 anos de experiência prática em ciência de dados e machine learning
-- Proficiência em Python, SQL e bibliotecas como Pandas, Scikit‑learn e PyTorch
-- Experiência sólida em desenvolvimento e implantação de pipelines de dados end‑to‑end (ETL/ELT) e modelos em nuvem (AWS/Azure)
-- Capacidade comprovada de traduzir requisitos de negócio em soluções técnicas e comunicar resultados
-
-### Gaps
-- Nenhuma menção explícita a ferramentas/experiência avançada em visualização de dados (ex.: Tableau, PowerBI, matplotlib, seaborn)
-- Inglês avançado não declarado no perfil
-- Experiência com R não citada, embora seja desejável
-- Falta de exemplos claros de atuação direta com stakeholders não‑técnicos em contextos de negócio variados
-
-### Veredicto
-O candidato possui a base técnica e a experiência necessária para a vaga, mas deve evidenciar habilidades de visualização e proficiência em inglês. Reforce esses pontos no currículo ou na carta e candidate‑se, pois ainda há forte aderência ao perfil.
-
----
-
-## 14. Engineer – Collection - CloudWalk, Inc.
-
-- Nota de match: 75/100
-- Link: https://www.linkedin.com/jobs/view/4428959742
-- Tipo de contratacao inferido: CLT
-- Score CLT: 0.3599
-- Score Nao-CLT: 0.299
-- Margem contratacao: 0.0608
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
-- Modelo de trabalho: remoto
-- Localizacao: São Paulo, SP
-
-### Pontos fortes
-- Sólida experiência em desenvolvimento backend com Python e APIs RESTful
-- Profundo conhecimento em IA, LLMs e integração de modelos em produção
-- Experiência comprovada em pipelines de dados escaláveis e implantação em nuvem (AWS/Azure)
-- Histórico de entrega de soluções orientadas a resultados de negócio
-
-### Gaps
-- Experiência prévia no setor fintech/coleções de dívida não mencionada
-- Fluência avançada em inglês não confirmada no currículo
-- Experiência direta com ferramentas generativas de IA para automação de fluxos de trabalho não explicitada
-- Histórico de colaboração estreita com times de Produto, Customer Success e análise de comportamento de clientes
-
-### Veredicto
-O candidato tem forte aderência técnica, especialmente em backend e IA, mas carece de experiência específica em fintech/collections e comprovação de inglês avançado. Vale a pena se candidatar, destacando projetos relevantes e reforçando habilidades de comunicação em inglês.
-
----
-
-## 15. Engenheiro de Dados (Junior) - Trabalho Remoto - BairesDev
-
-- Nota de match: 70/100
-- Link: https://www.linkedin.com/jobs/view/4430597197
-- Tipo de contratacao inferido: CLT
-- Score CLT: 0.3946
-- Score Nao-CLT: 0.3039
-- Margem contratacao: 0.0907
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
-- Modelo de trabalho: remoto
-- Localizacao: Goiânia, GO
-
-### Pontos fortes
-- Experiência prática com pipelines ETL/ELT e manipulação de dados em Python
-- Conhecimento sólido de SQL (PostgreSQL, MySQL) e modelagem de dados
-- Uso de controle de versão Git em projetos de engenharia
-- Experiência em ambientes de nuvem (AWS, Azure) que facilitam a construção de data warehouses/lakes
-
-### Gaps
-- Nenhuma menção explícita de experiência com data warehouses ou data lakes específicos (ex.: Snowflake, Redshift, BigQuery)
-- Foco predominante em Machine Learning e IA, com pouca ênfase em tarefas típicas de engenharia de dados junior (monitoramento de qualidade de dados, manutenção de pipelines simples)
-- Inglês intermediário não confirmado no currículo
-- Experiência profissional descrita como nível pleno/sênior, podendo gerar desalinhamento de expectativas salariais e de responsabilidades
-
-### Veredicto
-Você tem forte base técnica e experiência em ETL, mas falta foco em data warehouses e no nível junior esperado. Se adaptar a projetos mais simples de engenharia de dados e evidenciar seu inglês, pode ser uma boa candidatura; caso contrário, procure vagas que aproveitem seu nível sênior.
-
----
-
-## 16. Data Engineer / EF / São Jose dos Campos/SP - Bayer
-
-- Nota de match: 68/100
-- Link: https://www.linkedin.com/jobs/view/4431704214
-- Tipo de contratacao inferido: CLT
-- Score CLT: 0.4332
-- Score Nao-CLT: 0.3425
-- Margem contratacao: 0.0907
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
-- Modelo de trabalho: hibrido
-- Localizacao: São José dos Campos, SP
-
-### Pontos fortes
-- Experiência comprovada em construção de pipelines ETL/ELT e implantação em nuvem (AWS/Azure)
-- Domínio avançado de Python e SQL, essenciais para manipulação e transformação de dados
-- Conhecimento em Docker, CI/CD (GitHub Actions) e práticas de engenharia de software
-- Histórico de colaboração com equipes multidisciplinares e comunicação clara de requisitos técnicos
-
-### Gaps
-- Ausência de experiência explícita com GCP e BigQuery, plataforma principal citada na vaga
-- Falta de menção ao uso de Kafka, Spark/Flink ou outras tecnologias de streaming/big data
-- Não citou ferramentas de orquestração de pipelines como Airflow, dbt ou Step Functions
-- Governança de dados e práticas de DataOps/Data Governance não foram detalhadas
-
-### Veredicto
-O candidato tem boa base em engenharia de dados e cloud, mas precisa reforçar experiência com GCP/BigQuery e ferramentas de streaming/orquestração. Se puder evidenciar projetos com Kafka, Airflow ou BigQuery, vale a pena se candidatar.
-
----
-
-## 17. Desenvolvedor Python / Pesquisa + Desenvolvimento - Trabalho Remoto - BairesDev
-
-- Nota de match: 65/100
-- Link: https://www.linkedin.com/jobs/view/4430551936
-- Tipo de contratacao inferido: CLT
-- Score CLT: 0.3946
-- Score Nao-CLT: 0.3039
-- Margem contratacao: 0.0907
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
-- Modelo de trabalho: remoto
-- Localizacao: Brasília, DF
-
-### Pontos fortes
-- Mais de 4 anos de experiência prática em desenvolvimento Python
-- Experiência robusta com pipelines de dados, ETL/ELT e integração de APIs REST
-- Conhecimento avançado em bancos de dados relacionais (MySQL, PostgreSQL) e manipulação de grandes volumes de dados
-- Experiência em ambientes de nuvem (AWS, Azure) e automação com Docker e CI/CD
-
-### Gaps
-- Não menciona experiência com Django ou frameworks web Python específicos
-- Falta de experiência declarada com XML e bancos de dados Oracle/MS SQL
-- Nenhuma referência explícita a programação orientada a objetos avançada
-- Nível avançado de inglês não confirmado no perfil
-
-### Veredicto
-O candidato tem forte base em Python e engenharia de dados, mas carece de experiência específica em Django, XML e bancos Oracle/MS SQL exigidos pela vaga. Recomendo reforçar esses pontos (por exemplo, projetos pessoais ou cursos) antes de aplicar, ou focar em oportunidades onde a ênfase seja mais em pipelines e IA.
-
----
-
-## 18. Especialista de Dados [AL 46699-11395295] - AI/R WEBJUMP
-
-- Nota de match: 65/100
-- Link: https://www.linkedin.com/jobs/view/4423249227
-- Tipo de contratacao inferido: CLT
-- Score CLT: 0.4341
-- Score Nao-CLT: 0.3346
-- Margem contratacao: 0.0995
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT. Sinais textuais observados: Freelancer/autonomo/cooperado
-- Modelo de trabalho: remoto
-- Localizacao: Brasil
-
-### Pontos fortes
-- Mestrado e experiência sólida em ML/IA end-to-end, incluindo modelagem preditiva e engenharia de dados.
-- Capacidade comprovada de construir pipelines de dados escaláveis (ETL/ELT) e implantar modelos em nuvem (AWS/Azure).
-- Forte base estatística e experiência com validação de modelos, essencial para auditoria e evolução de modelos preditivos.
-- Excelentes soft skills de comunicação, liderança técnica e tradução de requisitos de negócio, cruciais para colaboração interfuncional.
-
-### Gaps
-- Falta de experiência explícita com GCP / BigQuery, Salesforce Data Cloud e SF CRM Analytics, ferramentas obrigatórias da vaga.
-- Ausência de vivência direta em projetos de Martech, CRM, CDP e técnicas de NBA/NBO, que são o core da posição.
-- Não detalha conhecimento em métricas específicas de avaliação de modelos (AUC, KS, Gini, Lift) e integração com plataformas de Martech/NBA Engines.
-- Embora tenha MLOps, não menciona familiaridade com orquestradores específicos como Airflow ou Vertex AI (listados como diferenciais).
-
-### Veredicto
-O candidato possui uma base técnica robusta em Data Science e ML, com mestrado e experiência end-to-end, o que é um excelente ponto de partida. Contudo, há gaps significativos nas ferramentas específicas de Martech/CRM (Salesforce Data Cloud, SF CRM Analytics, GCP/BigQuery) e no domínio de Martech/NBA, que são centrais para a vaga. Seria crucial demonstrar um forte interesse e capacidade de aprendizado rápido nessas plataformas e no ecossistema Martech para se candidatar.
-
----
-
-## 19. AI Systems Engineer - Forward-Deployed Builder - AI Acquisition
-
-- Nota de match: 65/100
-- Link: https://www.linkedin.com/jobs/view/4431734225
-- Tipo de contratacao inferido: CLT
-- Score CLT: 0.3094
-- Score Nao-CLT: 0.2316
-- Margem contratacao: 0.0778
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT. Sinais textuais observados: Valor hora/budget/faturamento
-- Modelo de trabalho: remoto
-- Localizacao: Brasil
-
-### Pontos fortes
-- Experiência comprovada em construção de agentes de IA autônomos e pipelines RAG usando LangChain e servidores MCP.
-- Sólida prática de desenvolvimento de APIs REST, integração de sistemas e implantação em nuvem (AWS/Azure).
-- Capacidade de desenhar e operar pipelines de dados escaláveis (ETL/ELT) e de documentar arquiteturas técnicas detalhadas.
-- Formação avançada (Mestrado) e histórico de entrega de soluções end‑to‑end que geram valor de negócio.
-
-### Gaps
-- Ausência de experiência explícita com automação de GTM/marketing ops (n8n, Make, Zapier) e conhecimento profundo de funis, ofertas e campanhas pagas.
-- Nenhuma menção a trabalhos diretos em ambientes DTC, agências ou produtos de informação que lidem com CRO, cold outreach ou ad‑creation.
-- Falta de evidência de entregas ultra‑rápidas (dias ou fins de semana) e de cultura de alta‑agência/blunt feedback típica da vaga.
-- Não citou familiaridade com ferramentas de tracking/attribution, CRMs (ex.: Close) ou plataformas de pagamento multi‑tenant (Stripe, Whop).
-
-### Veredicto
-O candidato tem forte base técnica em IA e engenharia de sistemas, mas carece de experiência prática em automação GTM e cultura de entrega ultra‑rápida exigida. Se puder demonstrar projetos de automação de marketing ou vendas e evidenciar rapidez de implementação, vale a pena se candidatar.
-
----
-
-## 20. Engenheiro de Big Data - Trabalho Remoto - BairesDev
-
-- Nota de match: 65/100
-- Link: https://www.linkedin.com/jobs/view/4431749604
-- Tipo de contratacao inferido: CLT
-- Score CLT: 0.3946
-- Score Nao-CLT: 0.3039
-- Margem contratacao: 0.0907
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
-- Modelo de trabalho: remoto
-- Localizacao: Brasil
-
-### Pontos fortes
-- Experiência sólida em construção de pipelines de dados escaláveis (ETL/ELT) usando Python e ferramentas de cloud (AWS, Azure).
-- Conhecimento avançado em análise e resolução de problemas, com forte base estatística e prática de engenharia de software.
-- Experiência com implantação de soluções em nuvem e uso de containers (Docker), alinhado à necessidade de soluções de alta disponibilidade.
-- Domínio avançado de inglês e capacidade de trabalho remoto colaborativo.
-
-### Gaps
-- Ausência de experiência comprovada com as linguagens exigidas (Ruby, Java) e foco principal em Python.
-- Falta de menção explícita a governança de Big Data, gerenciamento de metadados, lineage e políticas de dados.
-- Nenhuma experiência declarada com arquiteturas Lambda/Kappa/Delta ou DataOps para ingestão/processamento em tempo real.
-- Não citou experiência com plataformas específicas de Big Data como Cloudera ou ferramentas open‑source de modernização de data warehouses.
-
-### Veredicto
-O candidato tem boa base em pipelines e cloud, mas carece de experiência nas áreas centrais de Big Data exigidas. Recomendo reforçar conhecimentos em governança, arquiteturas Lambda/Kappa e tecnologias como Hadoop/Cloudera antes de aplicar.
-
----
-
-## 21. Analista de Dados - Uberlândia - Uberlândia Refrescos
-
-- Nota de match: 65/100
-- Link: https://www.linkedin.com/jobs/view/4428998672
-- Tipo de contratacao inferido: CLT
-- Score CLT: 0.3397
-- Score Nao-CLT: 0.2681
-- Margem contratacao: 0.0716
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
-- Modelo de trabalho: remoto
-- Localizacao: Uberlândia, MG
-
-### Pontos fortes
-- Experiência sólida em SQL e pipelines ETL/ELT, essenciais para manipulação e preparação de dados.
-- Conhecimento avançado em Python, linguagem amplamente usada para análises e automações de dados.
-- Forte background em modelagem de dados e governança, incluindo documentação técnica e conformidade.
-- Capacidade de traduzir requisitos de negócio em soluções técnicas, alinhado ao objetivo de gerar insights estratégicos.
-
-### Gaps
-- Nenhuma experiência declarada com ferramentas de BI específicas (ex.: Power BI, Tableau, Looker) para criação de dashboards.
-- Ausência de menção a Row-Level Security (RLS) ou implementação de controle de acesso granular em modelos semânticos.
-- Não há referência a trabalhos focados em governança de métricas e catálogo de indicadores, como manutenção de dicionário de métricas.
-- Falta de experiência explícita em apresentação de análises para áreas de negócio ou treinamento de usuários finais.
-
-### Veredicto
-O candidato tem boa base técnica em dados e programação, mas carece de experiência prática com ferramentas de BI e governança de métricas exigidas pela vaga. Recomendo reforçar projetos de dashboards e controle de acesso antes de se candidatar, ou destacar esses aspectos em um portfólio.
-
----
-
-## 22. Data Engineer - Semantic Modeler / EF / São Jose dos Campos/SP - Bayer
-
-- Nota de match: 55/100
-- Link: https://www.linkedin.com/jobs/view/4431729485
-- Tipo de contratacao inferido: CLT
-- Score CLT: 0.4332
-- Score Nao-CLT: 0.3425
-- Margem contratacao: 0.0907
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
-- Modelo de trabalho: hibrido
-- Localizacao: São José dos Campos, SP
-
-### Pontos fortes
-- Experiência sólida em engenharia de dados e pipelines ETL/ELT, incluindo uso de AWS, Azure, Docker e CI/CD (GitHub Actions).
-- Proficiência avançada em Python e SQL, linguagens centrais para desenvolvimento de pipelines e manipulação de dados.
-- Conhecimento em governança de dados e conformidade (LGPD, ISO 27001), alinhado às práticas de data governance da vaga.
-- Histórico de trabalho colaborativo com equipes multidisciplinares (data scientists, engenheiros, stakeholders).
-
-### Gaps
-- Experiência limitada ou não declarada em GCP (BigQuery, Cloud Functions) e serviços específicos da AWS/GCP citados na vaga.
-- Ausência de experiência comprovada com Kafka, Spark/Flink, e ferramentas de streaming/big data.
-- Não menciona uso de Airflow, dbt ou outras ferramentas de orquestração de pipelines (DataOps/DevOps).
-- Falta de conhecimento explícito em Semantic Web, ontologias, SPARQL/RDF/graph databases (Neo4j, AWS Neptune).
-
-### Veredicto
-O candidato tem boa base em engenharia de dados e cloud, mas carece de experiência nas tecnologias de streaming e semântica exigidas. Recomendo focar em adquirir conhecimentos em Kafka, Spark/Flink e GCP antes de aplicar, ou destacar projetos relevantes que envolvam essas ferramentas.
-
----
-
-## 23. Power BI Data Analyst | Senior - Jobgether
-
-- Nota de match: 55/100
-- Link: https://www.linkedin.com/jobs/view/4432086916
-- Tipo de contratacao inferido: CLT
-- Score CLT: 0.3884
-- Score Nao-CLT: 0.3177
-- Margem contratacao: 0.0707
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
-- Modelo de trabalho: remoto
-- Localizacao: Brasil
-
-### Pontos fortes
-- Strong SQL and Python skills for data extraction, transformation, and analysis.
-- Experience building scalable ETL/ELT pipelines and working with cloud data platforms (Azure/AWS).
-- Solid statistical and analytical background with machine learning techniques.
-- Ability to translate business requirements into technical solutions and communicate effectively with cross-functional teams.
-
-### Gaps
-- No demonstrated advanced Power BI proficiency (dashboard creation, data modeling, visualization best practices).
-- Lack of experience with Databricks or similar modern data platforms.
-- Limited evidence of creating executive reports and visualizations for business stakeholders.
-- No explicit mention of availability for occasional travel to Porto Alegre, RS.
-
-### Veredicto
-Você tem uma base analítica e de engenharia de dados sólida, mas a vaga exige expertise específica em Power BI e Databricks. Vale a pena se candidatar se estiver disposto a destacar ou desenvolver essas habilidades; caso contrário, pode ser mais assertivo buscar vagas mais alinhadas ao seu perfil de ML/IA.
-
----
-
-## 24. Desenvolvedor Python - Trabalho Remoto - BairesDev
-
-- Nota de match: 55/100
-- Link: https://www.linkedin.com/jobs/view/4430567727
-- Tipo de contratacao inferido: CLT
-- Score CLT: 0.3946
-- Score Nao-CLT: 0.3039
-- Margem contratacao: 0.0907
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
-- Modelo de trabalho: remoto
-- Localizacao: Rio de Janeiro, RJ
-
-### Pontos fortes
-- Sólida experiência com Python e desenvolvimento de APIs RESTful
-- Conhecimento avançado em pipelines de dados, ETL/ELT e integração em nuvem (AWS/Azure)
-- Experiência com Docker, CI/CD (GitHub Actions) e controle de versão
-- Boa prática de engenharia de software, incluindo documentação técnica e foco em qualidade
-
-### Gaps
-- Nenhuma experiência declarada com Django ou frameworks web Python específicos
-- Ausência de menção a bancos NoSQL (ex.: MongoDB, Cassandra) e design de microsserviços
-- Não há evidência de prática avançada em testes automatizados, cobertura de código e metodologias ágeis
-- Falta de referência explícita a princípios SOLID, Clean Code, Design Patterns e inglês avançado
-
-### Veredicto
-O candidato tem boa base em Python e cloud, mas carece de experiência específica em Django, microsserviços e práticas avançadas de qualidade de código. Recomendo reforçar esses pontos no currículo ou adquirir projetos relevantes antes de aplicar.
-
----
-
-## 25. Forward Deployed Engineer (AI & Creative Transformation) - Marketing - Truelogic Software
-
-- Nota de match: 55/100
-- Link: https://www.linkedin.com/jobs/view/4432009369
-- Tipo de contratacao inferido: CLT
-- Score CLT: 0.3286
-- Score Nao-CLT: 0.2301
-- Margem contratacao: 0.0985
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
-- Modelo de trabalho: remoto
-- Localizacao: São Paulo, SP
-
-### Pontos fortes
-- Experiência avançada em desenvolvimento e implantação de pipelines de IA end‑to‑end, incluindo LLMs, prompt engineering e agentes autônomos
-- Sólida prática em integração de APIs, orquestração de workflows e automação em ambientes de nuvem (Azure/AWS) com Docker e CI/CD
-- Histórico comprovado de entrega de soluções de produção com métricas de negócio mensuráveis
-- Capacidade de mapear requisitos complexos e traduzi‑los em arquitetura de software robusta, facilitando colaboração entre equipes técnicas e de negócio
-
-### Gaps
-- Experiência direta com fluxos de trabalho criativos, produção de conteúdo e operações de marketing (ex.: briefing, concepting, review, localization)
-- Conhecimento prático de ferramentas do ecossistema Adobe (AEM, Workfront, Firefly) e de plataformas de design como Figma
-- Histórico de atuação embutido em equipes de criação/marketing, atuando lado a lado com diretores criativos e produtores
-- Experiência comprovada em governança específica de brand safety, direitos de conteúdo e compliance em ambientes criativos
-
-### Veredicto
-O candidato tem forte base técnica em IA e entrega de soluções de produção, mas carece de experiência prática em workflows criativos e nas ferramentas Adobe exigidas. Recomendo focar em projetos que envolvam integração de IA com equipes de marketing ou adquirir certificações nas plataformas Adobe antes de aplicar.
-
----
-
-## 26. AI Automation & Systems Specialist - Jobgether
-
-- Nota de match: 55/100
-- Link: https://www.linkedin.com/jobs/view/4430554320
-- Tipo de contratacao inferido: CLT
-- Score CLT: 0.3751
-- Score Nao-CLT: 0.3067
-- Margem contratacao: 0.0684
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
-- Modelo de trabalho: remoto
-- Localizacao: Brasil
-
-### Pontos fortes
-- Experiência sólida em desenvolvimento e implantação de APIs REST e integração com serviços cloud (AWS/Azure).
-- Conhecimento avançado em IA generativa, LLMs, engenharia de prompt e orquestração de ferramentas (LangChain, RAG).
-- Forte background em design de pipelines de dados escaláveis (ETL/ELT) e automação de processos de dados.
-- Habilidade comprovada de traduzir requisitos de negócio em soluções técnicas robustas e documentadas.
-
-### Gaps
-- Experiência prática com ferramentas de automação de workflow como N8N, Make ou Zapier não foi mencionada.
-- Histórico específico de 2-3 anos focado em automação de processos de negócios (financeiro, RH, marketing) não está presente.
-- Conhecimento explícito sobre otimização de uso de tokens e custos de modelos AI (OpenAI, Claude, Gemini) não foi detalhado.
-- Habilidades de scripting básico e engenharia de prompts são desejáveis, mas não há evidência clara de prática cotidiana.
-
-### Veredicto
-O candidato tem forte expertise em IA e integração de sistemas, mas carece de experiência direta com ferramentas de workflow como N8N. Se houver disposição para aprender rapidamente essas plataformas, a candidatura pode ser válida; caso contrário, focar em vagas mais alinhadas à engenharia de IA e pipelines de dados.
-
----
-
-## 27. Analista Growth Pleno (Produtos) - iFood
-
-- Nota de match: 55/100
-- Link: https://www.linkedin.com/jobs/view/4432032075
-- Tipo de contratacao inferido: CLT
-- Score CLT: 0.3347
-- Score Nao-CLT: 0.236
-- Margem contratacao: 0.0987
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
-- Modelo de trabalho: remoto
-- Localizacao: Brasil
-
-### Pontos fortes
-- Domínio avançado de Python e SQL para extração, transformação e análise de dados
-- Experiência robusta em construção de pipelines de dados (ETL/ELT) e automação de processos
-- Capacidade comprovada de traduzir requisitos de negócio em soluções técnicas e comunicar resultados a times multidisciplinares
-- Conhecimento em modelagem estatística e técnicas de clustering, úteis para análises diagnósticas
-
-### Gaps
-- Experiência prática em experimentação e testes A/B voltados para produto/growth
-- Uso de ferramentas de BI (ex.: Tableau, Looker, PowerBI) e criação de dashboards de monitoramento de KPIs
-- Familiaridade com métricas específicas de marketplace e food delivery (GMV, take rate, ticket médio, frequência)
-- Histórico de atuação direta com times de produto, growth e comercial em iniciativas de crescimento
-
-### Veredicto
-O candidato tem forte base técnica e analítica, mas carece de experiência prática em growth, experimentação A/B e ferramentas de BI específicas da vaga. Se houver disposição para aprender rapidamente essas áreas, pode ser uma boa candidatura; caso contrário, focar em oportunidades mais alinhadas a data science puro.
-
----
-
-## 28. Engenheiro Flutter - Trabalho Remoto - BairesDev
-
-- Nota de match: 50/100
-- Link: https://www.linkedin.com/jobs/view/4430594804
-- Tipo de contratacao inferido: CLT
-- Score CLT: 0.3946
-- Score Nao-CLT: 0.3039
-- Margem contratacao: 0.0907
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
-- Modelo de trabalho: remoto
-- Localizacao: Florianópolis, SC
-
-### Pontos fortes
-- Vaga coletada com sucesso
-- Disponível para avaliação
-
-### Gaps
-- Análise do Gemini indisponível (Verifique sua GEMINI_API_KEY no .env)
-
-### Veredicto
-Insira uma chave válida em GEMINI_API_KEY no arquivo .env para obter uma análise de inteligência artificial real desta vaga.
-
----
-
-## 29. Engenheiro de Analytics Sênior - RB Consult RH
-
-- Nota de match: 45/100
-- Link: https://www.linkedin.com/jobs/view/4429429060
-- Tipo de contratacao inferido: CLT
-- Score CLT: 0.4121
-- Score Nao-CLT: 0.3493
-- Margem contratacao: 0.0628
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
-- Modelo de trabalho: remoto
-- Localizacao: Brasil
-
-### Pontos fortes
-- Experiência sólida em pipelines ETL/ELT e arquitetura de dados em nuvem (AWS, Azure)
-- Conhecimento avançado em Python, SQL e ferramentas de CI/CD, essenciais para automação de processos de dados
-- Experiência com governança e conformidade (LGPD, ISO 27001), demonstrando preocupação com qualidade e segurança dos dados
-- Capacidade de traduzir requisitos de negócio em soluções técnicas, alinhado ao perfil sênior solicitado
-
-### Gaps
-- Ausência de experiência explícita com Snowflake
-- Não menciona DBT Core nem experiência prática com a ferramenta
-- Falta de conhecimento demonstrado em Power BI
-- Nenhuma referência ao framework DAMA-DMBOK ou certificação CDMP
-- Certificações específicas (SnowPro, AWS Data Analytics Specialty, dbt, Power BI) não citadas
-
-### Veredicto
-O candidato tem forte background em engenharia de dados e governança, mas carece das ferramentas e certificações centrais da vaga. Recomendo focar em adquirir experiência com Snowflake, DBT e Power BI antes de aplicar, ou destacar projetos relevantes que envolvam essas tecnologias.
-
----
-
-## 30. Profissional de Liderança Técnica Fullstack (React e Python) - Radix
-
-- Nota de match: 45/100
-- Link: https://www.linkedin.com/jobs/view/4428966758
-- Tipo de contratacao inferido: CLT
-- Score CLT: 0.3202
-- Score Nao-CLT: 0.2525
-- Margem contratacao: 0.0677
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
+- Score CLT: 0.7
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.70. Descrição não menciona PJ, CNPJ, nota fiscal ou trabalho autônomo explícito; portanto, aplica‑se o regime CLT padrão.
 - Modelo de trabalho: remoto
 - Localizacao: Brasil
 
 ### Pontos fortes
 - Experiência sólida em Python e desenvolvimento de APIs RESTful
-- Conhecimento avançado em bancos de dados relacionais (PostgreSQL, MySQL) e otimização de queries
-- Prática com Docker, CI/CD (GitHub Actions) e metodologias ágeis
-- Experiência em liderança técnica e mentoria de equipes
+- Forte background em engenharia de software e boas práticas de código (CI/CD, Docker, documentação técnica)
+- Conhecimento avançado em IA, LLMs e pipelines de dados, alinhado ao foco da vaga em avaliação de código gerado por IA
+- Capacidade analítica e atenção a detalhes, essenciais para revisão e feedback de código
 
 ### Gaps
-- Nenhuma experiência declarada com React, TypeScript e desenvolvimento frontend
-- Ausência de experiência com GraphQL, microfrontend e arquitetura de microserviços front-end
-- Não menciona uso de FastAPI ou Django como frameworks backend
-- Falta de comprovação de inglês avançado para comunicação com times globais
+- Nenhuma experiência explícita em revisão e avaliação de código gerado por IA ou rating de respostas de IA
+- Não menciona familiaridade com linguagens adicionais solicitadas (Java, C++, Swift, Rust, TypeScript)
+- Ausência de experiência específica na criação de desafios de programação ou questões de CS para testar IA
+- Não há referência a trabalho assíncrono/remoto em projetos de curto prazo ou pagamento por hora
 
 ### Veredicto
-O candidato tem forte background em Python e liderança, mas carece das habilidades essenciais de frontend (React/TypeScript) e alguns frameworks backend exigidos. Recomendo focar em adquirir experiência prática com React e FastAPI/Django antes de se candidatar a esta vaga.
+O candidato tem forte base em Python e engenharia de IA, mas falta experiência direta com avaliação de código de IA e criação de desafios. Se estiver disposto a aprender rapidamente essas práticas, vale a pena se candidatar e destacar sua capacidade analítica e experiência em boas práticas de código.
 
 ---
 
-## 31. Desenvolvedor Junior Node.js - Trabalho Remoto - BairesDev
+## 17. Data Scientist (Remote) - Quik Hire Staffing
 
-- Nota de match: 40/100
-- Link: https://www.linkedin.com/jobs/view/4430583488
+- Nota de match: 78/100
+- Link: https://www.linkedin.com/jobs/view/4432569561
+- Tipo de contratacao inferido: INDEFINIDO
+- Score CLT: N/A
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: LLM indisponivel; vaga mantida por padrao (CLT presumido).
+- Modelo de trabalho: remoto
+- Localizacao: Brasil
+
+### Pontos fortes
+- Proficiência em Python e experiência com desenvolvimento de APIs e pipelines de dados
+- Forte atenção a detalhes, pensamento analítico e experiência em resolução de problemas complexos
+- Experiência em engenharia de software full‑stack e uso de ferramentas de versionamento e CI/CD
+- Conhecimento avançado de IA/LLM, que facilita a compreensão e avaliação de código gerado por IA
+
+### Gaps
+- Nenhuma menção explícita de experiência prévia em revisão e avaliação de código gerado por IA
+- Falta de experiência declarada em linguagens adicionais listadas (Java, TypeScript, C++, Swift, Rust)
+- Não há indicação de familiaridade com diretrizes estruturadas de feedback ou métricas de rating de respostas de IA
+- Ausência de informação sobre disponibilidade para trabalho assíncrono e flexível em projetos de curto prazo
+
+### Veredicto
+Seu perfil técnico é sólido e atende bem aos requisitos de programação, mas falta evidência de experiência específica em avaliação de código de IA. Foque seu currículo em projetos de revisão de código ou contribuições open‑source que demonstrem essa habilidade antes de aplicar.
+
+---
+
+## 18. Conversational AI Engineer (Remote) - Hire Feed
+
+- Nota de match: 78/100
+- Link: https://www.linkedin.com/jobs/view/4432582885
 - Tipo de contratacao inferido: CLT
-- Score CLT: 0.3946
-- Score Nao-CLT: 0.3039
-- Margem contratacao: 0.0907
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
+- Score CLT: 0.55
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.55. Descrição não menciona explícitamente PJ, freelancer, estágio ou temporário; portanto, aplica-se o padrão CLT vigente no Brasil.
+- Modelo de trabalho: remoto
+- Localizacao: Brasil
+
+### Pontos fortes
+- Proficiência em Python e JavaScript, atendendo ao requisito de linguagem
+- Forte capacidade analítica e de resolução de problemas proveniente da experiência em ML e ciência de dados
+- Conhecimento profundo em sistemas de IA (LLMs, RAG, agentes autônomos) relevante para avaliar código gerado por IA
+- Experiência em engenharia de software sólida (APIs, CI/CD, documentação) que garante atenção ao detalhe e qualidade
+
+### Gaps
+- Ausência de experiência explícita em revisão e avaliação de código gerado por IA
+- Não há demonstração de experiência na criação de desafios ou testes de codificação para IA
+- Experiência limitada em desenvolvimento frontend ou móvel (apesar de conhecimento em JavaScript)
+- Não mencionado o seguimento de diretrizes estruturadas para projetos de treinamento de IA ou fornecimento de feedback estruturado
+
+### Veredicto
+Seu perfil é muito forte em engenharia de software e IA, atendendo bem aos requisitos técnicos da vaga. Porém, falta experiência direta na avaliação de código gerado por IA e na criação de desafios de codificação, que são atividades centrais do papel. Se você se sentir confortável em aplicar suas habilidades de análise e atenção a esses novos tipos de tarefas, vale a pena se candidatar.
+
+---
+
+## 19. Data Science specialist - Lenovo
+
+- Nota de match: 78/100
+- Link: https://www.linkedin.com/jobs/view/4431437955
+- Tipo de contratacao inferido: CLT
+- Score CLT: 0.72
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.72. Descrição de cargo pleno, sem menção a contrato de prestação de serviços, indicando vínculo típico de emprego
+- Modelo de trabalho: remoto
+- Localizacao: Indaiatuba, SP
+
+### Pontos fortes
+- Experiência comprovada em desenvolvimento end‑to‑end de modelos de Machine Learning e implantação em nuvem (Azure/AWS)
+- Sólida prática em construção de pipelines de dados escaláveis (ETL/ELT) e integração via APIs RESTful
+- Conhecimento avançado em governança de dados, documentação e conformidade (LGPD, ISO 27001)
+- Capacidade de traduzir requisitos de negócio em soluções técnicas e liderar projetos de Data Science
+
+### Gaps
+- Não há menção explícita de experiência com criação de dashboards, relatórios ou ferramentas de visualização (ex.: Power BI, Tableau)
+- Inglês avançado não está comprovado no currículo apresentado
+- Falta evidência de atuação direta como evangelista de cultura data‑driven ou condução de workshops de treinamento para usuários de negócio
+- Nenhuma referência a experiência prévia em ambientes de serviços/IT Service Management, foco da vaga
+
+### Veredicto
+O candidato tem forte aderência técnica, mas precisa evidenciar habilidades de visualização, comunicação em inglês e experiência em evangelização de cultura data‑driven. Se puder reforçar esses pontos no currículo ou na carta, vale a pena se candidatar.
+
+---
+
+## 20. Expert Engineer (Remote) - Hire Feed
+
+- Nota de match: 75/100
+- Link: https://www.linkedin.com/jobs/view/4432588738
+- Tipo de contratacao inferido: CLT
+- Score CLT: 0.65
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.65. Não há menção explícita a PJ, freelancer ou outros regimes; a descrição apenas menciona 'contractual role', que não descarta vínculo empregatício.
+- Modelo de trabalho: remoto
+- Localizacao: Brasil
+
+### Pontos fortes
+- Experiência sólida em deployment de modelos de IA em ambientes de nuvem (AWS/Azure) e uso de Docker
+- Proficiência avançada em Python, essencial para integração e customização de modelos
+- Histórico de criação de pipelines de dados e APIs RESTful, facilitando a integração com clientes
+- Boa comunicação técnica e produção de documentação detalhada (runbooks, guias de troubleshooting)
+
+### Gaps
+- Não menciona experiência com ferramentas IaC como Terraform ou Ansible
+- Ausência de experiência explícita com orquestração Kubernetes em produção
+- Nenhuma referência direta a monitoramento de SLA ou uso de dashboards de performance
+- Falta de menção a suporte ao cliente em tempo real (on‑boarding técnico ao vivo)
+
+### Veredicto
+O candidato tem forte aderência nas áreas de IA, cloud e Python, mas precisa comprovar experiência com IaC, Kubernetes e suporte ao cliente em tempo real. Se puder evidenciar esses pontos (por exemplo, projetos pessoais ou cursos), vale a pena se candidatar.
+
+---
+
+## 21. Data Scientist - Syngenta
+
+- Nota de match: 75/100
+- Link: https://www.linkedin.com/jobs/view/4432836269
+- Tipo de contratacao inferido: CLT
+- Score CLT: 1.0
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=1.00. Pacote de benefícios completo (médico, odontológico e oftalmológico) que começa no seu primeiro dia. Férias Remuneradas, Licença Maternidade e Paternidade, Auxílio Educação, Programas de Bem-Estar, Descontos Corporativos, entre outros benefícios.
 - Modelo de trabalho: remoto
 - Localizacao: São Paulo, SP
 
 ### Pontos fortes
-- Experiência com desenvolvimento de APIs RESTful
-- Conhecimento em Git e controle de versão
-- Boa capacidade de aprendizado rápido e resolução de problemas
-- Inglês avançado para leitura técnica
+- Profunda experiência com Python e bibliotecas de ciência de dados (pandas, scikit‑learn)
+- Experiência comprovada em desenvolvimento e implantação de pipelines de ML em nuvem (AWS/Azure)
+- Sólida prática em engenharia de dados, ETL/ELT e integração com equipes de engenharia
+- Conhecimento avançado em LLMs, RAG e agentes de IA, alinhado às tecnologias emergentes desejadas
 
 ### Gaps
-- Experiência prática específica em Node.js (não mencionado)
-- Foco principal em Python/ML, não em desenvolvimento back‑end JavaScript
-- Nenhuma menção a trabalho colaborativo direto com desenvolvedores front‑end
-- Ausência de projetos que evidenciem uso de algoritmos e estruturas de dados em JavaScript
+- Falta de experiência explícita com séries temporais avançadas (ARIMA, Prophet, LSTM) e otimização específica para supply chain
+- Nenhuma menção a grafos de conhecimento, bancos de dados de grafos ou SPARQL
+- Ausência de experiência direta no domínio agrícola ou de cadeia de suprimentos
+- Não há evidência de fluência em inglês avançado para comunicação diária
 
 ### Veredicto
-O candidato tem forte background em APIs e aprendizado rápido, mas carece de experiência comprovada em Node.js, essencial para a vaga. Recomendo focar em projetos ou cursos que demonstrem uso prático de Node.js antes de se candidatar.
+O candidato tem forte base técnica e experiência em cloud e IA, mas carece de conhecimentos específicos em séries temporais, grafos e domínio de supply chain agrícola. Recomendo focar em adquirir experiência ou projetos nessas áreas antes de aplicar, ou destacar projetos relevantes que possam suprir esses gaps.
 
 ---
 
-## 32. Engenheiro de Dados Sênior - Microsoft Fabric - ilegra
+## 22. Machine Learning Engineer - ML Applications - HP
+
+- Nota de match: 73/100
+- Link: https://www.linkedin.com/jobs/view/4422446261
+- Tipo de contratacao inferido: CLT
+- Score CLT: 0.9
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.90. A descrição utiliza termos como 'role', 'responsibilities', 'management' e 'teams', que são indicativos de um vínculo empregatício padrão, sem menção explícita a outros regimes.
+- Modelo de trabalho: remoto
+- Localizacao: Porto Alegre e Região
+
+### Pontos fortes
+- Experiência sólida em desenvolvimento e implantação de modelos de Machine Learning em produção (Azure/AWS) e pipelines ETL/ELT.
+- Domínio de Python, PyTorch, Scikit-learn e boas práticas de engenharia de software (APIs REST, Docker, CI/CD).
+- Conhecimento avançado em NLP, Deep Learning e otimização de hiperparâmetros, alinhado às responsabilidades de treinamento e validação de modelos.
+- Experiência com metodologias ágeis e colaboração interfuncional, facilitando integração com times de CI/CD e pesquisa.
+
+### Gaps
+- Ausência de experiência explícita com C++ e Java.
+- Nenhuma menção ao uso de Apache Spark ou outras tecnologias Big Data.
+- Não possui certificação AWS Certified Machine Learning Specialty.
+- Falta de referência direta ao uso de TensorFlow.
+
+### Veredicto
+O candidato tem forte aderência nas áreas centrais de ML, implantação em cloud e engenharia de pipelines, mas carece de algumas tecnologias específicas da vaga. Recomendo aplicar, destacando projetos com Spark, Java/C++ ou certificação AWS, ou buscar complementar essas habilidades antes de avançar.
+
+---
+
+## 23. Engenheiro de IA Generativa - innolevels
+
+- Nota de match: 70/100
+- Link: https://www.linkedin.com/jobs/view/4429806447
+- Tipo de contratacao inferido: CLT
+- Score CLT: 0.85
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.85. Descrição padrão de vaga com salário fixo, benefícios implícitos e sem menção a CNPJ ou nota fiscal
+- Modelo de trabalho: remoto
+- Localizacao: Rio de Janeiro e Região
+
+### Pontos fortes
+- Especialização em LLMs, agentes de IA autônomos, pipelines RAG avançados, LangChain, servidores MCP e bancos vetoriais (Qdrant).
+- Experiência sólida em Python e desenvolvimento de APIs RESTful, com implantação de modelos em AWS (Lambda, S3) e Azure.
+- Histórico comprovado na construção de pipelines ETL/ELT escaláveis e CI/CD (GitHub Actions) para MLOps.
+- Práticas de engenharia de software robustas (documentação, LGPD, ISO 27001) e familiaridade com arquiteturas orientadas a microsserviços via Docker e integração cloud‑edge.
+
+### Gaps
+- Experiência direta com AWS Bedrock e SageMaker para hospedagem e ajuste de modelos foundation.
+- Conhecimento prático de AWS Step Functions e CloudWatch para orquestração e monitoramento de workflows.
+- Familiaridade com serviços de orquestração de contêineres ECS/EKS (Kubernetes) para microsserviços em escala.
+- Exposição a APIs gRPC e frameworks de orquestração de agentes como LangGraph além do LangChain.
+
+### Veredicto
+Seu perfil é muito forte em IA generativa, LLMs e APIs REST, atendendo à maior parte dos requisitos da vaga. Entretanto, falta experiência específica com os serviços AWS Bedrock, SageMaker, Step Functions, ECS/EKS e com gRPC/LangGraph, que são diferenciais importantes para a role. Se você se sentir confortável em aprofundar esses pontos, vale a pena se candidatar e destacar sua disposição para aprender rapidamente.
+
+---
+
+## 24. Senior Data Scientist and/or Staff Data Scientist - iFood
+
+- Nota de match: 70/100
+- Link: https://www.linkedin.com/jobs/view/4413909258
+- Tipo de contratacao inferido: CLT
+- Score CLT: 0.78
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.78. Vaga de Senior Data Scientist em empresa grande (iFood) sem indicação de CNPJ ou trabalho por projeto, sugerindo contratação típica de empregado.
+- Modelo de trabalho: remoto
+- Localizacao: Brasil
+
+### Pontos fortes
+- Experiência sólida em desenvolvimento end‑to‑end de modelos de Machine Learning e pipelines de dados (ETL/ELT)
+- Fortes habilidades de programação em Python e SQL, além de experiência com AWS (S3, EC2, Lambda, RDS)
+- Capacidade de traduzir requisitos de negócio em soluções técnicas e comunicar resultados de forma clara
+- Experiência com implantação de modelos em produção e práticas de CI/CD
+
+### Gaps
+- Não menciona experiência direta com Databricks, Airflow ou SageMaker
+- Falta de evidência de trabalho específico com experimentação causal ou algoritmos de otimização
+- Nenhuma referência a projetos em ambientes de Big Data (ex.: Spark, Hadoop) ou uso de PySpark
+- Experiência predominantemente em Azure; pouca ênfase em serviços específicos da AWS para ML
+
+### Veredicto
+O candidato tem boa base técnica e experiência em ML end‑to‑end, mas carece de familiaridade com as ferramentas chave da vaga (Databricks, Airflow, SageMaker). Se puder reforçar esses conhecimentos ou projetos relevantes, vale a pena se candidatar.
+
+---
+
+## 25. AIS Engineer - UltraCon Consultoria
+
+- Nota de match: 70/100
+- Link: https://www.linkedin.com/jobs/view/4429865474
+- Tipo de contratacao inferido: CLT
+- Score CLT: 0.6
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.60. Contrato de longo prazo, jornada fixa 9{h} às 18{h}, indicando vínculo empregatício típico
+- Modelo de trabalho: remoto
+- Localizacao: Brasil
+
+### Pontos fortes
+- Experiência comprovada em projetos de IA generativa e desenvolvimento de agentes autônomos baseados em LLMs
+- Capacidade de desenhar e implementar pipelines de dados end‑to‑end e APIs RESTful
+- Forte background em transformar requisitos de negócio em arquiteturas técnicas robustas
+- Experiência com implantação de modelos em ambientes de nuvem (Azure e AWS) e boas práticas de CI/CD
+
+### Gaps
+- Profundo conhecimento e experiência prática com o ecossistema Google Cloud (GCP)
+- Histórico explícito de atuação direta com stakeholders de nível C‑suite
+- Comprovação de fluência avançada em inglês no currículo
+- Experiência específica em ambientes “Day Zero” com pouca estrutura definida
+
+### Veredicto
+O candidato tem forte aderência técnica ao perfil de IA generativa, mas carece de experiência comprovada em GCP e contato direto com executivos C‑suite. Recomendo reforçar esses pontos (certificação GCP, cases de interação com alta direção) antes de aplicar, ou destacar projetos relevantes que evidenciem essas habilidades.
+
+---
+
+## 26. Líder de Aquisição de Dados/ Leader Data Acquisition - EEmovel
+
+- Nota de match: 70/100
+- Link: https://www.linkedin.com/jobs/view/4432493536
+- Tipo de contratacao inferido: CLT
+- Score CLT: 0.9
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.90. Líder responsável por liderar a equipe, receber e distribuir demandas, auxiliar no desenvolvimento e treinamento da equipe, indicando vínculo empregatício.
+- Modelo de trabalho: remoto
+- Localizacao: Brasil
+
+### Pontos fortes
+- Experiência avançada em Python e desenvolvimento de pipelines ETL/ELT
+- Conhecimento sólido em AWS (S3, EC2, Lambda) e implantação de soluções em nuvem
+- Experiência em liderança de equipes técnicas e gestão de projetos de dados
+- Capacidade de analisar, tratar e validar grandes volumes de dados
+
+### Gaps
+- Experiência prática específica em webscraping e captura de dados de sites
+- Histórico comprovado de criação de relatórios de andamento de demandas de aquisição
+- Experiência direta em distribuição e priorização de demandas dentro de uma equipe de aquisição de dados
+- Foco em tecnologias de IA/LLM que não são centrais ao escopo da vaga
+
+### Veredicto
+O candidato tem boa base técnica e liderança, mas precisa demonstrar experiência concreta em webscraping e gestão operacional de equipes de aquisição. Vale se candidatar, destacando projetos de captura de dados e gestão de demandas, e preparando exemplos de como aplicou essas habilidades.
+
+---
+
+## 27. Data Scientist Senior (Machine Learning e LLM) - CI&T
+
+- Nota de match: 68/100
+- Link: https://www.linkedin.com/jobs/view/4432805987
+- Tipo de contratacao inferido: CLT
+- Score CLT: 0.96
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.96. Benefícios como plano de saúde, vale alimentação, PLR, seguro de vida e licença parental indicam vínculo CLT
+- Modelo de trabalho: remoto
+- Localizacao: Brasil
+
+### Pontos fortes
+- Experiência sólida em Python, SQL e desenvolvimento de pipelines de dados end‑to‑end
+- Especialista em agentes de IA autônomos, LLMs e arquiteturas RAG, alinhado ao foco em IA generativa da vaga
+- Implantação de modelos em ambientes Cloud (Azure e AWS) e uso de Docker/CI‑CD, atendendo ao requisito de cloud
+- Liderança técnica e capacidade de transformar problemas de negócio em soluções analíticas
+
+### Gaps
+- Ausência de experiência explícita com Databricks e GCP/Gemini, plataformas citadas na vaga
+- Nenhuma menção a projetos específicos de MDM, Golden Record ou governança de dados cadastrais
+- Falta de experiência declarada com qualidade de dados, KYC ou ambientes regulados
+- Não há indicação de residência na Região Metropolitana de Campinas, requisito de presença presencial
+
+### Veredicto
+O candidato tem forte alinhamento técnico em IA generativa e engenharia de dados, mas carece de experiência nas ferramentas e domínios específicos da vaga. Recomendo reforçar conhecimentos em Databricks, GCP e práticas de MDM antes de aplicar, ou destacar projetos relevantes que ainda não constam no currículo.
+
+---
+
+## 28. Desenvolvedor(a) LLM/Backend (GenAI & Graph Data)- COM INGLÊS - Remoto - Capco
+
+- Nota de match: 68/100
+- Link: https://www.linkedin.com/jobs/view/4338398752
+- Tipo de contratacao inferido: CLT
+- Score CLT: 0.78
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.78. A vaga é apresentada como oportunidade de carreira com recrutador, sem indicar contrato PJ, freelancer ou temporário, sugerindo vínculo empregatício padrão.
+- Modelo de trabalho: remoto
+- Localizacao: São Paulo, SP
+
+### Pontos fortes
+- Experiência comprovada com LLMs, agentes inteligentes e engenharia de prompt
+- Desenvolvimento backend em Python e criação de APIs RESTful
+- Conhecimento em pipelines de dados, integração de APIs e implantação em nuvem (AWS/Azure)
+- Forte background em ciência de dados e machine learning, alinhado ao foco em IA generativa
+
+### Gaps
+- Experiência prática com bancos de dados de grafos (Neo4j, AWS Neptune, etc.)
+- Conhecimento em GraphQL Federation ou frameworks de grafos
+- Inglês avançado não explicitado no currículo
+- Experiência prévia no setor financeiro/seguros
+
+### Veredicto
+O candidato tem boa aderência nas áreas de LLM, backend e engenharia de IA, mas carece de experiência com grafos e comprovação de fluência em inglês. Recomendo reforçar esses pontos (ex.: projetos pessoais com Neo4j) antes de aplicar, mas ainda vale a candidatura.
+
+---
+
+## 29. Cloud Platform Engineer Sr - Itaú Unibanco
+
+- Nota de match: 65/100
+- Link: https://www.linkedin.com/jobs/view/4430206000
+- Tipo de contratacao inferido: CLT
+- Score CLT: 0.97
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.97. Oferta inclui vale‑transporte, plano de saúde, PLR, previdência privada e outros benefícios típicos de contrato CLT
+- Modelo de trabalho: remoto
+- Localizacao: São Paulo, SP
+
+### Pontos fortes
+- Experiência comprovada em IA generativa, LLMs, agentes autônomos e pipelines RAG, alinhado ao core da vaga
+- Implantação de modelos em ambientes cloud (Azure e AWS) e uso de Docker para containerização
+- Conhecimento em pipelines de dados (ETL/ELT) e CI/CD com GitHub Actions, facilitando automação e entrega contínua
+- Formação avançada (Mestrado) e prática de engenharia de software robusta, atendendo ao requisito de confiabilidade e qualidade
+
+### Gaps
+- Não menciona experiência com orquestração Kubernetes (EKS/AKS/GKE) nem service mesh ou ingress controllers
+- Ausência de ferramentas de IaC como Terraform ou CloudFormation
+- Nenhum detalhe sobre gestão de custos (FinOps) ou otimização de workloads GPU/CPU intensivos
+- Falta de experiência explícita em networking avançado (VPC/VNet, Direct Connect, ExpressRoute) e ambientes híbridos/multi‑cloud
+
+### Veredicto
+O candidato tem forte aderência nas áreas de IA e automação, mas carece de competências essenciais de plataforma cloud (Kubernetes, IaC, FinOps e networking avançado). Recomendo focar em adquirir ou evidenciar essas habilidades antes de aplicar, ou destacar projetos relevantes que envolvam essas tecnologias.
+
+---
+
+## 30. Engenheiro de Soluções de IA - DOT Digital Group
+
+- Nota de match: 65/100
+- Link: https://www.linkedin.com/jobs/view/4429881795
+- Tipo de contratacao inferido: CLT
+- Score CLT: 0.95
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.95. Oferece vale alimentação, plano de saúde, auxílio home office e licenças estendidas, benefícios típicos de regime CLT.
+- Modelo de trabalho: remoto
+- Localizacao: Brasil
+
+### Pontos fortes
+- Experiência consolidada em desenvolvimento backend Python e APIs RESTful
+- Domínio de LangChain e arquitetura RAG, além de orquestração de LLMs
+- Conhecimento avançado em implantação de modelos em nuvem (Azure/AWS) e pipelines de dados escaláveis
+- Capacidade de traduzir necessidades de negócio em soluções técnicas e documentação clara
+
+### Gaps
+- Não menciona experiência com Next.js/React, Shadcn/UI, Tailwind para frontend
+- Falta referência ao uso de FastAPI ou TypeScript no backend
+- Não citou experiência com LangGraph, CrewAI ou ferramentas como Cursor, Claude Code
+- Ausência de experiência declarada com Supabase, Firebase ou bancos vetoriais como OpenSearch
+
+### Veredicto
+O candidato tem forte base em IA e backend, mas precisa comprovar habilidades frontend e familiaridade com as ferramentas específicas de IA generativa citadas. Se estiver disposto a aprender rapidamente essas tecnologias, vale a pena se candidatar e destacar sua capacidade de adaptação.
+
+---
+
+## 31. Cientista de Dados Pleno | Inteligência Social - Globo
+
+- Nota de match: 65/100
+- Link: https://www.linkedin.com/jobs/view/4429890342
+- Tipo de contratacao inferido: CLT
+- Score CLT: 0.85
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.85. Vaga apresenta descrição de cargo completo, requisitos e benefícios implícitos de emprego efetivo, típico de contratação CLT.
+- Modelo de trabalho: remoto
+- Localizacao: Rio de Janeiro e Região
+
+### Pontos fortes
+- Experiência avançada com pipelines de dados (ETL/ELT) e integração de múltiplas fontes
+- Domínio de Python, SQL e desenvolvimento de APIs para automação e modelagem
+- Conhecimento sólido em engenharia de prompt e uso de LLMs para geração de insights
+- Experiência com implantação de modelos em nuvem (Azure/AWS) e governança de dados
+
+### Gaps
+- Não menciona Power BI avançado nem experiência comprovada em criação de dashboards interativos
+- Falta evidência de conhecimento específico em métricas de mídia, marketing digital e comportamento do consumidor
+- Não há referência ao uso avançado de Excel (tabelas dinâmicas, fórmulas) para análise de dados
+- Ausência de experiência declarada em storytelling com dados para áreas não técnicas
+
+### Veredicto
+O candidato tem forte base técnica em pipelines, IA e cloud, mas carece das habilidades de visualização e conhecimento de mídia exigidas. Recomendo reforçar experiência com Power BI, Excel e métricas de marketing antes de aplicar.
+
+---
+
+## 32. Senior Machine Learning Engineer - Search Wizards
+
+- Nota de match: 55/100
+- Link: https://www.linkedin.com/jobs/view/4431478241
+- Tipo de contratacao inferido: CLT
+- Score CLT: 0.88
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.88. open-ended contract role; benefits package (healthcare and 401k)
+- Modelo de trabalho: remoto
+- Localizacao: Brasil
+
+### Pontos fortes
+- Experiência sólida em desenvolvimento e implantação de pipelines RAG e agentes autônomos baseados em LLMs, incluindo uso de LangChain e bancos vetoriais.
+- Fortes habilidades em Python, PyTorch, Keras e Scikit‑Learn, além de experiência com APIs REST e implantação em nuvem (AWS/Azure).
+- Histórico de construção de pipelines de dados escaláveis (ETL/ELT) e prática de engenharia de software orientada a produção.
+- Capacidade de liderança técnica e comunicação interfuncional, essencial para projetos cross‑functional.
+
+### Gaps
+- Ausência de experiência comprovada em Computer Vision, VLMs e modelos fundacionais como CLIP, BLIP ou similares.
+- Nenhum diploma de PhD e experiência de 5+ anos especificamente em ML/Computer Vision; possui apenas mestrado.
+- Falta de menção a ferramentas de MLOps avançadas (Weights & Biases, Kubeflow, Ray Tune) e orquestração de LLMs além de LangChain.
+- Nenhuma experiência declarada no domínio de varejo/e‑commerce, visual search ou autenticação de produtos.
+
+### Veredicto
+O candidato tem forte base em LLMs, RAG e engenharia de produção, mas carece de experiência em visão computacional e nas ferramentas MLOps exigidas. Recomendo focar em projetos de CV ou certificações relevantes antes de aplicar, ou buscar vagas que priorizem LLM/RAG sobre visão.
+
+---
+
+## 33. Senior Software Engineer GitHub Governance - Exadel
+
+- Nota de match: 48/100
+- Link: https://www.linkedin.com/jobs/view/4432568580
+- Tipo de contratacao inferido: CLT
+- Score CLT: 0.8
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.80. Os benefícios da Exadel variam de acordo com a localização e o tipo de contrato, indicando vínculo empregatício típico.
+- Modelo de trabalho: remoto
+- Localizacao: Brasil
+
+### Pontos fortes
+- Experiência comprovada com CI/CD usando GitHub Actions.
+- Sólida experiência em automação de pipelines de dados (ETL/ELT) e integração com serviços de nuvem (AWS, Azure).
+- Proficiência em Python e scripting para automação e desenvolvimento de APIs.
+- Conhecimento em conformidade, segurança e documentação técnica (LGPD, ISO 27001) alinhado às práticas de governança e DevSecOps.
+
+### Gaps
+- Experiência direta na administração e suporte ao GitHub Enterprise (configuração de repositórios, permissões, gerenciamento de acesso).
+- Conhecimento prático de Infraestrutura como Código (IaC) com Terraform, CloudFormation ou similares.
+- Experiência na definição e aplicação de padrões de governança de repositórios, estratégias de ramificação (Git Flow, Trunk-Based) e controle de acesso avançado.
+- Familiaridade com uso avançado da API do GitHub, automação de implantação e integração de pipelines CI/CD com ambientes de nuvem (AWS/Azure/GCP) além do básico.
+
+### Veredicto
+Seu perfil mostra forte base em automação e nuvem, mas falta experiência específica em governança do GitHub Enterprise e IaC, que são centrais para a vaga. Vale destacar e aprofundar esses tópicos antes de se candidatar, ou considerar funções mais alinhadas a ML/engenharia de dados. Caso queira buscar essa posição, invista em cursos ou projetos práticos de GitHub Actions avançado, Terraform e políticas de acesso.
+
+---
+
+## 34. Senior Backend Developer | International Project - Reply
+
+- Nota de match: 48/100
+- Link: https://www.linkedin.com/jobs/view/4432587987
+- Tipo de contratacao inferido: CLT
+- Score CLT: 0.65
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=INDEFINIDO confianca=0.65. A descrição não menciona explicitamente CLT, CNPJ, emissão de nota fiscal ou benefícios típicos.
+- Modelo de trabalho: remoto
+- Localizacao: Brasil
+
+### Pontos fortes
+- Experiência com Azure Data Factory e integração cloud
+- Desenvolvimento de APIs RESTful e trabalho com PostgreSQL
+- Conhecimento em Docker e práticas de CI/CD (GitHub Actions)
+- Experiência em pipelines de dados escaláveis (ETL/ELT) e modelagem de soluções de IA
+
+### Gaps
+- Ausência de experiência em C# e .NET Core
+- Não menciona Azure Functions, Azure DevOps ou Kafka
+- Familiaridade limitada com Kubernetes e RabbitMQ
+- Não evidencia experiência com MongoDB ou avançado em Azure Cloud
+- Nível de inglês avançado não confirmado
+
+### Veredicto
+O candidato possui boa base em cloud e APIs, mas falta experiência crítica no stack Microsoft exigido (C#, .NET Core, Azure Functions, DevOps). Vale se candidatar se estiver disposto a upskilling nessas tecnologias e melhorar o inglês técnico.
+
+---
+
+## 35. (Senior) BESS Engineer - Jobgether
 
 - Nota de match: 38/100
-- Link: https://www.linkedin.com/jobs/view/4431709086
-- Tipo de contratacao inferido: CLT
-- Score CLT: 0.3898
-- Score Nao-CLT: 0.3314
-- Margem contratacao: 0.0583
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
+- Link: https://www.linkedin.com/jobs/view/4431465895
+- Tipo de contratacao inferido: INDEFINIDO
+- Score CLT: N/A
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: LLM indisponivel; vaga mantida por padrao (CLT presumido).
 - Modelo de trabalho: remoto
 - Localizacao: Brasil
 
 ### Pontos fortes
-- Experiência com pipelines ETL/ELT e Azure Data Factory
-- Domínio de Python e SQL avançado
-- Práticas de CI/CD usando GitHub Actions
-- Conhecimento em governança de dados e conformidade (LGPD, ISO 27001)
+- Proficiência avançada em Python para análise de dados, processamento de sinais e detecção de anomalias.
+- Experiência sólida com pipelines de dados (ETL/ELT), APIs RESTful e integração cloud (Azure/AWS), alinhado com a necessidade de configurar data pipelines e KPI frameworks.
+- Habilidade comprovada de traduzir insights técnicos complexos em comunicação clara para públicos não‑técnicos, essencial para o papel de interface com clientes.
+- Formação em engenharia (mestrado) e forte base analítica, atendendo ao requisito de graduação em área técnica ou experiência equivalente.
 
 ### Gaps
-- Experiência prática com Microsoft Fabric (Data Factory, Dataflows, OneLake, Lakehouse)
-- Conhecimento e uso de PySpark/Spark Notebooks e arquitetura medallion (bronze/silver/gold)
-- Experiência com Power BI (modelagem semântica, DAX) e Power Platform (Power Apps, Power Automate, Dataverse)
-- Certificações Microsoft relacionadas (DP-700, DP-600, DP-203) ou Databricks
+- Experiência direta na indústria de BESS, incluindo comissionamento, operação inicial e O&M de sistemas de armazenamento de baterias.
+- Conhecimento aprofundado do comportamento de baterias de íon‑lítio (degradação, capacidade fade, resistência interna, estimativa de SoC, desequilíbrios térmicos/tensão).
+- Familiaridade com protocolos de comunicação específicos de BESS (Modbus, IEC‑104, OPC‑UA, SFTP) além de APIs REST.
+- Conhecimento dos mercados de energia dos EUA e estruturas ISO/RTO (CAISO, ERCOT, PJM, MISO, SPP, ISO‑NE, NYISO).
+- Experiência prática em validação de KPI, detecção de anomalias e diagnóstico de desempenho em ativos de armazenamento de energia.
 
 ### Veredicto
-O candidato tem boa base em engenharia de dados e CI/CD, mas carece de experiência específica em Microsoft Fabric e ecossistema Power Platform, que são críticos para a vaga. Se estiver disposto a aprender rapidamente essas tecnologias, pode valer a pena se candidatar, porém deve destacar sua capacidade de adaptação e projetos relevantes em Azure.
+Seu perfil é forte em análise de dados e engenharia de software, mas falta a experiência específica em BESS e conhecimento de baterias que são centrais para a vaga. Vale se candidatar apenas se você estiver disposto a adquirir rapidamente esse domínio técnico ou destacar projetos paralelos relacionados a armazenamento de energia.
 
 ---
 
-## 33. QA Automation, Brazil - CI&T
+## 36. Engenheiro de Software Sênior  (Java, Cloud & IA) - banco BV
 
-- Nota de match: 35/100
-- Link: https://www.linkedin.com/jobs/view/4431220065
+- Nota de match: 30/100
+- Link: https://www.linkedin.com/jobs/view/4432458452
 - Tipo de contratacao inferido: CLT
-- Score CLT: 0.3241
-- Score Nao-CLT: 0.2372
-- Margem contratacao: 0.0868
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
+- Score CLT: 0.95
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.95. Vaga de nível sênior em banco grande sem menção a PJ, freelancer, estágio ou temporário, indicando regime CLT padrão.
+- Modelo de trabalho: remoto
+- Localizacao: São Paulo, Brasil
+
+### Pontos fortes
+- Experiência avançada em IA generativa, RAG e integração de LLMs, alinhada ao requisito de Engenharia de IA
+- Conhecimento sólido em pipelines de dados escaláveis e implantação de serviços em nuvem (Docker, CI/CD)
+- Experiência com arquitetura de APIs RESTful e desenvolvimento de sistemas end‑to‑end
+- Habilidade de liderança técnica e comunicação interfuncional
+
+### Gaps
+- Domínio de Java 11+ e ecossistema Spring (Boot, Data, Cloud, Batch)
+- Experiência prática com GCP (Pub/Sub, Kafka, GKE, Vertex AI) e arquitetura cloud‑native
+- Conhecimento de padrões de sistemas distribuídos (SAGA, CQRS, Event Sourcing) e modelagem C4/DDD
+- Experiência prévia no setor de seguros ou em bancos
+
+### Veredicto
+O candidato tem forte expertise em IA generativa, mas carece das habilidades essenciais em Java, Spring e GCP exigidas para a vaga. Recomendo focar em adquirir experiência prática com Java/Spring e plataformas GCP antes de se{
+
+---
+
+## 37. Engenharia de Segurança Cibernética Sênior| RD Station - Jobgether
+
+- Nota de match: 30/100
+- Link: https://www.linkedin.com/jobs/view/4429816932
+- Tipo de contratacao inferido: CLT
+- Score CLT: 0.95
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.95. Benefícios de saúde e bem‑estar, pacote de remuneração competitivo e modelo de trabalho remoto indicam vínculo empregatício típico CLT.
 - Modelo de trabalho: remoto
 - Localizacao: Brasil
 
 ### Pontos fortes
-- Proficiência em JavaScript
-- Experiência com CI/CD (GitHub Actions)
-- Capacidade analítica e de resolução de problemas complexos
-- Aptidão para aprendizado rápido e autodidatismo
+- Experiência avançada em Python e desenvolvimento de APIs RESTful, úteis para automação e integração de ferramentas de segurança.
+- Conhecimento em governança e conformidade (LGPD, ISO 27001), que demonstra familiaridade com processos de GRC.
+- Experiência com ambientes de nuvem (AWS, Azure) e infraestrutura como código, relevantes para segurança em SaaS/Cloud.
+- Habilidade de comunicação clara e colaboração interfuncional, essencial para interagir com equipes de engenharia e executivos.
 
 ### Gaps
-- Experiência em testes manuais e automatizados
-- Conhecimento específico de Cypress
-- Familiaridade com Azure DevOps
-- Elaboração de planos de teste e documentação de bugs
+- Ausência de experiência prática em gestão de vulnerabilidades, scanners de segurança e ciclo de vida de vulnerabilidades.
+- Nenhuma menção ao uso de frameworks de priorização de risco como CVSS ou modelos de pontuação baseados em exposição.
+- Falta de background em Application Security (AppSec) ou em desenvolvimento seguro de software.
+- Não demonstra experiência com automação de segurança via APIs, orquestração de processos de remediação ou construção de dashboards de segurança.
 
 ### Veredicto
-O candidato possui boa base técnica em programação e automação de pipelines, mas falta experiência direta em QA e nas ferramentas exigidas (Cypress, Azure DevOps). Vale a pena se candidatar apenas se estiver disposto a investir tempo em aprender testes de automação e as ferramentas específicas da vaga.
+O candidato tem forte background em engenharia de dados e cloud, mas carece de experiência direta em segurança e gestão de vulnerabilidades, que são críticos para a vaga. Recomendo focar em adquirir certificações ou projetos de AppSec antes de se candidatar.
 
 ---
 
-## 34. Engenheiro MATLAB - Trabalho Remoto - BairesDev
+## 38. Palantir Foundry Engineer - Remote Work - BairesDev
 
-- Nota de match: 32/100
-- Link: https://www.linkedin.com/jobs/view/4430555143
+- Nota de match: 25/100
+- Link: https://www.linkedin.com/jobs/view/4431437126
 - Tipo de contratacao inferido: CLT
-- Score CLT: 0.3946
-- Score Nao-CLT: 0.3039
-- Margem contratacao: 0.0907
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
+- Score CLT: 0.95
+- Score Nao-CLT: N/A
+- Margem contratacao: N/A
+- Evidencias de contratacao: [LLM] regime=CLT confianca=0.95. A vaga oferece 'Paid parental leaves, vacations, and national holidays' e 'promotions', benefícios típicos de um vínculo empregatício.
 - Modelo de trabalho: remoto
-- Localizacao: Cuiabá, MT
+- Localizacao: São Paulo, Brasil
 
 ### Pontos fortes
-- Experiência sólida em desenvolvimento de algoritmos e análise de dados
-- Conhecimento avançado em machine learning e métodos numéricos
-- Práticas de engenharia de software e otimização de performance
-- Inglês avançado e experiência em trabalho remoto colaborativo
+- Experiência comprovada na construção de pipelines ETL/ELT escaláveis usando Azure Data Factory, AWS e Docker.
+- Proficiência em Python, SQL e desenvolvimento de APIs REST para manipulação e integração de dados.
+- Forte capacidade analítica e de resolução de problemas, alinhada ao mindset exigido para a função.
+- Experiência em CI/CD, CD (GitHub Actions) e práticas de engenharia de software que suportam manutenção e eficiência de arquiteturas de dados.
 
 ### Gaps
-- Nenhuma experiência declarada com MATLAB, Simulink ou toolboxes específicos
-- Ausência de histórico comprovado de 3+ anos desenvolvendo em ambiente MATLAB
-- Falta de experiência explícita em processamento de sinais ou sistemas de controle
-- Não menciona integração de soluções MATLAB com outras plataformas
+- Experiência comprovada com Palantir Foundry (obrigatório).
+- Especialidade em Palantir Foundry Pipeline Builder (obrigatório).
+- Experiência com Quiver para visualização de dados.
+- Proficiência com a ferramenta Ontology dentro do Palantir Foundry.
+- Conhecimento sólido da arquitetura do Palantir Foundry.
+- Nível avançado de inglês não explicitamente mencionado.
 
 ### Veredicto
-O candidato tem forte background em ciência de dados e desenvolvimento de algoritmos, mas carece da experiência essencial em MATLAB requerida pela vaga. Recomendo focar em adquirir competências em MATLAB/Simulink antes de se candidatar, ou buscar oportunidades onde suas habilidades em ML e engenharia de dados sejam o foco principal.
-
----
-
-## 35. Engenheiro Golang - Trabalho Remoto - BairesDev
-
-- Nota de match: 32/100
-- Link: https://www.linkedin.com/jobs/view/4430802251
-- Tipo de contratacao inferido: CLT
-- Score CLT: 0.3946
-- Score Nao-CLT: 0.3039
-- Margem contratacao: 0.0907
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
-- Modelo de trabalho: remoto
-- Localizacao: Florianópolis, SC
-
-### Pontos fortes
-- Experiência comprovada em desenvolvimento de APIs RESTful e pipelines de dados escaláveis
-- Conhecimento sólido em ambientes de nuvem (AWS, Docker) e práticas de CI/CD
-- Forte background em boas práticas de engenharia de software, testes automatizados e versionamento
-- Capacidade de trabalhar de forma autônoma e traduzir requisitos de negócio em soluções técnicas
-
-### Gaps
-- Nenhuma experiência declarada com a linguagem Golang
-- Falta de experiência explícita em microserviços desenvolvidos em Go
-- Ausência de experiência front‑end ou desenvolvimento de UI
-- Não menciona nível avançado de inglês nem familiaridade com padrões SOLID aplicados a Go
-
-### Veredicto
-O candidato tem um perfil sólido em engenharia de dados e cloud, mas carece da expertise central em Golang requerida. Recomendo focar em adquirir experiência prática com Go e microserviços antes de se candidatar a esta vaga.
-
----
-
-## 36. MATLAB Engineer - Remote Work - BairesDev
-
-- Nota de match: 30/100
-- Link: https://www.linkedin.com/jobs/view/4430542987
-- Tipo de contratacao inferido: CLT
-- Score CLT: 0.3562
-- Score Nao-CLT: 0.3052
-- Margem contratacao: 0.051
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
-- Modelo de trabalho: remoto
-- Localizacao: Campo Grande, SP
-
-### Pontos fortes
-- Experiência sólida em desenvolvimento de algoritmos e análise de dados
-- Conhecimento avançado em boas práticas de engenharia de software e otimização de código
-- Experiência com integração de sistemas e desenvolvimento de APIs RESTful
-- Histórico de trabalho remoto e colaboração em equipes multidisciplinares
-
-### Gaps
-- Não possui experiência comprovada em desenvolvimento com MATLAB/Simulink
-- Falta de 3+ anos de atuação específica em MATLAB engineering
-- Ausência de conhecimento explícito em toolboxes de MATLAB, processamento de sinais ou controle de sistemas
-- Não menciona nível avançado de inglês
-
-### Veredicto
-O candidato tem forte background em ciência de dados e engenharia de software, mas carece das habilidades essenciais em MATLAB e Simulink exigidas pela vaga. Recomendo focar em adquirir experiência prática com MATLAB antes de se candidatar, ou buscar oportunidades mais alinhadas ao seu stack atual.
-
----
-
-## 37. Pesquisador Doutor - Indústria Automotiva - Automação Inteligente e Dados | Doutores Inovando IEL PR - IEL Paraná
-
-- Nota de match: 30/100
-- Link: https://www.linkedin.com/jobs/view/4429406242
-- Tipo de contratacao inferido: CLT
-- Score CLT: 0.3772
-- Score Nao-CLT: 0.3081
-- Margem contratacao: 0.0692
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
-- Modelo de trabalho: hibrido
-- Localizacao: São José dos Pinhais, PR
-
-### Pontos fortes
-- Experiência avançada em desenvolvimento de agentes de IA e arquiteturas RAG, alinhada ao foco em IA generativa da vaga
-- Sólida prática em pipelines de dados end‑to‑end (ETL/ELT) e implantação em nuvem (Azure/AWS), útil para a criação de arquitetura de dados corporativa
-- Conhecimento em modelagem, dashboards e indicadores para apoio à decisão, atendendo à demanda por monitoramento de processos
-- Habilidades de liderança, comunicação e gestão de projetos de ciência de dados, essenciais para conduzir iniciativas multidisciplinares
-
-### Gaps
-- Não possui doutorado concluído (requisito obrigatório)
-- Não menciona experiência com Microsoft Power Platform (Power Automate, Power BI, Power Apps)
-- Falta de familiaridade declarada com Palantir, RPA, SAP ou governança de dados específica
-- Ausência de experiência explícita em mapeamento de processos administrativos e automação de documentos corporativos
-
-### Veredicto
-Apesar de forte expertise em IA e engenharia de dados, a ausência de doutorado e de conhecimentos específicos nas ferramentas citadas representa um gap significativo. Recomendo focar em obter ou evidenciar experiência com Power Platform e processos de automação antes de se candidatar.
-
----
-
-## 38. DYNAMICS ENGINEER (PROPULSION SYSTEMS VIRTUAL ENGINEERING) - 34875 - Bosch Brasil
-
-- Nota de match: 15/100
-- Link: https://www.linkedin.com/jobs/view/4430529795
-- Tipo de contratacao inferido: CLT
-- Score CLT: 0.3768
-- Score Nao-CLT: 0.2813
-- Margem contratacao: 0.0955
-- Evidencias de contratacao: Descricao semanticamente mais proxima dos prototipos CLT.
-- Modelo de trabalho: remoto
-- Localizacao: Campinas, SP
-
-### Pontos fortes
-- Sólida experiência em programação Python e desenvolvimento de pipelines de dados e APIs RESTful
-- Forte capacidade analítica e de resolução de problemas complexos, com background em pesquisa científica
-- Experiência comprovada em projetos multidisciplinares e comunicação técnica clara
-- Conhecimento avançado em cloud (Azure/AWS) e boas práticas de engenharia de software
-
-### Gaps
-- Formação em Engenharia Mecânica/Aeroespacial ou área correlata (o candidato tem formação em Data Science)
-- Experiência prática com simulações dinâmicas, MBD e FE para sistemas de propulsão
-- Domínio de ferramentas específicas da vaga (ANSA/META, Nastran, Abaqus, Actran, AVL Excite, Contecs Simdrive, Siemens NX, Teamcenter)
-- Conhecimento em dinâmica de veículos, NVH, transmissão, drivelines e arquitetura híbrida
-
-### Veredicto
-O perfil do candidato está muito distante dos requisitos técnicos da vaga de Dynamics Engineer. A menos que ele adquira experiência em engenharia mecânica e simulação de sistemas de propulsão, a candidatura tem baixa probabilidade de sucesso.
+O candidato possui um bom background em engenharia de dados e análise, mas falta experiência essencial na plataforma Palantir Foundry, que é requisito obrigatório para a vaga. Sem esse conhecimento específico, a aderência é baixa; vale considerar apenas se houver disposição para adquirir rapidamente expertise em Foundry.
 
 ---

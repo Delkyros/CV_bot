@@ -14,81 +14,81 @@ def table_text(value):
     return str(value).replace("|", "\\|").replace("\n", " ")
 
 
-def generate_report(vagas_analisadas, output_path="vagas_filtradas.md"):
+def generate_report(analyzed_jobs, output_path="vagas_filtradas.md"):
     """
-    Gera um relatorio consolidado em Markdown, ordenado por melhor match.
+    Generate a consolidated Markdown report, sorted by best match.
     """
-    logger.info(f"Gerando relatorio Markdown para {len(vagas_analisadas)} vagas analisadas...")
+    logger.info(f"Generating Markdown report for {len(analyzed_jobs)} analyzed jobs...")
 
-    if not vagas_analisadas:
-        logger.warning("Nenhuma vaga analisada com sucesso para gerar o relatorio.")
+    if not analyzed_jobs:
+        logger.warning("No successfully analyzed job to generate the report.")
         return False
 
-    vagas_ordenadas = sorted(
-        vagas_analisadas,
-        key=lambda vaga: int(vaga.get("nota_match", 0) or 0),
+    sorted_jobs = sorted(
+        analyzed_jobs,
+        key=lambda job: int(job.get("match_score", 0) or 0),
         reverse=True
     )
 
-    linhas = [
-        "# Vagas filtradas",
+    lines = [
+        "# Filtered jobs",
         "",
-        f"Gerado em: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-        f"Total de vagas novas analisadas: {len(vagas_ordenadas)}",
+        f"Generated at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        f"Total new jobs analyzed: {len(sorted_jobs)}",
         "",
-        "| Nota | Score CLT | Score Nao-CLT | Margem | Vaga | Empresa | Contratacao | Modelo | Localizacao |",
+        "| Score | Score CLT | Score Non-CLT | Margin | Job | Company | Contract | Model | Location |",
         "| ---: | ---: | ---: | ---: | --- | --- | --- | --- | --- |",
     ]
 
-    for vaga in vagas_ordenadas:
-        nota = vaga.get("nota_match", 0)
-        titulo = vaga.get("titulo_vaga", "N/A")
-        empresa = vaga.get("empresa", "N/A")
-        link = vaga.get("link_vaga", "")
-        titulo_link = f"[{table_text(titulo)}]({link})" if link else table_text(titulo)
-        linhas.append(
-            "| {nota} | {score_clt} | {score_nao_clt} | {margem} | {titulo} | {empresa} | {contrato} | {modelo} | {localizacao} |".format(
-                nota=nota,
-                score_clt=table_text(vaga.get("score_clt", "N/A")),
-                score_nao_clt=table_text(vaga.get("score_nao_clt", "N/A")),
-                margem=table_text(vaga.get("margem_contratacao", "N/A")),
-                titulo=titulo_link,
-                empresa=table_text(empresa),
-                contrato=table_text(vaga.get("tipo_contratacao_inferido", vaga.get("tipo_contratacao", "N/A"))),
-                modelo=table_text(vaga.get("modelo_trabalho", "N/A")),
-                localizacao=table_text(vaga.get("localizacao", "N/A")),
+    for job in sorted_jobs:
+        score = job.get("match_score", 0)
+        title = job.get("job_title", "N/A")
+        company = job.get("company", "N/A")
+        link = job.get("job_link", "")
+        title_link = f"[{table_text(title)}]({link})" if link else table_text(title)
+        lines.append(
+            "| {score} | {score_clt} | {score_non_clt} | {margin} | {title} | {company} | {contract} | {model} | {location} |".format(
+                score=score,
+                score_clt=table_text(job.get("score_clt", "N/A")),
+                score_non_clt=table_text(job.get("score_non_clt", "N/A")),
+                margin=table_text(job.get("contract_margin", "N/A")),
+                title=title_link,
+                company=table_text(company),
+                contract=table_text(job.get("inferred_contract_type", job.get("contract_type", "N/A"))),
+                model=table_text(job.get("workplace_type", "N/A")),
+                location=table_text(job.get("location", "N/A")),
             )
         )
 
-    linhas.append("")
-    linhas.append("---")
-    linhas.append("")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
 
-    for idx, vaga in enumerate(vagas_ordenadas, start=1):
-        titulo = vaga.get("titulo_vaga", "N/A")
-        empresa = vaga.get("empresa", "N/A")
-        link = vaga.get("link_vaga", "")
-        linhas.extend([
-            f"## {idx}. {titulo} - {empresa}",
+    for idx, job in enumerate(sorted_jobs, start=1):
+        title = job.get("job_title", "N/A")
+        company = job.get("company", "N/A")
+        link = job.get("job_link", "")
+        lines.extend([
+            f"## {idx}. {title} - {company}",
             "",
-            f"- Nota de match: {vaga.get('nota_match', 0)}/100",
+            f"- Match score: {job.get('match_score', 0)}/100",
             f"- Link: {link or 'N/A'}",
-            f"- Tipo de contratacao inferido: {vaga.get('tipo_contratacao_inferido', vaga.get('tipo_contratacao', 'N/A'))}",
-            f"- Score CLT: {vaga.get('score_clt', 'N/A')}",
-            f"- Score Nao-CLT: {vaga.get('score_nao_clt', 'N/A')}",
-            f"- Margem contratacao: {vaga.get('margem_contratacao', 'N/A')}",
-            f"- Evidencias de contratacao: {vaga.get('evidencias_contratacao', vaga.get('inferencia_contratacao', 'N/A'))}",
-            f"- Modelo de trabalho: {vaga.get('modelo_trabalho', 'N/A')}",
-            f"- Localizacao: {vaga.get('localizacao', 'N/A')}",
+            f"- Inferred contract type: {job.get('inferred_contract_type', job.get('contract_type', 'N/A'))}",
+            f"- Score CLT: {job.get('score_clt', 'N/A')}",
+            f"- Score Non-CLT: {job.get('score_non_clt', 'N/A')}",
+            f"- Contract margin: {job.get('contract_margin', 'N/A')}",
+            f"- Contract evidence: {job.get('contract_evidence', job.get('contract_inference', 'N/A'))}",
+            f"- Workplace type: {job.get('workplace_type', 'N/A')}",
+            f"- Location: {job.get('location', 'N/A')}",
             "",
-            "### Pontos fortes",
-            format_list(vaga.get("pontos_fortes", [])),
+            "### Strengths",
+            format_list(job.get("strengths", [])),
             "",
             "### Gaps",
-            format_list(vaga.get("gaps", [])),
+            format_list(job.get("gaps", [])),
             "",
-            "### Veredicto",
-            vaga.get("veredicto", "N/A"),
+            "### Verdict",
+            job.get("verdict", "N/A"),
             "",
             "---",
             "",
@@ -96,9 +96,9 @@ def generate_report(vagas_analisadas, output_path="vagas_filtradas.md"):
 
     try:
         with open(output_path, "w", encoding="utf-8") as f:
-            f.write("\n".join(linhas).strip() + "\n")
-        logger.info(f"Sucesso! Relatorio salvo em '{output_path}'.")
+            f.write("\n".join(lines).strip() + "\n")
+        logger.info(f"Success! Report saved to '{output_path}'.")
         return True
     except Exception:
-        logger.exception("Falha ao gerar relatorio Markdown")
+        logger.exception("Failed to generate the Markdown report")
         return False

@@ -18,13 +18,13 @@ def normalize_text(text):
 def explicit_negative_evidence(text):
     normalized = normalize_text(text)
     patterns = [
-        ("PJ/pessoa juridica", r"\b(pj|pessoa juridica)\b"),
-        ("Prestador de servicos", r"prestador(?:a)? de servicos|prestacao de servicos"),
-        ("Nota fiscal", r"\b(nf|nota fiscal)\b|emitir nota"),
-        ("CNPJ/empresa aberta", r"\bcnpj\b|empresa aberta"),
-        ("Freelancer/autonomo/cooperado", r"freelancer|freela|autonomo|cooperado"),
-        ("Estagio/temporario", r"estagio|temporario"),
-        ("Valor hora/budget/faturamento", r"valor\s*/?\s*hora|valor hora|budget|faturamento"),
+        ("PJ/legal entity", r"\b(pj|pessoa juridica)\b"),
+        ("Service provider", r"prestador(?:a)? de servicos|prestacao de servicos"),
+        ("Invoice", r"\b(nf|nota fiscal)\b|emitir nota"),
+        ("CNPJ/registered company", r"\bcnpj\b|empresa aberta"),
+        ("Freelancer/self-employed/cooperative", r"freelancer|freela|autonomo|cooperado"),
+        ("Internship/temporary", r"estagio|temporario"),
+        ("Hourly rate/budget/billing", r"valor\s*/?\s*hora|valor hora|budget|faturamento"),
     ]
     return [label for label, pattern in patterns if re.search(pattern, normalized)]
 
@@ -42,10 +42,12 @@ class ContractClassifier:
             from sentence_transformers import SentenceTransformer
         except ImportError as exc:
             raise RuntimeError(
-                "Dependencia ausente: instale sentence-transformers para usar o "
-                "classificador local de contratacao."
+                "Missing dependency: install sentence-transformers to use the "
+                "local contract classifier."
             ) from exc
 
+        # NOTE: config keys come from config/contract_examples.yaml and are kept
+        # in Portuguese on purpose (that file is not translated).
         self.model_name = config.get(
             "modelo_embedding",
             "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
@@ -57,9 +59,9 @@ class ContractClassifier:
         self.non_clt_examples = config.get("prototipos_nao_clt", [])
 
         if not self.clt_examples or not self.non_clt_examples:
-            raise ValueError("Configure prototipos_clt e prototipos_nao_clt em config/contract_examples.yaml.")
+            raise ValueError("Set prototipos_clt and prototipos_nao_clt in config/contract_examples.yaml.")
 
-        logger.info(f"Carregando modelo local de embeddings: {self.model_name}")
+        logger.info(f"Loading local embedding model: {self.model_name}")
         self.model = SentenceTransformer(self.model_name)
         self.clt_embeddings = self._encode(self.clt_examples)
         self.non_clt_embeddings = self._encode(self.non_clt_examples)
@@ -75,7 +77,9 @@ class ContractClassifier:
             embeddings = embeddings.reshape(1, -1)
         return embeddings
 
-    def classify(self, description_text):
+    def classify(self, description_text, title=None, company=None):
+        # title/company are accepted for compatibility with the LLM classifier
+        # interface; the embedding model uses only the description.
         description = description_text or ""
         negative_evidence = explicit_negative_evidence(description)
         job_embedding = self._encode([description])[0]
@@ -87,30 +91,30 @@ class ContractClassifier:
         margin = score_clt - score_non_clt
 
         if negative_evidence and score_non_clt >= score_clt - 0.02:
-            inferred = "NAO_CLT"
+            inferred = "NON_CLT"
             accepted = False
-            reason = "Sinais explicitos contra CLT: " + ", ".join(negative_evidence)
+            reason = "Explicit signals against CLT: " + ", ".join(negative_evidence)
         elif score_clt >= self.min_clt_score and margin >= self.min_margin:
             inferred = "CLT"
             accepted = True
-            reason = "Descricao semanticamente mais proxima dos prototipos CLT."
+            reason = "Description semantically closer to the CLT prototypes."
         elif score_non_clt >= score_clt:
-            inferred = "NAO_CLT"
+            inferred = "NON_CLT"
             accepted = False
-            reason = "Descricao semanticamente mais proxima dos prototipos nao-CLT."
+            reason = "Description semantically closer to the non-CLT prototypes."
         else:
-            inferred = "AMBIGUA"
+            inferred = "AMBIGUOUS"
             accepted = False
-            reason = "Margem insuficiente para confirmar CLT; vaga descartada por ambiguidade."
+            reason = "Insufficient margin to confirm CLT; job discarded due to ambiguity."
 
-        if negative_evidence and inferred != "NAO_CLT":
-            reason += " Sinais textuais observados: " + ", ".join(negative_evidence)
+        if negative_evidence and inferred != "NON_CLT":
+            reason += " Observed textual signals: " + ", ".join(negative_evidence)
 
         return {
-            "tipo_contratacao_inferido": inferred,
-            "aceita": accepted,
+            "inferred_contract_type": inferred,
+            "accepted": accepted,
             "score_clt": round(score_clt, 4),
-            "score_nao_clt": round(score_non_clt, 4),
-            "margem_contratacao": round(margin, 4),
-            "evidencias_contratacao": reason,
+            "score_non_clt": round(score_non_clt, 4),
+            "contract_margin": round(margin, 4),
+            "contract_evidence": reason,
         }

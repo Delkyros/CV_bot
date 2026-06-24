@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
-# Lista de User-Agents realistas para alternar nas requisições
+# List of realistic User-Agents to rotate across requests
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -19,7 +19,7 @@ USER_AGENTS = [
 ]
 
 def get_headers():
-    """Gera cabeçalhos HTTP aleatórios para simular um navegador real."""
+    """Generate random HTTP headers to mimic a real browser."""
     return {
         "User-Agent": random.choice(USER_AGENTS),
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
@@ -30,19 +30,19 @@ def get_headers():
     }
 
 
-# Parametros de retentativa para contornar bloqueios temporarios (429) sem
-# recorrer a paralelismo. Retentativa serial, aguardando RETRY_WAIT segundos.
+# Retry parameters to work around temporary blocks (429) without resorting to
+# parallelism. Serial retry, waiting RETRY_WAIT seconds.
 MAX_RETRIES = 5
 RETRY_WAIT = 5.0
 
 
 def request_with_retry(url, headers=None, timeout=15, max_retries=MAX_RETRIES, retry_wait=RETRY_WAIT):
     """
-    Faz GET com retentativa em caso de 429 (Too Many Requests) ou erro de rede,
-    aguardando retry_wait segundos entre cada tentativa (sem paralelismo).
+    Perform a GET with retry on a 429 (Too Many Requests) or network error,
+    waiting retry_wait seconds between each attempt (no parallelism).
 
-    Retorna o objeto Response (mesmo com status != 200, p. ex. ainda 429 apos
-    esgotar as tentativas) ou None se todas as tentativas falharem por rede.
+    Returns the Response object (even with status != 200, e.g. still 429 after
+    exhausting the attempts) or None if all attempts fail due to network.
     """
     headers = headers or get_headers()
     last_response = None
@@ -54,20 +54,20 @@ def request_with_retry(url, headers=None, timeout=15, max_retries=MAX_RETRIES, r
 
             if response.status_code == 429:
                 if attempt < max_retries:
-                    logger.warning(f"429 (Too Many Requests). Tentativa {attempt}/{max_retries}. Aguardando {retry_wait:.0f}s e retentando...")
+                    logger.warning(f"429 (Too Many Requests). Attempt {attempt}/{max_retries}. Waiting {retry_wait:.0f}s and retrying...")
                     time.sleep(retry_wait)
                     continue
-                logger.warning(f"429 persistente apos {max_retries} tentativas. Desistindo desta requisicao.")
+                logger.warning(f"Persistent 429 after {max_retries} attempts. Giving up on this request.")
                 return response
 
             return response
 
         except requests.RequestException as exc:
             if attempt < max_retries:
-                logger.warning(f"Falha de rede (tentativa {attempt}/{max_retries}): {exc}. Aguardando {retry_wait:.0f}s e retentando...")
+                logger.warning(f"Network failure (attempt {attempt}/{max_retries}): {exc}. Waiting {retry_wait:.0f}s and retrying...")
                 time.sleep(retry_wait)
                 continue
-            logger.error(f"Falha de rede apos {max_retries} tentativas: {exc}")
+            logger.error(f"Network failure after {max_retries} attempts: {exc}")
 
     return last_response
 
@@ -82,14 +82,15 @@ def normalize_text(text):
 
 def workplace_matches(location_text, description_text, workplace_type, search_location):
     """
-    Confirma os modelos aceitos: remoto no Brasil ou hibrido em Sao Jose-SC
-    ou Florianopolis-SC.
+    Confirm the accepted workplace models: remote in Brazil or hybrid in Sao
+    Jose-SC or Florianopolis-SC.
 
-    O modelo de trabalho (remoto/hibrido) ja e filtrado pelo parametro f_WT na
-    URL de busca do LinkedIn, entao aqui validamos apenas a LOCALIZACAO real da
-    vaga (que o LinkedIn nao restringe de forma confiavel pelo parametro
-    location). Exigir a palavra literal "hibrido"/"remoto" no texto descartava
-    vagas validas, e aceitar "brasil" vindo da busca deixava passar vagas dos EUA.
+    The workplace type (remote/hybrid) is already filtered by the f_WT parameter
+    in the LinkedIn search URL, so here we only validate the job's actual
+    LOCATION (which LinkedIn does not reliably restrict via the location
+    parameter). Requiring the literal word "hibrido"/"remoto" in the text
+    discarded valid jobs, and accepting "brasil" from the search let US jobs slip
+    through.
     """
     if not workplace_type:
         return True
@@ -98,9 +99,10 @@ def workplace_matches(location_text, description_text, workplace_type, search_lo
     location_norm = normalize_text(location_text)
 
     if normalized_workplace == "remoto":
-        # O pais ja e garantido pelo geoId na URL de busca (Brasil). Aqui apenas
-        # rejeitamos vagas cuja localizacao mencione explicitamente outro pais,
-        # sem exigir a palavra "brasil" (cidades como "Campinas, SP" nao a contem).
+        # The country is already guaranteed by the geoId in the search URL
+        # (Brazil). Here we only reject jobs whose location explicitly mentions
+        # another country, without requiring the word "brasil" (cities like
+        # "Campinas, SP" do not contain it).
         foreign = [
             "estados unidos", "united states", "canada", "espanha", "spain",
             "portugal", "india", "mexico", "argentina", "reino unido",
@@ -109,7 +111,7 @@ def workplace_matches(location_text, description_text, workplace_type, search_lo
         return not any(token in location_norm for token in foreign)
 
     if normalized_workplace in ("hibrido", "hybrid"):
-        # Mantem apenas vagas hibridas em Sao Jose-SC / Florianopolis-SC.
+        # Keep only hybrid jobs in Sao Jose-SC / Florianopolis-SC.
         return any(
             token in location_norm
             for token in ["sao jose", "florianopolis", "floripa", "santa catarina"]
@@ -119,16 +121,16 @@ def workplace_matches(location_text, description_text, workplace_type, search_lo
 
 def job_matches_filters(job_info, contract_type, workplace_type, search_location):
     return workplace_matches(
-        job_info.get("localizacao", ""),
-        job_info.get("descricao_completa", ""),
+        job_info.get("location", ""),
+        job_info.get("full_description", ""),
         workplace_type,
         search_location,
     )
 
 def linkedin_time_filter(period):
     """
-    Mapeia um periodo amigavel para o parametro f_TPR (time posted range) do
-    LinkedIn, em segundos. Retorna None quando nao ha filtro de tempo.
+    Map a friendly period to LinkedIn's f_TPR (time posted range) parameter, in
+    seconds. Returns None when there is no time filter.
     """
     normalized = normalize_text(period)
     mapping = {
@@ -158,60 +160,62 @@ def linkedin_workplace_filter(workplace_type):
 
 def extract_job_id(url, card_element=None):
     """
-    Tenta extrair o ID da vaga do link ou do próprio elemento do card HTML.
+    Try to extract the job ID from the link or from the HTML card element itself.
     """
-    # Método 1: Atributo data-entity-urn do card
+    # Method 1: data-entity-urn attribute of the card
     if card_element:
         urn = card_element.get("data-entity-urn")
         if urn and "jobPosting:" in urn:
             match = re.search(r"jobPosting:(\d+)", urn)
             if match:
                 return match.group(1)
-                
-    # Método 2: URL de visualização de vaga (/view/ID ou /jobs/view/ID)
+
+    # Method 2: job view URL (/view/ID or /jobs/view/ID)
     match = re.search(r"/view/(\d+)", url)
     if match:
         return match.group(1)
-        
+
     match = re.search(r"currentJobId=(\d+)", url)
     if match:
         return match.group(1)
-        
-    # Método 3: Tenta pegar o último grupo de números após o último hífen ou barra antes dos parâmetros
+
+    # Method 3: try to grab the last group of digits after the last hyphen or
+    # slash before the parameters
     clean_url = url.split("?")[0]
     match = re.search(r"-(\d+)(?:/|$)", clean_url)
     if match:
         return match.group(1)
-        
+
     return None
 
 def fetch_job_description(job_id):
     """
-    Busca a descrição detalhada da vaga no endpoint público do LinkedIn Guest API.
+    Fetch the detailed job description from the public LinkedIn Guest API endpoint.
     """
     url = f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
     headers = get_headers()
 
     try:
-        # Pausa amigável antes de buscar a descrição para evitar 429
+        # Friendly pause before fetching the description to avoid 429
         time.sleep(random.uniform(1.0, 2.5))
 
         response = request_with_retry(url, headers=headers, timeout=15)
         if response is None or response.status_code != 200:
-            status = response.status_code if response is not None else "sem resposta"
-            logger.warning(f"Falha ao obter detalhes da vaga ID {job_id}. Status: {status}")
-            return "Descrição não disponível devido a erro de conexão pública."
-            
+            status = response.status_code if response is not None else "no response"
+            logger.warning(f"Failed to get details for job ID {job_id}. Status: {status}")
+            return "Description unavailable due to a public connection error."
+
         soup = BeautifulSoup(response.content, "html.parser")
-        
-        # Encontra o container com a descrição da vaga
-        # O endpoint /jobs-guest/jobs/api/jobPosting/ retorna um HTML compacto com a descrição
+
+        # Find the container with the job description
+        # The /jobs-guest/jobs/api/jobPosting/ endpoint returns compact HTML with
+        # the description
         desc_element = soup.find(class_="show-more-less-html__markup")
         if not desc_element:
             desc_element = soup.find(class_="description__text")
-            
+
         if desc_element:
-            # Mantém alguma quebra de linha de parágrafo e remove tags HTML desnecessárias
+            # Keep some paragraph line breaks and remove unnecessary HTML tags
             for br in desc_element.find_all("br"):
                 br.replace_with("\n")
             for p in desc_element.find_all("p"):
@@ -219,22 +223,22 @@ def fetch_job_description(job_id):
             for li in desc_element.find_all("li"):
                 li.insert(0, "- ")
                 li.append("\n")
-                
+
             text = desc_element.get_text()
-            # Remove espaçamentos extras mantendo quebras de linha limpas
+            # Remove extra whitespace while keeping clean line breaks
             text = re.sub(r'\n\s*\n', '\n\n', text).strip()
             return text
-            
-        # Fallback: Se não achar as classes conhecidas, pega o texto do body todo
+
+        # Fallback: if the known classes are not found, take the whole body text
         body_text = soup.get_text().strip()
         if len(body_text) > 100:
             return body_text
-            
-        return "Descrição indisponível no HTML retornado."
-        
+
+        return "Description unavailable in the returned HTML."
+
     except Exception:
-        logger.exception(f"Falha ao buscar descrição da vaga ID {job_id}")
-        return "Erro ao extrair descrição da vaga."
+        logger.exception(f"Failed to fetch description for job ID {job_id}")
+        return "Error extracting the job description."
 
 def scrape_linkedin_jobs(
     keyword,
@@ -249,15 +253,15 @@ def scrape_linkedin_jobs(
     max_pages=10,
 ):
     """
-    Busca vagas no LinkedIn utilizando o Guest API de busca pública.
-    Retorna uma lista de dicionários com as informações coletadas.
+    Search LinkedIn jobs using the public search Guest API.
+    Returns a list of dictionaries with the collected information.
 
-    O parametro geo_id (geoId do LinkedIn) e o que realmente restringe o pais da
-    busca; o parametro de texto `location` sozinho nao e respeitado de forma
-    confiavel pela Guest API (retorna vagas dos EUA mesmo com location=Brasil).
+    The geo_id parameter (LinkedIn geoId) is what actually restricts the search
+    country; the `location` text parameter alone is not reliably honored by the
+    Guest API (it returns US jobs even with location=Brasil).
     """
     search_keyword = keyword
-    logger.info(f"Iniciando busca pública para: '{search_keyword}' em '{location}' (Modelo: {workplace_type or 'qualquer'} | Limite: {max_jobs} vagas)")
+    logger.info(f"Starting public search for: '{search_keyword}' in '{location}' (Model: {workplace_type or 'any'} | Limit: {max_jobs} jobs)")
 
     jobs = []
     start = 0
@@ -265,7 +269,7 @@ def scrape_linkedin_jobs(
     headers = get_headers()
     excluded_links = set(excluded_links or [])
 
-    # URL de busca Guest do LinkedIn
+    # LinkedIn Guest search URL
     encoded_keyword = urllib.parse.quote(search_keyword)
     encoded_location = urllib.parse.quote(location)
     workplace_filter = linkedin_workplace_filter(workplace_type)
@@ -283,113 +287,114 @@ def scrape_linkedin_jobs(
 
         try:
             time.sleep(random.uniform(1.5, 3.0))
-            # Retentativa serial em 429/erro de rede (sem paralelismo).
+            # Serial retry on 429/network error (no parallelism).
             response = request_with_retry(url, headers=headers, timeout=15)
 
             if response is None:
-                logger.error("Falha na busca apos multiplas tentativas. Encerrando este termo.")
+                logger.error("Search failed after multiple attempts. Ending this term.")
                 break
 
             if response.status_code != 200:
-                logger.error(f"Falha na busca. Status code: {response.status_code}")
+                logger.error(f"Search failed. Status code: {response.status_code}")
                 break
 
             soup = BeautifulSoup(response.content, "html.parser")
-            # Seleciona apenas os contêineres de vaga de nível superior. A âncora ^...$
-            # evita casar elementos-filhos como "base-card__full-link" ou
-            # "base-search-card__title", que antes inflavam a lista com ~5 fantasmas
-            # por vaga e geravam avisos de "ID não encontrado" em massa.
+            # Select only the top-level job containers. The ^...$ anchor avoids
+            # matching child elements like "base-card__full-link" or
+            # "base-search-card__title", which used to inflate the list with ~5
+            # ghosts per job and generated mass "ID not found" warnings.
             cards = soup.find_all(class_=re.compile(r"^(base-card|base-search-card)$"))
-            
+
             if not cards:
-                logger.info("Nenhuma vaga encontrada nesta página de busca ou fim dos resultados.")
+                logger.info("No jobs found on this search page or end of results.")
                 break
 
-            logger.info(f"Encontrados {len(cards)} cards na página atual. Processando...")
-            
+            logger.info(f"Found {len(cards)} cards on the current page. Processing...")
+
             for card in cards:
                 if len(jobs) >= max_jobs:
                     break
-                    
+
                 try:
-                    # Título da vaga
+                    # Job title
                     title_elem = card.find(class_=re.compile(r"base-search-card__title|job-search-card__title"))
-                    title = title_elem.get_text().strip() if title_elem else "Título não identificado"
-                    
-                    # Empresa
+                    title = title_elem.get_text().strip() if title_elem else "Unidentified title"
+
+                    # Company
                     company_elem = card.find(class_=re.compile(r"base-search-card__subtitle|job-search-card__subtitle"))
-                    company = company_elem.get_text().strip() if company_elem else "Empresa não identificada"
-                    
-                    # Link da vaga
+                    company = company_elem.get_text().strip() if company_elem else "Unidentified company"
+
+                    # Job link
                     link_elem = card.find("a", class_=re.compile(r"base-card__full-link|base-search-card__full-link"))
                     link = link_elem["href"].split("?")[0] if link_elem and "href" in link_elem.attrs else ""
-                    
-                    # Localização
+
+                    # Location
                     loc_elem = card.find(class_=re.compile(r"job-search-card__location"))
                     loc = loc_elem.get_text().strip() if loc_elem else location
-                    
-                    # ID da Vaga para buscar descrição completa
+
+                    # Job ID used to fetch the full description
                     job_id = extract_job_id(link, card)
-                    
+
                     if not job_id:
-                        # Se não conseguir o ID da vaga, descarta ou tenta usar o link como fallback
-                        logger.warning(f"Não foi possível extrair ID para a vaga: {title} - {company}. Pulando.")
+                        # If we cannot get the job ID, discard it or try the link as fallback
+                        logger.warning(f"Could not extract ID for the job: {title} - {company}. Skipping.")
                         continue
 
                     job_link = f"https://www.linkedin.com/jobs/view/{job_id}"
                     if job_link in excluded_links:
-                        logger.info(f"Vaga ja conhecida (histórico), pulando: {title} | {company} ({job_id})")
+                        logger.info(f"Job already known (history), skipping: {title} | {company} ({job_id})")
                         continue
 
-                    # Filtra modelo/localizacao ANTES de baixar a descricao: a
-                    # localizacao ja vem no card, entao evitamos requests (e risco
-                    # de 429) baixando descricoes de vagas que serao descartadas.
+                    # Filter model/location BEFORE downloading the description: the
+                    # location already comes in the card, so we avoid requests (and
+                    # the risk of 429) downloading descriptions of jobs that will be
+                    # discarded.
                     if not workplace_matches(loc, "", workplace_type, location):
-                        logger.info(f"Vaga fora do modelo/localidade alvo, pulando: {title} | {company} | {loc}")
+                        logger.info(f"Job outside the target model/location, skipping: {title} | {company} | {loc}")
                         continue
 
-                    logger.info(f"Coletando descrição da vaga: {title} | {company} (ID: {job_id})...")
-                    descricao = fetch_job_description(job_id)
+                    logger.info(f"Collecting job description: {title} | {company} (ID: {job_id})...")
+                    description = fetch_job_description(job_id)
                     contract_inference = {
-                        "tipo_contratacao_inferido": contract_type or "N/A",
-                        "aceita": True,
+                        "inferred_contract_type": contract_type or "N/A",
+                        "accepted": True,
                         "score_clt": "N/A",
-                        "score_nao_clt": "N/A",
-                        "margem_contratacao": "N/A",
-                        "evidencias_contratacao": "Classificador de contratacao nao configurado.",
+                        "score_non_clt": "N/A",
+                        "contract_margin": "N/A",
+                        "contract_evidence": "Contract classifier not configured.",
                     }
                     if normalize_text(contract_type) == "clt":
                         if not contract_classifier:
-                            raise RuntimeError("Classificador local de contratacao CLT nao foi inicializado.")
-                        contract_inference = contract_classifier.classify(descricao)
-                    
+                            raise RuntimeError("CLT contract classifier was not initialized.")
+                        contract_inference = contract_classifier.classify(description, title=title, company=company)
+
                     job_info = {
-                        "titulo_vaga": title,
-                        "empresa": company,
-                        "localizacao": loc,
-                        "modelo_trabalho": workplace_type or "N/A",
-                        "tipo_contratacao": contract_inference.get("tipo_contratacao_inferido", contract_type or "N/A"),
-                        "tipo_contratacao_inferido": contract_inference.get("tipo_contratacao_inferido", "N/A"),
+                        "job_title": title,
+                        "company": company,
+                        "location": loc,
+                        "workplace_type": workplace_type or "N/A",
+                        "contract_type": contract_inference.get("inferred_contract_type", contract_type or "N/A"),
+                        "inferred_contract_type": contract_inference.get("inferred_contract_type", "N/A"),
                         "score_clt": contract_inference.get("score_clt", "N/A"),
-                        "score_nao_clt": contract_inference.get("score_nao_clt", "N/A"),
-                        "margem_contratacao": contract_inference.get("margem_contratacao", "N/A"),
-                        "inferencia_contratacao": contract_inference.get("evidencias_contratacao", "N/A"),
-                        "evidencias_contratacao": contract_inference.get("evidencias_contratacao", "N/A"),
-                        "link_vaga": job_link,
-                        "descricao_completa": descricao
+                        "score_non_clt": contract_inference.get("score_non_clt", "N/A"),
+                        "contract_margin": contract_inference.get("contract_margin", "N/A"),
+                        "contract_inference": contract_inference.get("contract_evidence", "N/A"),
+                        "contract_evidence": contract_inference.get("contract_evidence", "N/A"),
+                        "job_link": job_link,
+                        "full_description": description
                     }
 
-                    if not contract_inference.get("aceita", True):
+                    if not contract_inference.get("accepted", True):
                         logger.info(
-                            "Vaga descartada por contratacao {tipo}: {titulo} | {empresa}. "
-                            "Scores: CLT {clt} | Nao-CLT {nao_clt} | Margem {margem}. {evidencias}".format(
-                                tipo=job_info["tipo_contratacao_inferido"],
-                                titulo=title,
-                                empresa=company,
+                            "Job discarded by contract type {type}: {title} | {company}. "
+                            "Scores: CLT {clt} | Non-CLT {non_clt} | Margin {margin}. {evidence}".format(
+                                type=job_info["inferred_contract_type"],
+                                title=title,
+                                company=company,
                                 clt=job_info["score_clt"],
-                                nao_clt=job_info["score_nao_clt"],
-                                margem=job_info["margem_contratacao"],
-                                evidencias=job_info["evidencias_contratacao"],
+                                non_clt=job_info["score_non_clt"],
+                                margin=job_info["contract_margin"],
+                                evidence=job_info["contract_evidence"],
                             )
                         )
                         continue
@@ -398,16 +403,16 @@ def scrape_linkedin_jobs(
                     excluded_links.add(job_link)
 
                 except Exception:
-                    logger.exception("Falha ao processar um card de vaga")
+                    logger.exception("Failed to process a job card")
                     continue
 
-            # Avanca exatamente pelo numero de cards vistos. Antes incrementava
-            # +25 fixo enquanto a pagina retornava ~10 vagas, pulando resultados.
+            # Advance by exactly the number of cards seen. It used to increment a
+            # fixed +25 while the page returned ~10 jobs, skipping results.
             start += len(cards)
-            
+
         except Exception:
-            logger.exception("Falha ao realizar requisição de busca")
+            logger.exception("Failed to perform the search request")
             break
 
-    logger.info(f"Concluído! Total de vagas coletadas para '{search_keyword}': {len(jobs)}")
+    logger.info(f"Done! Total jobs collected for '{search_keyword}': {len(jobs)}")
     return jobs

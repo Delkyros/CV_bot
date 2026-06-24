@@ -6,114 +6,119 @@ from datetime import datetime
 import yaml
 from dotenv import load_dotenv
 
-# Garante que os arquivos do pacote src/ possam ser importados corretamente
+# Ensure the src/ package files can be imported correctly
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 from src.scraper import scrape_linkedin_jobs, normalize_text
-from src.matcher import analyze_match, has_provider
+from src.matcher import analyze_match, has_provider, LLMContractClassifier, MIN_DISCARD_CONFIDENCE
 from src.reporter import generate_report
-from src.contract_classifier import ContractClassifier
 from src.logging_config import setup_logging
 
 logger = logging.getLogger(__name__)
 
 
-_LABEL_ACRONIMOS = {
+# NOTE: these maps drive _prettify_label, which receives the Portuguese skill
+# category keys from config/keywords.yaml (e.g. ia_e_llms), so the acronyms and
+# connectors are intentionally kept in Portuguese.
+_LABEL_ACRONYMS = {
     "ia": "IA", "llm": "LLM", "llms": "LLMs", "nlp": "NLP", "ml": "ML",
     "mlops": "MLOps", "api": "API", "apis": "APIs", "etl": "ETL", "elt": "ELT",
     "aws": "AWS", "gcp": "GCP", "ci": "CI", "cd": "CD",
 }
-_LABEL_CONECTORES = {"e", "de", "da", "do", "para", "com"}
+_LABEL_CONNECTORS = {"e", "de", "da", "do", "para", "com"}
 
 
 def _prettify_label(key):
-    """Transforma uma chave snake_case (ex.: ia_e_llms) num rotulo legivel
-    (ex.: 'IA e LLMs'), preservando acronimos e conectores em minusculo."""
-    palavras = []
+    """Turn a snake_case key (e.g. ia_e_llms) into a readable label (e.g. 'IA e
+    LLMs'), preserving acronyms and keeping connectors lowercase."""
+    words = []
     for w in str(key).replace("_", " ").split():
-        baixo = w.lower()
-        if baixo in _LABEL_ACRONIMOS:
-            palavras.append(_LABEL_ACRONIMOS[baixo])
-        elif baixo in _LABEL_CONECTORES:
-            palavras.append(baixo)
+        lower = w.lower()
+        if lower in _LABEL_ACRONYMS:
+            words.append(_LABEL_ACRONYMS[lower])
+        elif lower in _LABEL_CONNECTORS:
+            words.append(lower)
         else:
-            palavras.append(w.capitalize())
-    return " ".join(palavras)
+            words.append(w.capitalize())
+    return " ".join(words)
 
 
-def format_candidate_profile(perfil):
+def format_candidate_profile(profile):
     """
-    Converte o perfil_candidato (dict estruturado vindo do YAML ou texto puro,
-    para retrocompatibilidade) em um texto corrido e legivel para o prompt do
-    matcher. O Gemini recebe texto formatado, nao o repr de um dicionario.
+    Convert the candidate profile (structured dict from the YAML, or plain text
+    for backward compatibility) into a readable running text for the matcher
+    prompt. The LLM receives formatted text, not the repr of a dict.
+
+    NOTE: the profile dict keys come from config/keywords.yaml and are kept in
+    Portuguese on purpose (that file is not translated).
     """
-    if perfil is None:
+    if profile is None:
         return ""
-    if isinstance(perfil, str):
-        return perfil.strip()
-    if not isinstance(perfil, dict):
-        return str(perfil).strip()
+    if isinstance(profile, str):
+        return profile.strip()
+    if not isinstance(profile, dict):
+        return str(profile).strip()
 
-    secoes = []
+    sections = []
 
-    resumo = perfil.get("resumo_profissional")
-    if resumo:
-        secoes.append("Resumo Profissional:\n" + str(resumo).strip())
+    summary = profile.get("resumo_profissional")
+    if summary:
+        sections.append("Professional Summary:\n" + str(summary).strip())
 
-    competencias = perfil.get("competencias_tecnicas")
-    if isinstance(competencias, dict):
-        linhas = ["Competências Técnicas (Hard Skills):"]
-        for categoria, itens in competencias.items():
-            titulo = _prettify_label(categoria)
-            if isinstance(itens, (list, tuple)):
-                itens_txt = ", ".join(str(i) for i in itens)
+    skills = profile.get("competencias_tecnicas")
+    if isinstance(skills, dict):
+        skill_lines = ["Technical Skills (Hard Skills):"]
+        for category, items in skills.items():
+            title = _prettify_label(category)
+            if isinstance(items, (list, tuple)):
+                items_txt = ", ".join(str(i) for i in items)
             else:
-                itens_txt = str(itens)
-            linhas.append(f"- {titulo}: {itens_txt}")
-        secoes.append("\n".join(linhas))
-    elif competencias:
-        secoes.append("Competências Técnicas (Hard Skills):\n" + str(competencias).strip())
+                items_txt = str(items)
+            skill_lines.append(f"- {title}: {items_txt}")
+        sections.append("\n".join(skill_lines))
+    elif skills:
+        sections.append("Technical Skills (Hard Skills):\n" + str(skills).strip())
 
-    soft_skills = perfil.get("soft_skills")
+    soft_skills = profile.get("soft_skills")
     if isinstance(soft_skills, (list, tuple)):
-        linhas = ["Soft Skills:"] + [f"- {s}" for s in soft_skills]
-        secoes.append("\n".join(linhas))
+        soft_lines = ["Soft Skills:"] + [f"- {s}" for s in soft_skills]
+        sections.append("\n".join(soft_lines))
     elif soft_skills:
-        secoes.append("Soft Skills:\n" + str(soft_skills).strip())
+        sections.append("Soft Skills:\n" + str(soft_skills).strip())
 
-    nivel = perfil.get("nivel_experiencia")
-    if nivel:
-        secoes.append(f"Nível de Experiência: {nivel}")
+    level = profile.get("nivel_experiencia")
+    if level:
+        sections.append(f"Experience Level: {level}")
 
-    return "\n\n".join(secoes).strip()
+    return "\n\n".join(sections).strip()
 
 
-def dedupe_vagas(vagas):
+def dedupe_jobs(jobs):
     """
-    Remove quase-duplicatas (mesmo titulo + empresa, ignorando localizacao/ID)
-    antes de enviar ao LLM. O LinkedIn frequentemente republica a mesma vaga com
-    IDs diferentes em varias cidades; sem isso, cada copia consumiria uma chamada
-    do Gemini. Mantem a primeira ocorrencia (que ja tem a descricao baixada).
+    Remove near-duplicates (same title + company, ignoring location/ID) before
+    sending to the LLM. LinkedIn often reposts the same job with different IDs in
+    several cities; without this, each copy would consume an LLM call. Keeps the
+    first occurrence (which already has the downloaded description).
 
-    O dedup por link/ID exato ja acontece na coleta; aqui tratamos as repostagens
-    com IDs distintos.
+    Dedup by exact link/ID already happens during collection; here we handle the
+    reposts with distinct IDs.
     """
-    vistas = set()
-    unicas = []
-    for vaga in vagas:
-        chave = (
-            normalize_text(vaga.get("titulo_vaga", "")),
-            normalize_text(vaga.get("empresa", "")),
+    seen = set()
+    unique = []
+    for job in jobs:
+        key = (
+            normalize_text(job.get("job_title", "")),
+            normalize_text(job.get("company", "")),
         )
-        if chave in vistas:
+        if key in seen:
             logger.info(
-                "Duplicata (mesmo título+empresa) descartada antes do match: "
-                f"{vaga.get('titulo_vaga')} | {vaga.get('empresa')} | {vaga.get('localizacao')}"
+                "Duplicate (same title+company) discarded before match: "
+                f"{job.get('job_title')} | {job.get('company')} | {job.get('location')}"
             )
             continue
-        vistas.add(chave)
-        unicas.append(vaga)
-    return unicas
+        seen.add(key)
+        unique.append(job)
+    return unique
 
 
 def load_job_history(history_path):
@@ -126,218 +131,218 @@ def load_job_history(history_path):
         if isinstance(data, dict):
             return data
     except Exception as e:
-        logger.warning(f"Nao foi possivel carregar histórico '{history_path}': {e}")
+        logger.warning(f"Could not load history '{history_path}': {e}")
 
     return {}
 
 
-def save_job_history(history_path, history, vagas_analisadas):
+def save_job_history(history_path, history, analyzed_jobs):
     now = datetime.now().isoformat(timespec="seconds")
 
-    for vaga in vagas_analisadas:
-        link = vaga.get("link_vaga")
+    for job in analyzed_jobs:
+        link = job.get("job_link")
         if not link:
             continue
 
         history[link] = {
-            "titulo_vaga": vaga.get("titulo_vaga", "N/A"),
-            "empresa": vaga.get("empresa", "N/A"),
-            "localizacao": vaga.get("localizacao", "N/A"),
-            "tipo_contratacao": vaga.get("tipo_contratacao", "N/A"),
-            "tipo_contratacao_inferido": vaga.get("tipo_contratacao_inferido", "N/A"),
-            "score_clt": vaga.get("score_clt", "N/A"),
-            "score_nao_clt": vaga.get("score_nao_clt", "N/A"),
-            "margem_contratacao": vaga.get("margem_contratacao", "N/A"),
-            "evidencias_contratacao": vaga.get("evidencias_contratacao", "N/A"),
-            "modelo_trabalho": vaga.get("modelo_trabalho", "N/A"),
-            "nota_match": vaga.get("nota_match", 0),
-            "primeira_vez_vista_em": history.get(link, {}).get("primeira_vez_vista_em", now),
-            "ultima_vez_processada_em": now,
+            "job_title": job.get("job_title", "N/A"),
+            "company": job.get("company", "N/A"),
+            "location": job.get("location", "N/A"),
+            "contract_type": job.get("contract_type", "N/A"),
+            "inferred_contract_type": job.get("inferred_contract_type", "N/A"),
+            "score_clt": job.get("score_clt", "N/A"),
+            "score_non_clt": job.get("score_non_clt", "N/A"),
+            "contract_margin": job.get("contract_margin", "N/A"),
+            "contract_evidence": job.get("contract_evidence", "N/A"),
+            "workplace_type": job.get("workplace_type", "N/A"),
+            "match_score": job.get("match_score", 0),
+            "first_seen_at": history.get(link, {}).get("first_seen_at", now),
+            "last_processed_at": now,
         }
 
     try:
         with open(history_path, "w", encoding="utf-8") as f:
             json.dump(history, f, ensure_ascii=False, indent=2)
-        logger.info(f"Historico atualizado em '{history_path}' ({len(history)} vagas conhecidas).")
+        logger.info(f"History updated at '{history_path}' ({len(history)} known jobs).")
         return True
     except Exception as e:
-        logger.error(f"Falha ao salvar histórico '{history_path}': {e}")
+        logger.error(f"Failed to save history '{history_path}': {e}")
         return False
 
 
 def main():
     setup_logging()
     logger.info("=" * 60)
-    logger.info("PIPELINE DE BUSCA E MATCH DE VAGAS DO LINKEDIN")
+    logger.info("LINKEDIN JOB SEARCH AND MATCH PIPELINE")
     logger.info("=" * 60)
 
-    # 1. Carrega variáveis de ambiente (.env)
+    # 1. Load environment variables (.env)
     load_dotenv()
 
-    # Verifica provedores de LLM disponíveis (OpenRouter principal, Gemini fallback).
-    tem_provedor_llm = has_provider()
-    if not tem_provedor_llm:
-        logger.warning("Nenhum provedor de LLM configurado (OPENROUTER_API_KEY/GEMINI_API_KEY) no arquivo .env.")
-        logger.warning("O script continuará com a busca de vagas, mas a etapa de match usará uma nota padrão (simulada).")
+    # Check available LLM providers (OpenRouter primary, Gemini fallback).
+    has_llm_provider = has_provider()
+    if not has_llm_provider:
+        logger.warning("No LLM provider configured (OPENROUTER_API_KEY/GEMINI_API_KEY) in the .env file.")
+        logger.warning("The script will continue with the job search, but the match step will use a default (simulated) score.")
 
-    # 2. Carrega configurações do arquivo YAML
+    # 2. Load settings from the YAML file
     config_path = "config/keywords.yaml"
     if not os.path.exists(config_path):
-        logger.error(f"Arquivo de configuração '{config_path}' não encontrado!")
+        logger.error(f"Configuration file '{config_path}' not found!")
         sys.exit(1)
 
     try:
         with open(config_path, "r", encoding="utf-8") as f:
             config = yaml.safe_load(f)
     except Exception as e:
-        logger.error(f"Falha ao carregar o arquivo YAML '{config_path}': {e}")
-        sys.exit(1)
-        
-    termos_busca = config.get("termos_busca", [])
-    localizacao = config.get("localizacao", "Brasil")
-    tipo_contratacao = config.get("tipo_contratacao", "CLT")
-    tempo_publicacao = config.get("tempo_publicacao")
-    filtros_busca = config.get("filtros_busca") or [{"modelo_trabalho": None, "localizacao": localizacao}]
-    perfil_candidato = format_candidate_profile(config.get("perfil_candidato"))
-    
-    if not termos_busca:
-        logger.error("Lista 'termos_busca' vazia no arquivo de configuração.")
+        logger.error(f"Failed to load the YAML file '{config_path}': {e}")
         sys.exit(1)
 
-    if not perfil_candidato:
-        logger.error("'perfil_candidato' não configurado ou vazio no arquivo de configuração.")
+    # NOTE: config keys (termos_busca, localizacao, filtros_busca, ...) come from
+    # keywords.yaml and are kept in Portuguese on purpose.
+    search_terms = config.get("termos_busca", [])
+    location = config.get("localizacao", "Brasil")
+    contract_type = config.get("tipo_contratacao", "CLT")
+    posting_period = config.get("tempo_publicacao")
+    search_filters = config.get("filtros_busca") or [{"modelo_trabalho": None, "localizacao": location}]
+    candidate_profile = format_candidate_profile(config.get("perfil_candidato"))
+
+    if not search_terms:
+        logger.error("Empty 'termos_busca' list in the configuration file.")
         sys.exit(1)
 
-    logger.info(f"Termos de busca encontrados: {termos_busca}")
-    logger.info(f"Tipo de contratação: {tipo_contratacao}")
-    logger.info(f"Filtro de tempo de publicação: {tempo_publicacao or 'sem filtro'}")
-    logger.info(f"Filtros de busca: {filtros_busca}")
-    logger.info(f"Perfil do candidato carregado ({len(perfil_candidato)} caracteres).")
+    if not candidate_profile:
+        logger.error("'perfil_candidato' not configured or empty in the configuration file.")
+        sys.exit(1)
+
+    logger.info(f"Search terms found: {search_terms}")
+    logger.info(f"Contract type: {contract_type}")
+    logger.info(f"Posting time filter: {posting_period or 'no filter'}")
+    logger.info(f"Search filters: {search_filters}")
+    logger.info(f"Candidate profile loaded ({len(candidate_profile)} characters).")
 
     contract_classifier = None
-    if str(tipo_contratacao).strip().lower() == "clt":
-        contract_config_path = "config/contract_examples.yaml"
-        if not os.path.exists(contract_config_path):
-            logger.error(f"Arquivo de protótipos '{contract_config_path}' não encontrado!")
+    if str(contract_type).strip().lower() == "clt":
+        if not has_llm_provider:
+            logger.error(
+                "CLT contract filtering uses the LLM (same OpenRouter/Gemini chain "
+                "as the match). Configure OPENROUTER_API_KEY and/or GEMINI_API_KEY in .env."
+            )
             sys.exit(1)
-
-        try:
-            with open(contract_config_path, "r", encoding="utf-8") as f:
-                contract_config = yaml.safe_load(f)
-            contract_classifier = ContractClassifier(contract_config)
-        except Exception as e:
-            logger.error(f"Falha ao inicializar classificador local de contratação: {e}")
-            logger.error("Instale as dependências e garanta que o modelo de embeddings esteja disponível localmente.")
-            sys.exit(1)
+        contract_classifier = LLMContractClassifier()
+        logger.info(
+            "LLM contract classification enabled (default-CLT: only discards "
+            f"non-CLT types with confidence >= {MIN_DISCARD_CONFIDENCE:.2f})."
+        )
 
     history_path = "vagas_historico.json"
-    historico_vagas = load_job_history(history_path)
-    links_historico = set(historico_vagas.keys())
-    logger.info(f"Vagas conhecidas carregadas do histórico: {len(links_historico)}")
-    
-    # 3. Executa o Scraper para coletar vagas do LinkedIn
-    # Limitamos a 3 vagas por termo de busca para ser ágil e evitar bloqueios, mas pode ser expandido
-    vagas_coletadas = []
-    links_coletados = set()
-    max_vagas_por_termo = 3
-    
-    for termo in termos_busca:
-        for filtro in filtros_busca:
-            localizacao_filtro = filtro.get("localizacao", localizacao)
-            modelo_trabalho = filtro.get("modelo_trabalho")
-            geo_id_filtro = filtro.get("geo_id")
+    job_history = load_job_history(history_path)
+    history_links = set(job_history.keys())
+    logger.info(f"Known jobs loaded from history: {len(history_links)}")
+
+    # 3. Run the scraper to collect LinkedIn jobs
+    # We limit to 3 jobs per search term to be quick and avoid blocks, but it can be expanded
+    collected_jobs = []
+    collected_links = set()
+    max_jobs_per_term = 3
+
+    for term in search_terms:
+        for search_filter in search_filters:
+            filter_location = search_filter.get("localizacao", location)
+            workplace_type = search_filter.get("modelo_trabalho")
+            filter_geo_id = search_filter.get("geo_id")
             try:
-                vagas = scrape_linkedin_jobs(
-                    termo,
-                    location=localizacao_filtro,
-                    max_jobs=max_vagas_por_termo,
-                    contract_type=tipo_contratacao,
-                    workplace_type=modelo_trabalho,
-                    excluded_links=links_historico | links_coletados,
+                jobs = scrape_linkedin_jobs(
+                    term,
+                    location=filter_location,
+                    max_jobs=max_jobs_per_term,
+                    contract_type=contract_type,
+                    workplace_type=workplace_type,
+                    excluded_links=history_links | collected_links,
                     contract_classifier=contract_classifier,
-                    geo_id=geo_id_filtro,
-                    time_filter=tempo_publicacao,
+                    geo_id=filter_geo_id,
+                    time_filter=posting_period,
                 )
-                for vaga in vagas:
-                    link_vaga = vaga.get("link_vaga")
-                    if link_vaga in links_coletados:
-                        logger.info(f"Vaga duplicada ignorada: {vaga.get('titulo_vaga')} | {vaga.get('empresa')}")
+                for job in jobs:
+                    job_link = job.get("job_link")
+                    if job_link in collected_links:
+                        logger.info(f"Duplicate job ignored: {job.get('job_title')} | {job.get('company')}")
                         continue
-                    links_coletados.add(link_vaga)
-                    vagas_coletadas.append(vaga)
+                    collected_links.add(job_link)
+                    collected_jobs.append(job)
             except Exception:
-                logger.exception(f"Erro ao buscar vagas para o termo '{termo}' com filtro {filtro}")
+                logger.exception(f"Error searching jobs for term '{term}' with filter {search_filter}")
                 continue
 
-    total_coletadas = len(vagas_coletadas)
-    logger.info(f"Busca concluída! Total de vagas coletadas de todas as buscas: {total_coletadas}")
+    total_collected = len(collected_jobs)
+    logger.info(f"Search finished! Total jobs collected across all searches: {total_collected}")
 
-    # Deduplicacao antes do LLM: colapsa repostagens da mesma vaga (mesmo
-    # titulo+empresa) que vieram com IDs diferentes, economizando chamadas ao Gemini.
-    vagas_coletadas = dedupe_vagas(vagas_coletadas)
-    total_vagas = len(vagas_coletadas)
-    removidas = total_coletadas - total_vagas
-    if removidas:
-        logger.info(f"Deduplicação: {removidas} quase-duplicata(s) removida(s). Vagas únicas para análise: {total_vagas}")
+    # Dedup before the LLM: collapses reposts of the same job (same
+    # title+company) that came with different IDs, saving LLM calls.
+    collected_jobs = dedupe_jobs(collected_jobs)
+    total_jobs = len(collected_jobs)
+    removed = total_collected - total_jobs
+    if removed:
+        logger.info(f"Dedup: {removed} near-duplicate(s) removed. Unique jobs to analyze: {total_jobs}")
 
-    if total_vagas == 0:
-        logger.info("Nenhuma vaga nova pôde ser coletada. Encerrando pipeline.")
+    if total_jobs == 0:
+        logger.info("No new job could be collected. Ending pipeline.")
         sys.exit(0)
-        
-    # 4. Executa o Matcher para analisar cada vaga coletada
-    vagas_analisadas = []
-    
+
+    # 4. Run the matcher to analyze each collected job
+    analyzed_jobs = []
+
     logger.info("=" * 40)
-    logger.info("INICIANDO ANÁLISE DE MATCH")
+    logger.info("STARTING MATCH ANALYSIS")
     logger.info("=" * 40)
 
-    for idx, vaga in enumerate(vagas_coletadas, start=1):
-        logger.info(f"Analisando vaga {idx} de {total_vagas}: {vaga['titulo_vaga']} | Empresa: {vaga['empresa']}")
+    for idx, job in enumerate(collected_jobs, start=1):
+        logger.info(f"Analyzing job {idx} of {total_jobs}: {job['job_title']} | Company: {job['company']}")
 
-        resultado_analysis = None
+        analysis_result = None
 
-        # Executa a análise se houver ao menos um provedor de LLM configurado
-        # (OpenRouter como principal, Gemini como fallback).
-        if tem_provedor_llm:
+        # Run the analysis if there is at least one LLM provider configured
+        # (OpenRouter as primary, Gemini as fallback).
+        if has_llm_provider:
             try:
-                resultado_analysis = analyze_match(vaga, perfil_candidato)
+                analysis_result = analyze_match(job, candidate_profile)
             except Exception:
-                logger.exception("Falha na chamada do LLM para esta vaga")
+                logger.exception("LLM call failed for this job")
 
-        # Fallback inteligente (Resiliência) caso a análise falhe ou não haja provedor
-        if not resultado_analysis:
-            if not tem_provedor_llm:
-                logger.warning("Usando análise simulada de fallback: nenhum provedor de LLM configurado (OPENROUTER_API_KEY/GEMINI_API_KEY).")
+        # Smart fallback (resilience) if the analysis fails or there is no provider
+        if not analysis_result:
+            if not has_llm_provider:
+                logger.warning("Using simulated fallback analysis: no LLM provider configured (OPENROUTER_API_KEY/GEMINI_API_KEY).")
             else:
-                logger.warning("Usando análise simulada de fallback devido a falha de todos os provedores de LLM.")
-                
-            # Cria um resultado amigável de simulação/fallback para que o pipeline não quebre
-            # E para que o usuário possa testar o pipeline completo sem a chave se quiser
-            resultado_analysis = {
-                "nota_match": 50,  # Nota neutra
-                "pontos_fortes": ["Vaga coletada com sucesso", "Disponível para avaliação"],
-                "gaps": ["Análise do Gemini indisponível (Verifique sua GEMINI_API_KEY no .env)"],
-                "veredicto": "Insira uma chave válida em GEMINI_API_KEY no arquivo .env para obter uma análise de inteligência artificial real desta vaga."
-            }
-            
-        # Mescla os dados da vaga com a análise
-        vaga_analisada = {**vaga, **resultado_analysis}
-        vagas_analisadas.append(vaga_analisada)
+                logger.warning("Using simulated fallback analysis due to failure of all LLM providers.")
 
-        logger.info(f"Resultado: Nota {vaga_analisada['nota_match']}/100")
-        
-    # 5. Executa o Reporter para gerar o arquivo Markdown de saída
-    vagas_salvas = generate_report(vagas_analisadas, output_path="vagas_filtradas.md")
-    historico_salvo = save_job_history(history_path, historico_vagas, vagas_analisadas)
-    
-    if vagas_salvas and historico_salvo:
+            # Create a friendly simulated/fallback result so the pipeline does not break
+            # and so the user can test the full pipeline without a key if desired
+            analysis_result = {
+                "match_score": 50,  # Neutral score
+                "strengths": ["Job collected successfully", "Available for evaluation"],
+                "gaps": ["LLM analysis unavailable (check your GEMINI_API_KEY in .env)"],
+                "verdict": "Enter a valid key in GEMINI_API_KEY in the .env file to get a real AI analysis of this job."
+            }
+
+        # Merge the job data with the analysis
+        analyzed_job = {**job, **analysis_result}
+        analyzed_jobs.append(analyzed_job)
+
+        logger.info(f"Result: Score {analyzed_job['match_score']}/100")
+
+    # 5. Run the reporter to generate the output Markdown file
+    report_saved = generate_report(analyzed_jobs, output_path="vagas_filtradas.md")
+    history_saved = save_job_history(history_path, job_history, analyzed_jobs)
+
+    if report_saved and history_saved:
         logger.info("=" * 60)
-        logger.info("PIPELINE CONCLUÍDO COM SUCESSO!")
-        logger.info("O relatório 'vagas_filtradas.md' está disponível na raiz do projeto.")
-        logger.info("O histórico 'vagas_historico.json' foi atualizado.")
+        logger.info("PIPELINE COMPLETED SUCCESSFULLY!")
+        logger.info("The report 'vagas_filtradas.md' is available at the project root.")
+        logger.info("The history 'vagas_historico.json' has been updated.")
         logger.info("=" * 60)
     else:
-        logger.error("Falha ao gerar o relatório final ou atualizar o histórico.")
+        logger.error("Failed to generate the final report or update the history.")
         sys.exit(1)
 
 if __name__ == "__main__":

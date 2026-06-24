@@ -1,1 +1,1 @@
-# Pacote de código-fonte para o pipeline de vagas do LinkedIn
+# Source package for the LinkedIn jobs pipeline
