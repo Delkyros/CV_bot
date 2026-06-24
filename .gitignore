@@ -1,4 +1,18 @@
+# Environments
 .venv
-__pycache__
+__pycache__/
+*.pyc
+
+# Local tooling
+.claude/
+
+# Secrets
 .env
+
+# Local user configuration (use config/keywords.example.yaml as a template)
+config/keywords.yaml
+
+# Runtime outputs (generated on each run)
+vagas_filtradas.md
+vagas_historico.json
 *.xlsx

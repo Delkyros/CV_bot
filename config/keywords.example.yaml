@@ -1,0 +1,69 @@
+# ---------------------------------------------------------------------------
+# Example configuration. Copy this file to "config/keywords.yaml" and adjust
+# the search terms, filters and your own professional profile.
+#
+# NOTE: the keys below are kept in Portuguese on purpose — they are read as-is
+# by the pipeline (main.py / scraper.py). Only the values are meant to be edited.
+# ---------------------------------------------------------------------------
+
+# Job titles to search for. Do NOT append "CLT" here — the contract type is
+# inferred from each job description by the LLM classifier.
+termos_busca:
+  - "AI Engineer"
+  - "Machine Learning Engineer"
+  - "Data Scientist"
+  - "Engenheiro de Machine Learning"
+  - "Cientista de Dados"
+
+# Desired contract type. "CLT" enables the LLM-based contract filter.
+tipo_contratacao: "CLT"
+
+# Max jobs collected per (search term x filter) combination.
+max_vagas_por_termo: 3
+
+# Job posting time filter (LinkedIn f_TPR parameter).
+# Accepted values: "24h", "semana", "mes". Leave empty to disable.
+tempo_publicacao: "24h"
+
+# geo_id is LinkedIn's location identifier (geoId). It is what reliably
+# restricts the country on the Guest API; the `localizacao` text alone returns
+# US jobs. 106057199 = Brazil. For hybrid filters we keep Brazil's geoId and
+# refine the target city by the job's location text.
+filtros_busca:
+  - modelo_trabalho: "remoto"
+    localizacao: "Brasil"
+    geo_id: "106057199"
+  - modelo_trabalho: "hibrido"
+    localizacao: "São Paulo, São Paulo, Brasil"
+    geo_id: "106057199"
+
+# Your professional profile. Used by the LLM to score the match against each job.
+perfil_candidato:
+  nivel_experiencia: "Pleno / Sênior"
+
+  resumo_profissional: |
+    Data Scientist / Machine Learning Engineer with hands-on experience building
+    end-to-end AI solutions: LLM-based agents, RAG pipelines, vector search and
+    REST APIs deployed to the cloud. Strong software-engineering practices applied
+    to data products.
+
+  competencias_tecnicas:
+    ia_e_llms:
+      - "AI Agents"
+      - "RAG Pipelines"
+      - "LangChain"
+      - "Vector Databases"
+    linguagens_e_backend:
+      - "Python"
+      - "SQL (PostgreSQL)"
+      - "RESTful APIs"
+      - "Pandas, Scikit-learn, PyTorch"
+    engenharia_de_dados_e_cloud:
+      - "ETL/ELT Pipelines"
+      - "Docker"
+      - "AWS (S3, EC2, Lambda)"
+      - "CI/CD (GitHub Actions)"
+
+  soft_skills:
+    - "Clear communication and cross-functional collaboration."
+    - "Turning complex business requirements into reliable software."

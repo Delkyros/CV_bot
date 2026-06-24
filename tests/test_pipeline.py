@@ -1,0 +1,164 @@
+"""Unit tests for the pure (network-free, LLM-free) logic of the pipeline."""
+
+import os
+import sys
+
+import pytest
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from src import scraper, matcher, reporter, text_signals
+import main
+
+
+# --------------------------------------------------------------------------- #
+# text_signals
+# --------------------------------------------------------------------------- #
+def test_normalize_text_strips_accents_and_lowercases():
+    assert text_signals.normalize_text("São Paulo") == "sao paulo"
+    assert text_signals.normalize_text("") == ""
+    assert text_signals.normalize_text(None) == ""
+
+
+def test_explicit_negative_evidence_detects_pj_signals():
+    signals = text_signals.explicit_negative_evidence(
+        "Contrato PJ, necessário CNPJ ativo e emissão de nota fiscal."
+    )
+    assert "PJ/legal entity" in signals
+    assert "CNPJ/registered company" in signals
+    assert "Invoice" in signals
+
+
+def test_explicit_negative_evidence_empty_for_clt():
+    assert text_signals.explicit_negative_evidence("Vaga efetiva com carteira assinada.") == []
+
+
+# --------------------------------------------------------------------------- #
+# scraper
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("period,expected", [
+    ("24h", "r86400"),
+    ("semana", "r604800"),
+    ("mes", "r2592000"),
+    ("", None),
+    (None, None),
+])
+def test_linkedin_time_filter(period, expected):
+    assert scraper.linkedin_time_filter(period) == expected
+
+
+@pytest.mark.parametrize("model,expected", [
+    ("remoto", "2"),
+    ("hibrido", "3"),
+    ("presencial", "1"),
+    ("qualquer", None),
+])
+def test_linkedin_workplace_filter(model, expected):
+    assert scraper.linkedin_workplace_filter(model) == expected
+
+
+def test_workplace_matches_remote_rejects_foreign():
+    assert scraper.workplace_matches("Campinas, SP", "", "remoto", "Brasil") is True
+    assert scraper.workplace_matches("United States", "", "remoto", "Brasil") is False
+
+
+def test_workplace_matches_hybrid_only_sc_cities():
+    assert scraper.workplace_matches("Florianópolis, SC", "", "hibrido", "x") is True
+    assert scraper.workplace_matches("São Paulo, SP", "", "hibrido", "x") is False
+
+
+def test_workplace_matches_no_filter():
+    assert scraper.workplace_matches("anywhere", "", None, "x") is True
+
+
+@pytest.mark.parametrize("url,expected", [
+    ("https://www.linkedin.com/jobs/view/1234567890", "1234567890"),
+    ("https://www.linkedin.com/jobs/search?currentJobId=987654", "987654"),
+    ("https://www.linkedin.com/jobs/view/some-title-555111", "555111"),
+])
+def test_extract_job_id(url, expected):
+    assert scraper.extract_job_id(url) == expected
+
+
+# --------------------------------------------------------------------------- #
+# matcher
+# --------------------------------------------------------------------------- #
+def test_extract_json_object_ignores_braces_in_strings():
+    text = 'noise {"a": "has } brace", "b": {"c": 1}} trailing'
+    assert matcher._extract_json_object(text) == '{"a": "has } brace", "b": {"c": 1}}'
+
+
+def test_parse_result_clamps_and_normalizes():
+    raw = '{"match_score": 150, "strengths": ["x"], "gaps": [], "verdict": "ok"}'
+    result = matcher._parse_result(raw)
+    assert result["match_score"] == 100
+    assert result["strengths"] == ["x"]
+    assert result["verdict"] == "ok"
+
+
+def test_parse_result_strips_code_fences():
+    raw = '```json\n{"match_score": 42, "strengths": [], "gaps": [], "verdict": "v"}\n```'
+    assert matcher._parse_result(raw)["match_score"] == 42
+
+
+def test_parse_result_invalid_returns_none():
+    assert matcher._parse_result(None) is None
+    assert matcher._parse_result("not json at all") is None
+
+
+def test_parse_contract_valid_and_clamped():
+    result = matcher._parse_contract('{"regime": "PJ", "confidence": 1.5, "evidence": "CNPJ"}')
+    assert result["regime"] == "PJ"
+    assert result["confidence"] == 1.0
+
+
+def test_parse_contract_rejects_unknown_regime():
+    assert matcher._parse_contract('{"regime": "WHATEVER", "confidence": 0.9}') is None
+
+
+# --------------------------------------------------------------------------- #
+# reporter
+# --------------------------------------------------------------------------- #
+def test_format_list():
+    assert reporter.format_list([]) == "- N/A"
+    assert reporter.format_list(["a", "b"]) == "- a\n- b"
+
+
+def test_table_text_escapes_pipes_and_newlines():
+    assert reporter.table_text("a|b\nc") == "a\\|b c"
+
+
+# --------------------------------------------------------------------------- #
+# main
+# --------------------------------------------------------------------------- #
+def test_dedupe_jobs_collapses_same_title_company():
+    jobs = [
+        {"job_title": "AI Engineer", "company": "ACME", "location": "SP", "job_link": "1"},
+        {"job_title": "ai engineer", "company": "acme", "location": "RJ", "job_link": "2"},
+        {"job_title": "Data Scientist", "company": "ACME", "location": "SP", "job_link": "3"},
+    ]
+    unique = main.dedupe_jobs(jobs)
+    assert len(unique) == 2
+    assert unique[0]["job_link"] == "1"
+
+
+def test_prettify_label_keeps_acronyms_and_connectors():
+    assert main._prettify_label("ia_e_llms") == "IA e LLMs"
+    assert main._prettify_label("engenharia_de_dados") == "Engenharia de Dados"
+
+
+def test_format_candidate_profile_renders_sections():
+    profile = {
+        "nivel_experiencia": "Sênior",
+        "resumo_profissional": "Resumo aqui.",
+        "competencias_tecnicas": {"linguagens_e_backend": ["Python", "SQL"]},
+        "soft_skills": ["Comunicação"],
+    }
+    text = main.format_candidate_profile(profile)
+    assert "Professional Summary:" in text
+    assert "Python, SQL" in text
+    assert "Experience Level: Sênior" in text
+
+
+def test_format_candidate_profile_passthrough_string():
+    assert main.format_candidate_profile("plain text") == "plain text"

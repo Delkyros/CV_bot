@@ -3,9 +3,10 @@ import random
 import re
 import logging
 import urllib.parse
-import unicodedata
 import requests
 from bs4 import BeautifulSoup
+
+from src.text_signals import normalize_text
 
 logger = logging.getLogger(__name__)
 
@@ -72,14 +73,6 @@ def request_with_retry(url, headers=None, timeout=15, max_retries=MAX_RETRIES, r
     return last_response
 
 
-def normalize_text(text):
-    if not text:
-        return ""
-    text = unicodedata.normalize("NFKD", str(text))
-    text = "".join(ch for ch in text if not unicodedata.combining(ch))
-    return text.lower()
-
-
 def workplace_matches(location_text, description_text, workplace_type, search_location):
     """
     Confirm the accepted workplace models: remote in Brazil or hybrid in Sao
@@ -118,14 +111,6 @@ def workplace_matches(location_text, description_text, workplace_type, search_lo
         )
 
     return True
-
-def job_matches_filters(job_info, contract_type, workplace_type, search_location):
-    return workplace_matches(
-        job_info.get("location", ""),
-        job_info.get("full_description", ""),
-        workplace_type,
-        search_location,
-    )
 
 def linkedin_time_filter(period):
     """

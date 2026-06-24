@@ -1,4 +1,9 @@
-Markdown
+> **Nota histórica:** este é o documento de especificação **original (v1)** do projeto.
+> A implementação evoluiu desde então — em especial, a classificação de contratação
+> migrou de um classificador local por **embeddings** (`sentence-transformers`) para um
+> classificador via **LLM** (`src/matcher.py::LLMContractClassifier`). Para a arquitetura
+> atual, consulte o [README](../README.md).
+
 # Especificações Técnicas: Pipeline de Busca e Match de Vagas do LinkedIn
 
 ## Objetivo do Projeto

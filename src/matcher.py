@@ -8,7 +8,7 @@ import requests
 from google import genai
 from google.genai import types
 
-from src.contract_classifier import explicit_negative_evidence
+from src.text_signals import explicit_negative_evidence
 
 logger = logging.getLogger(__name__)
 

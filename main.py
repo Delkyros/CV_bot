@@ -204,6 +204,7 @@ def main():
     location = config.get("localizacao", "Brasil")
     contract_type = config.get("tipo_contratacao", "CLT")
     posting_period = config.get("tempo_publicacao")
+    max_jobs_per_term = int(config.get("max_vagas_por_termo", 3))
     search_filters = config.get("filtros_busca") or [{"modelo_trabalho": None, "localizacao": location}]
     candidate_profile = format_candidate_profile(config.get("perfil_candidato"))
 
@@ -240,11 +241,11 @@ def main():
     history_links = set(job_history.keys())
     logger.info(f"Known jobs loaded from history: {len(history_links)}")
 
-    # 3. Run the scraper to collect LinkedIn jobs
-    # We limit to 3 jobs per search term to be quick and avoid blocks, but it can be expanded
+    # 3. Run the scraper to collect LinkedIn jobs.
+    # max_jobs_per_term (config: max_vagas_por_termo) caps how many jobs we pull
+    # per search term to stay quick and avoid blocks; raise it in the YAML.
     collected_jobs = []
     collected_links = set()
-    max_jobs_per_term = 3
 
     for term in search_terms:
         for search_filter in search_filters:
@@ -321,8 +322,8 @@ def main():
             analysis_result = {
                 "match_score": 50,  # Neutral score
                 "strengths": ["Job collected successfully", "Available for evaluation"],
-                "gaps": ["LLM analysis unavailable (check your GEMINI_API_KEY in .env)"],
-                "verdict": "Enter a valid key in GEMINI_API_KEY in the .env file to get a real AI analysis of this job."
+                "gaps": ["LLM analysis unavailable (check OPENROUTER_API_KEY/GEMINI_API_KEY in .env)"],
+                "verdict": "Set a valid OPENROUTER_API_KEY and/or GEMINI_API_KEY in the .env file to get a real AI analysis of this job."
             }
 
         # Merge the job data with the analysis
