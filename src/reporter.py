@@ -1,7 +1,44 @@
 import logging
 from datetime import datetime
 
+from src.settings import env_float
+
 logger = logging.getLogger(__name__)
+
+# Final-report relevance thresholds (defaults; overridable via the environment).
+# A job only reaches the Markdown if it is both confidently CLT and aligned with
+# the candidate profile:
+# - CLT confidence (score_clt, 0.0-1.0) must be numeric and >= the CLT threshold.
+#   "N/A" (non-CLT regime kept conservatively, or LLM unavailable) is excluded.
+# - profile match (match_score, 0-100) must be >= the match threshold.
+# Env overrides: REPORT_MIN_CLT_SCORE, REPORT_MIN_MATCH_SCORE.
+DEFAULT_MIN_CLT_SCORE = 0.6
+DEFAULT_MIN_MATCH_SCORE = 50
+
+
+def min_clt_score():
+    return env_float("REPORT_MIN_CLT_SCORE", DEFAULT_MIN_CLT_SCORE)
+
+
+def min_match_score():
+    return env_float("REPORT_MIN_MATCH_SCORE", DEFAULT_MIN_MATCH_SCORE)
+
+
+def _as_float(value):
+    """Return value as float, or None if it is not a number (e.g. 'N/A')."""
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return None
+
+
+def passes_relevance_filter(job):
+    """True if the job is confidently CLT and aligned with the profile."""
+    clt_score = _as_float(job.get("score_clt"))
+    if clt_score is None or clt_score < min_clt_score():
+        return False
+    match_score = _as_float(job.get("match_score")) or 0.0
+    return match_score >= min_match_score()
 
 
 def format_list(items):
@@ -24,8 +61,26 @@ def generate_report(analyzed_jobs, output_path="vagas_filtradas.md"):
         logger.warning("No successfully analyzed job to generate the report.")
         return False
 
+    clt_threshold = min_clt_score()
+    match_threshold = min_match_score()
+
+    relevant_jobs = [job for job in analyzed_jobs if passes_relevance_filter(job)]
+    dropped = len(analyzed_jobs) - len(relevant_jobs)
+    if dropped:
+        logger.info(
+            f"Relevance filter: {dropped} of {len(analyzed_jobs)} job(s) hidden "
+            f"from the report (CLT score < {clt_threshold} or non-numeric, "
+            f"or match score < {match_threshold})."
+        )
+
+    if not relevant_jobs:
+        logger.warning(
+            "No job passed the relevance filter "
+            f"(CLT score >= {clt_threshold} and match score >= {match_threshold})."
+        )
+
     sorted_jobs = sorted(
-        analyzed_jobs,
+        relevant_jobs,
         key=lambda job: int(job.get("match_score", 0) or 0),
         reverse=True
     )
@@ -34,7 +89,8 @@ def generate_report(analyzed_jobs, output_path="vagas_filtradas.md"):
         "# Filtered jobs",
         "",
         f"Generated at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-        f"Total new jobs analyzed: {len(sorted_jobs)}",
+        f"Jobs shown: {len(sorted_jobs)} of {len(analyzed_jobs)} analyzed "
+        f"(filter: CLT score >= {clt_threshold}, match score >= {match_threshold})",
         "",
         "| Score | Score CLT | Score Non-CLT | Margin | Job | Company | Contract | Model | Location |",
         "| ---: | ---: | ---: | ---: | --- | --- | --- | --- | --- |",

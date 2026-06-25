@@ -9,20 +9,23 @@ from google import genai
 from google.genai import types
 
 from src.text_signals import explicit_negative_evidence
+from src.settings import env_float, env_int, env_list, env_str
 
 logger = logging.getLogger(__name__)
 
-GEMINI_MODEL = "gemini-2.5-flash"
+# Defaults for tunables. Every value here is overridable via the environment
+# (.env); see env_*() reads below and .env.example for the variable names.
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 
 # Primary provider: OpenRouter (free models). Gemini is the fallback.
-# The order can be tuned here; both are tried on each cycle.
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-# List of free OpenRouter models, tried in order. The most popular ones
+# Default list of free OpenRouter models, tried in order. The most popular ones
 # (Llama 70B, Qwen) live in 429 ("rate-limited upstream") because the free
 # pool is congested, so we prioritize strong but less contested models. On a
 # 429 for one model, we move on to the next.
-# Can be overridden with a single choice via the OPENROUTER_MODEL env var.
+# Override the whole list via OPENROUTER_MODELS (comma-separated) or pin a
+# single model via OPENROUTER_MODEL.
 DEFAULT_OPENROUTER_MODELS = (
     "openai/gpt-oss-120b:free",
     "nvidia/nemotron-3-super-120b-a12b:free",
@@ -32,11 +35,40 @@ DEFAULT_OPENROUTER_MODELS = (
 PROVIDER_ORDER = ("openrouter", "gemini")
 
 # How many times to walk the full provider chain before giving up and falling
-# back to main's simulated analysis. Raise to a high value for an almost
-# "infinite until processed" behavior. Between cycles, wait QUOTA_RETRY_WAIT
-# seconds.
-MAX_PROVIDER_CYCLES = 3
-QUOTA_RETRY_WAIT = 60.0
+# back to main's simulated analysis. Raise (LLM_MAX_PROVIDER_CYCLES) for an
+# almost "infinite until processed" behavior. Between cycles, wait
+# LLM_QUOTA_RETRY_WAIT seconds.
+DEFAULT_MAX_PROVIDER_CYCLES = 3
+DEFAULT_QUOTA_RETRY_WAIT = 60.0
+
+# Sampling/budget defaults for the LLM calls.
+DEFAULT_LLM_TEMPERATURE = 0.1
+DEFAULT_OPENROUTER_MAX_TOKENS = 2000
+DEFAULT_LLM_REQUEST_TIMEOUT = 60
+
+
+def gemini_model():
+    return env_str("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
+
+
+def max_provider_cycles():
+    return env_int("LLM_MAX_PROVIDER_CYCLES", DEFAULT_MAX_PROVIDER_CYCLES)
+
+
+def quota_retry_wait():
+    return env_float("LLM_QUOTA_RETRY_WAIT", DEFAULT_QUOTA_RETRY_WAIT)
+
+
+def llm_temperature():
+    return env_float("LLM_TEMPERATURE", DEFAULT_LLM_TEMPERATURE)
+
+
+def openrouter_max_tokens():
+    return env_int("OPENROUTER_MAX_TOKENS", DEFAULT_OPENROUTER_MAX_TOKENS)
+
+
+def llm_request_timeout():
+    return env_int("LLM_REQUEST_TIMEOUT", DEFAULT_LLM_REQUEST_TIMEOUT)
 
 # Keywords that indicate a transient error (quota/limit/overload). For those
 # cases it is worth trying the next provider / repeating the cycle instead of
@@ -71,11 +103,14 @@ def _gemini_key():
 
 
 def _openrouter_models():
-    # If OPENROUTER_MODEL is set in .env, use only it; otherwise the default list.
-    override = os.getenv("OPENROUTER_MODEL")
-    if override:
-        return [override]
-    return list(DEFAULT_OPENROUTER_MODELS)
+    # Resolution order:
+    #   1. OPENROUTER_MODEL  -> pin a single model (highest priority).
+    #   2. OPENROUTER_MODELS -> comma-separated list, tried in order.
+    #   3. DEFAULT_OPENROUTER_MODELS built-in list.
+    single = os.getenv("OPENROUTER_MODEL")
+    if single and single.strip():
+        return [single.strip()]
+    return env_list("OPENROUTER_MODELS", DEFAULT_OPENROUTER_MODELS)
 
 
 def _is_retryable_quota_error(exc):
@@ -143,16 +178,16 @@ def _call_openrouter(prompt):
                 json={
                     "model": model,
                     "messages": [{"role": "user", "content": prompt}],
-                    "temperature": 0.1,
+                    "temperature": llm_temperature(),
                     "response_format": {"type": "json_object"},
                     # Generous output budget: reasoning models (e.g. gpt-oss)
                     # spend tokens "thinking" and, without this, the JSON comes
                     # out truncated.
-                    "max_tokens": 2000,
+                    "max_tokens": openrouter_max_tokens(),
                     # Minimize reasoning to leave budget for the final JSON.
                     "reasoning": {"effort": "low"},
                 },
-                timeout=60,
+                timeout=llm_request_timeout(),
             )
             if resp.status_code != 200:
                 last_error = RuntimeError(f"OpenRouter HTTP {resp.status_code} ({model}): {resp.text[:200]}")
@@ -177,11 +212,11 @@ def _call_gemini(prompt):
     """Call Gemini. Returns the raw response text or raises an exception."""
     client = _get_client()
     response = client.models.generate_content(
-        model=GEMINI_MODEL,
+        model=gemini_model(),
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
-            temperature=0.1,
+            temperature=llm_temperature(),
         ),
     )
     return response.text
@@ -280,16 +315,24 @@ def _parse_result(raw_text):
     }
 
 
-def _complete_with_providers(prompt, parse_fn, task="analysis", max_cycles=MAX_PROVIDER_CYCLES, retry_wait=QUOTA_RETRY_WAIT):
+def _complete_with_providers(prompt, parse_fn, task="analysis", max_cycles=None, retry_wait=None):
     """
     Walk the chain of LLM providers (OpenRouter primary, Gemini fallback) sending
     `prompt` and validating the response with `parse_fn`. Each cycle tries every
     available provider; quota/limit errors fall through to the next one. If all
     fail, wait `retry_wait`s and repeat the chain up to `max_cycles` times.
 
+    `max_cycles`/`retry_wait` default to the env-configured values
+    (LLM_MAX_PROVIDER_CYCLES / LLM_QUOTA_RETRY_WAIT) when not passed explicitly.
+
     Returns the result of parse_fn (first valid response) or None if no provider
     is configured or all failed after the cycles.
     """
+    if max_cycles is None:
+        max_cycles = max_provider_cycles()
+    if retry_wait is None:
+        retry_wait = quota_retry_wait()
+
     providers = _available_providers()
     if not providers:
         logger.error("No LLM provider configured (set OPENROUTER_API_KEY and/or GEMINI_API_KEY in .env).")
@@ -347,10 +390,17 @@ def analyze_match(job_info, candidate_profile):
 # ---------------------------------------------------------------------------
 
 # Regimes considered non-CLT; a job is only discarded if one of them comes with
-# confidence >= MIN_DISCARD_CONFIDENCE.
+# confidence >= the discard threshold (see min_discard_confidence()).
 _NON_CLT_REGIMES = {"PJ", "FREELANCER", "ESTAGIO", "TEMPORARIO"}
 _VALID_REGIMES = _NON_CLT_REGIMES | {"CLT", "INDEFINIDO"}
-MIN_DISCARD_CONFIDENCE = 0.6
+
+# Minimum confidence required to DISCARD a job as non-CLT during collection.
+# Overridable via CONTRACT_DISCARD_CONFIDENCE.
+DEFAULT_MIN_DISCARD_CONFIDENCE = 0.6
+
+
+def min_discard_confidence():
+    return env_float("CONTRACT_DISCARD_CONFIDENCE", DEFAULT_MIN_DISCARD_CONFIDENCE)
 
 
 def _build_contract_prompt(title, company, description, regex_signals):
@@ -464,7 +514,8 @@ def classify_contract(description, title=None, company=None, regex_signals=None)
 
     regime = result["regime"]
     confidence = result["confidence"]
-    discard = regime in _NON_CLT_REGIMES and confidence >= MIN_DISCARD_CONFIDENCE
+    discard_threshold = min_discard_confidence()
+    discard = regime in _NON_CLT_REGIMES and confidence >= discard_threshold
     accepted = not discard
 
     evidence = (
@@ -472,7 +523,7 @@ def classify_contract(description, title=None, company=None, regex_signals=None)
     ).strip()
     if regime in _NON_CLT_REGIMES and not discard:
         evidence += (
-            f" (confidence below {MIN_DISCARD_CONFIDENCE:.2f}; "
+            f" (confidence below {discard_threshold:.2f}; "
             "kept conservatively as assumed CLT)."
         )
 

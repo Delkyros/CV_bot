@@ -119,6 +119,23 @@ The ranked report is written to `vagas_filtradas.md` at the project root, and `v
 | `filtros_busca` | Accepted work-model/location scenarios (uses LinkedIn `geo_id`). |
 | `perfil_candidato` | Your summary, hard skills, soft skills and seniority. |
 
+## 🔧 Tunables (`.env`)
+
+Everything operational is configurable via environment variables — nothing is hardcoded. Each has a sensible default, so the pipeline runs out of the box; set any of these in `.env` only to override. See `.env.example` for the full list with defaults.
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `REPORT_MIN_CLT_SCORE` | `0.6` | Min CLT confidence (`score_clt`) for a job to appear in the report. `N/A` is always hidden. |
+| `REPORT_MIN_MATCH_SCORE` | `50` | Min profile match (`match_score`, 0–100) for a job to appear. |
+| `CONTRACT_DISCARD_CONFIDENCE` | `0.6` | Min confidence to discard a job as non-CLT during collection. |
+| `OPENROUTER_MODEL` / `OPENROUTER_MODELS` | built-in list | Pin one model, or override the whole comma-separated list. |
+| `GEMINI_MODEL` | `gemini-2.5-flash` | Gemini fallback model. |
+| `LLM_TEMPERATURE` / `OPENROUTER_MAX_TOKENS` / `LLM_REQUEST_TIMEOUT` | `0.1` / `2000` / `60` | LLM sampling, output budget, HTTP timeout. |
+| `LLM_MAX_PROVIDER_CYCLES` / `LLM_QUOTA_RETRY_WAIT` | `3` / `60` | Provider-chain retry cycles and wait between them. |
+| `SCRAPER_MAX_RETRIES` / `SCRAPER_RETRY_WAIT` / `SCRAPER_REQUEST_TIMEOUT` / `SCRAPER_MAX_PAGES` | `5` / `5` / `15` / `10` | Scraper retry, timeout and pagination limits. |
+| `SCRAPER_MIN_REQUEST_DELAY` / `SCRAPER_MAX_REQUEST_DELAY` | `1.0` / `3.0` | Random pause range (s) between requests. |
+| `KEYWORDS_CONFIG_PATH` / `HISTORY_PATH` / `REPORT_OUTPUT_PATH` | `config/keywords.yaml` / `vagas_historico.json` / `vagas_filtradas.md` | File locations. |
+
 ## 📂 Project structure
 
 ```text
@@ -130,6 +147,7 @@ CV_bot/
 │   ├── matcher.py              # LLM provider chain: match + contract classifier
 │   ├── text_signals.py         # Text normalization + non-CLT keyword signals
 │   ├── reporter.py             # Markdown report generation
+│   ├── settings.py             # Env-backed tunables (.env) with defaults
 │   └── logging_config.py       # Centralized logging setup
 ├── docs/specs.md               # Original technical spec (pt-BR)
 ├── examples/                   # Sample output

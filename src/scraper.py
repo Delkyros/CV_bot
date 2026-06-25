@@ -7,6 +7,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from src.text_signals import normalize_text
+from src.settings import env_float, env_int
 
 logger = logging.getLogger(__name__)
 
@@ -32,20 +33,63 @@ def get_headers():
 
 
 # Retry parameters to work around temporary blocks (429) without resorting to
-# parallelism. Serial retry, waiting RETRY_WAIT seconds.
-MAX_RETRIES = 5
-RETRY_WAIT = 5.0
+# parallelism. Serial retry, waiting the configured wait between attempts.
+# Defaults; overridable via SCRAPER_MAX_RETRIES / SCRAPER_RETRY_WAIT /
+# SCRAPER_REQUEST_TIMEOUT / SCRAPER_MAX_PAGES.
+DEFAULT_MAX_RETRIES = 5
+DEFAULT_RETRY_WAIT = 5.0
+DEFAULT_REQUEST_TIMEOUT = 15
+DEFAULT_MAX_PAGES = 10
+
+# Friendly random pause (seconds) between requests to avoid 429. Range is
+# overridable via SCRAPER_MIN_REQUEST_DELAY / SCRAPER_MAX_REQUEST_DELAY.
+DEFAULT_MIN_REQUEST_DELAY = 1.0
+DEFAULT_MAX_REQUEST_DELAY = 3.0
 
 
-def request_with_retry(url, headers=None, timeout=15, max_retries=MAX_RETRIES, retry_wait=RETRY_WAIT):
+def scraper_max_retries():
+    return env_int("SCRAPER_MAX_RETRIES", DEFAULT_MAX_RETRIES)
+
+
+def scraper_retry_wait():
+    return env_float("SCRAPER_RETRY_WAIT", DEFAULT_RETRY_WAIT)
+
+
+def scraper_request_timeout():
+    return env_int("SCRAPER_REQUEST_TIMEOUT", DEFAULT_REQUEST_TIMEOUT)
+
+
+def scraper_max_pages():
+    return env_int("SCRAPER_MAX_PAGES", DEFAULT_MAX_PAGES)
+
+
+def _sleep_between_requests():
+    """Pause a random interval within the configured request-delay range."""
+    low = env_float("SCRAPER_MIN_REQUEST_DELAY", DEFAULT_MIN_REQUEST_DELAY)
+    high = env_float("SCRAPER_MAX_REQUEST_DELAY", DEFAULT_MAX_REQUEST_DELAY)
+    if high < low:
+        low, high = high, low
+    time.sleep(random.uniform(low, high))
+
+
+def request_with_retry(url, headers=None, timeout=None, max_retries=None, retry_wait=None):
     """
     Perform a GET with retry on a 429 (Too Many Requests) or network error,
     waiting retry_wait seconds between each attempt (no parallelism).
+
+    timeout/max_retries/retry_wait default to the env-configured values when not
+    passed explicitly.
 
     Returns the Response object (even with status != 200, e.g. still 429 after
     exhausting the attempts) or None if all attempts fail due to network.
     """
     headers = headers or get_headers()
+    if timeout is None:
+        timeout = scraper_request_timeout()
+    if max_retries is None:
+        max_retries = scraper_max_retries()
+    if retry_wait is None:
+        retry_wait = scraper_retry_wait()
     last_response = None
 
     for attempt in range(1, max_retries + 1):
@@ -105,10 +149,17 @@ def workplace_matches(location_text, description_text, workplace_type, search_lo
 
     if normalized_workplace in ("hibrido", "hybrid"):
         # Keep only hybrid jobs in Sao Jose-SC / Florianopolis-SC.
-        return any(
-            token in location_norm
-            for token in ["sao jose", "florianopolis", "floripa", "santa catarina"]
-        )
+        # Florianopolis/Floripa are unambiguously in Santa Catarina.
+        if "florianopolis" in location_norm or "floripa" in location_norm:
+            return True
+        # "Sao Jose" alone is ambiguous: reject the Sao Paulo homonyms
+        # ("Sao Jose dos Campos", "Sao Jose do Rio Preto") that contain the
+        # same prefix and used to slip through.
+        if "dos campos" in location_norm or "do rio preto" in location_norm:
+            return False
+        # Otherwise require an explicit Santa Catarina marker (full name or the
+        # "SC" state abbreviation) so other "Sao Jose" homonyms don't pass.
+        return "santa catarina" in location_norm or bool(re.search(r"\bsc\b", location_norm))
 
     return True
 
@@ -173,24 +224,51 @@ def extract_job_id(url, card_element=None):
 
     return None
 
+# Phrases LinkedIn shows when a posting no longer accepts applications.
+# Matched against the accent-stripped, lowercased page text.
+_CLOSED_JOB_MARKERS = (
+    "no longer accepting applications",
+    "nao esta mais aceitando candidaturas",
+    "nao aceita mais candidaturas",
+    "candidaturas encerradas",
+    "vaga encerrada",
+)
+
+
+def job_is_closed(soup):
+    """
+    Detect whether a LinkedIn guest job page indicates the posting is closed
+    (no longer accepting applications), either by the explicit banner/figure or
+    by one of the known phrases in the page text.
+    """
+    if soup.find(class_=re.compile(r"closed-job|jobs-closed")):
+        return True
+    page_text = normalize_text(soup.get_text(" "))
+    return any(marker in page_text for marker in _CLOSED_JOB_MARKERS)
+
+
 def fetch_job_description(job_id):
     """
     Fetch the detailed job description from the public LinkedIn Guest API endpoint.
+
+    Returns a (description, is_closed) tuple, where is_closed is True when the
+    posting no longer accepts applications.
     """
     url = f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
     headers = get_headers()
 
     try:
         # Friendly pause before fetching the description to avoid 429
-        time.sleep(random.uniform(1.0, 2.5))
+        _sleep_between_requests()
 
-        response = request_with_retry(url, headers=headers, timeout=15)
+        response = request_with_retry(url, headers=headers)
         if response is None or response.status_code != 200:
             status = response.status_code if response is not None else "no response"
             logger.warning(f"Failed to get details for job ID {job_id}. Status: {status}")
-            return "Description unavailable due to a public connection error."
+            return "Description unavailable due to a public connection error.", False
 
         soup = BeautifulSoup(response.content, "html.parser")
+        is_closed = job_is_closed(soup)
 
         # Find the container with the job description
         # The /jobs-guest/jobs/api/jobPosting/ endpoint returns compact HTML with
@@ -212,18 +290,18 @@ def fetch_job_description(job_id):
             text = desc_element.get_text()
             # Remove extra whitespace while keeping clean line breaks
             text = re.sub(r'\n\s*\n', '\n\n', text).strip()
-            return text
+            return text, is_closed
 
         # Fallback: if the known classes are not found, take the whole body text
         body_text = soup.get_text().strip()
         if len(body_text) > 100:
-            return body_text
+            return body_text, is_closed
 
-        return "Description unavailable in the returned HTML."
+        return "Description unavailable in the returned HTML.", is_closed
 
     except Exception:
         logger.exception(f"Failed to fetch description for job ID {job_id}")
-        return "Error extracting the job description."
+        return "Error extracting the job description.", False
 
 def scrape_linkedin_jobs(
     keyword,
@@ -235,7 +313,7 @@ def scrape_linkedin_jobs(
     contract_classifier=None,
     geo_id=None,
     time_filter=None,
-    max_pages=10,
+    max_pages=None,
 ):
     """
     Search LinkedIn jobs using the public search Guest API.
@@ -245,6 +323,9 @@ def scrape_linkedin_jobs(
     country; the `location` text parameter alone is not reliably honored by the
     Guest API (it returns US jobs even with location=Brasil).
     """
+    if max_pages is None:
+        max_pages = scraper_max_pages()
+
     search_keyword = keyword
     logger.info(f"Starting public search for: '{search_keyword}' in '{location}' (Model: {workplace_type or 'any'} | Limit: {max_jobs} jobs)")
 
@@ -271,9 +352,9 @@ def scrape_linkedin_jobs(
             url += f"&f_TPR={tpr_filter}"
 
         try:
-            time.sleep(random.uniform(1.5, 3.0))
+            _sleep_between_requests()
             # Serial retry on 429/network error (no parallelism).
-            response = request_with_retry(url, headers=headers, timeout=15)
+            response = request_with_retry(url, headers=headers)
 
             if response is None:
                 logger.error("Search failed after multiple attempts. Ending this term.")
@@ -339,7 +420,14 @@ def scrape_linkedin_jobs(
                         continue
 
                     logger.info(f"Collecting job description: {title} | {company} (ID: {job_id})...")
-                    description = fetch_job_description(job_id)
+                    description, is_closed = fetch_job_description(job_id)
+
+                    # Skip postings that no longer accept applications: no point
+                    # spending an LLM classification/match call on them.
+                    if is_closed:
+                        logger.info(f"Job no longer accepting applications, skipping: {title} | {company} ({job_id})")
+                        continue
+
                     contract_inference = {
                         "inferred_contract_type": contract_type or "N/A",
                         "accepted": True,

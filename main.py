@@ -10,9 +10,10 @@ from dotenv import load_dotenv
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 from src.scraper import scrape_linkedin_jobs, normalize_text
-from src.matcher import analyze_match, has_provider, LLMContractClassifier, MIN_DISCARD_CONFIDENCE
+from src.matcher import analyze_match, has_provider, LLMContractClassifier, min_discard_confidence
 from src.reporter import generate_report
 from src.logging_config import setup_logging
+from src.settings import env_str
 
 logger = logging.getLogger(__name__)
 
@@ -186,7 +187,7 @@ def main():
         logger.warning("The script will continue with the job search, but the match step will use a default (simulated) score.")
 
     # 2. Load settings from the YAML file
-    config_path = "config/keywords.yaml"
+    config_path = env_str("KEYWORDS_CONFIG_PATH", "config/keywords.yaml")
     if not os.path.exists(config_path):
         logger.error(f"Configuration file '{config_path}' not found!")
         sys.exit(1)
@@ -233,10 +234,10 @@ def main():
         contract_classifier = LLMContractClassifier()
         logger.info(
             "LLM contract classification enabled (default-CLT: only discards "
-            f"non-CLT types with confidence >= {MIN_DISCARD_CONFIDENCE:.2f})."
+            f"non-CLT types with confidence >= {min_discard_confidence():.2f})."
         )
 
-    history_path = "vagas_historico.json"
+    history_path = env_str("HISTORY_PATH", "vagas_historico.json")
     job_history = load_job_history(history_path)
     history_links = set(job_history.keys())
     logger.info(f"Known jobs loaded from history: {len(history_links)}")
@@ -333,7 +334,8 @@ def main():
         logger.info(f"Result: Score {analyzed_job['match_score']}/100")
 
     # 5. Run the reporter to generate the output Markdown file
-    report_saved = generate_report(analyzed_jobs, output_path="vagas_filtradas.md")
+    output_path = env_str("REPORT_OUTPUT_PATH", "vagas_filtradas.md")
+    report_saved = generate_report(analyzed_jobs, output_path=output_path)
     history_saved = save_job_history(history_path, job_history, analyzed_jobs)
 
     if report_saved and history_saved:

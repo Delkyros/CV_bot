@@ -7,7 +7,7 @@ import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src import scraper, matcher, reporter, text_signals
+from src import scraper, matcher, reporter, text_signals, settings
 import main
 
 
@@ -65,6 +65,34 @@ def test_workplace_matches_remote_rejects_foreign():
 def test_workplace_matches_hybrid_only_sc_cities():
     assert scraper.workplace_matches("Florianópolis, SC", "", "hibrido", "x") is True
     assert scraper.workplace_matches("São Paulo, SP", "", "hibrido", "x") is False
+
+
+def test_workplace_matches_hybrid_accepts_sao_jose_sc():
+    assert scraper.workplace_matches("São José, Santa Catarina, Brasil", "", "hibrido", "x") is True
+    assert scraper.workplace_matches("São José, SC", "", "hibrido", "x") is True
+
+
+def test_workplace_matches_hybrid_rejects_sao_jose_sp_homonyms():
+    # São José dos Campos / do Rio Preto are in São Paulo, not Santa Catarina.
+    assert scraper.workplace_matches("São José dos Campos, São Paulo, Brasil", "", "hibrido", "x") is False
+    assert scraper.workplace_matches("São José do Rio Preto, SP", "", "hibrido", "x") is False
+
+
+def test_workplace_matches_hybrid_rejects_bare_sao_jose_without_sc():
+    # Ambiguous "São José" with no Santa Catarina marker must not pass.
+    assert scraper.workplace_matches("São José", "", "hibrido", "x") is False
+
+
+def test_job_is_closed_detects_banner_and_phrases():
+    from bs4 import BeautifulSoup
+    closed_text = BeautifulSoup("<div>No longer accepting applications</div>", "html.parser")
+    closed_pt = BeautifulSoup("<div>Esta vaga não aceita mais candidaturas.</div>", "html.parser")
+    closed_class = BeautifulSoup('<figure class="closed-job"></figure>', "html.parser")
+    open_job = BeautifulSoup("<div>Estamos contratando! Candidate-se já.</div>", "html.parser")
+    assert scraper.job_is_closed(closed_text) is True
+    assert scraper.job_is_closed(closed_pt) is True
+    assert scraper.job_is_closed(closed_class) is True
+    assert scraper.job_is_closed(open_job) is False
 
 
 def test_workplace_matches_no_filter():
@@ -126,6 +154,70 @@ def test_format_list():
 
 def test_table_text_escapes_pipes_and_newlines():
     assert reporter.table_text("a|b\nc") == "a\\|b c"
+
+
+@pytest.mark.parametrize("score_clt,match_score,expected", [
+    (0.6, 50, True),       # both at the threshold
+    (0.9, 80, True),       # comfortably above
+    (0.59, 90, False),     # CLT below threshold
+    (0.8, 49, False),      # profile below threshold
+    ("N/A", 90, False),    # non-numeric CLT score is excluded
+    (None, 90, False),     # missing CLT score is excluded
+    (0.8, None, False),    # missing match score treated as 0
+])
+def test_passes_relevance_filter(score_clt, match_score, expected):
+    job = {"score_clt": score_clt, "match_score": match_score}
+    assert reporter.passes_relevance_filter(job) is expected
+
+
+# --------------------------------------------------------------------------- #
+# settings (env-backed tunables)
+# --------------------------------------------------------------------------- #
+def test_env_float_default_and_invalid(monkeypatch):
+    monkeypatch.delenv("X_FLOAT", raising=False)
+    assert settings.env_float("X_FLOAT", 0.6) == 0.6
+    monkeypatch.setenv("X_FLOAT", "not-a-number")
+    assert settings.env_float("X_FLOAT", 0.6) == 0.6
+    monkeypatch.setenv("X_FLOAT", "0.8")
+    assert settings.env_float("X_FLOAT", 0.6) == 0.8
+
+
+def test_env_int_default_and_invalid(monkeypatch):
+    monkeypatch.setenv("X_INT", "x")
+    assert settings.env_int("X_INT", 5) == 5
+    monkeypatch.setenv("X_INT", "9")
+    assert settings.env_int("X_INT", 5) == 9
+
+
+def test_env_list_splits_and_defaults(monkeypatch):
+    monkeypatch.delenv("X_LIST", raising=False)
+    assert settings.env_list("X_LIST", ["a", "b"]) == ["a", "b"]
+    monkeypatch.setenv("X_LIST", " one , two ,, three ")
+    assert settings.env_list("X_LIST", []) == ["one", "two", "three"]
+
+
+def test_report_thresholds_read_from_env(monkeypatch):
+    monkeypatch.setenv("REPORT_MIN_CLT_SCORE", "0.9")
+    monkeypatch.setenv("REPORT_MIN_MATCH_SCORE", "70")
+    # A job that passes the defaults (0.6/50) must now fail the stricter env values.
+    job = {"score_clt": 0.8, "match_score": 60}
+    assert reporter.passes_relevance_filter(job) is False
+
+
+def test_contract_discard_threshold_reads_from_env(monkeypatch):
+    monkeypatch.delenv("CONTRACT_DISCARD_CONFIDENCE", raising=False)
+    assert matcher.min_discard_confidence() == 0.6
+    monkeypatch.setenv("CONTRACT_DISCARD_CONFIDENCE", "0.75")
+    assert matcher.min_discard_confidence() == 0.75
+
+
+def test_openrouter_models_env_overrides(monkeypatch):
+    monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
+    monkeypatch.setenv("OPENROUTER_MODELS", "model-a:free, model-b:free")
+    assert matcher._openrouter_models() == ["model-a:free", "model-b:free"]
+    # A single pinned model takes priority over the list.
+    monkeypatch.setenv("OPENROUTER_MODEL", "solo:free")
+    assert matcher._openrouter_models() == ["solo:free"]
 
 
 # --------------------------------------------------------------------------- #
