@@ -80,10 +80,10 @@ services:
   # volume, so its changes land in the same vagas_historico.json the scraper
   # reads/writes. Open http://localhost:8000 after `docker compose up -d`.
   web:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    # Reuse the image built by `jobmatch` (no second build -> no tag race).
     image: jobmatch-ai:latest
+    depends_on:
+      - jobmatch
     # Override the scheduler entrypoint to run the Flask app instead.
     entrypoint: ["python", "webapp.py"]
     restart: unless-stopped
