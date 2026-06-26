@@ -1,0 +1,110 @@
+# JobMatch AI — Docker Compose template.
+#
+# Copy this file to docker-compose.yml and fill in your real API keys:
+#     cp docker-compose.example.yml docker-compose.yml
+# docker-compose.yml is git-ignored (it holds your secrets); this example is
+# the versioned template.
+#
+# Build & run on a schedule (runs every 6h by default, in the background):
+#     docker compose build
+#     docker compose up -d
+#     docker compose logs -f          # follow the run output
+#     docker compose down             # stop the scheduler
+#
+# To run just once instead of on a schedule, set RUN_INTERVAL_SECONDS: "0"
+# below (or override per run):
+#     RUN_INTERVAL_SECONDS=0 docker compose run --rm jobmatch
+#
+# Your edited config/keywords.yaml is mounted read-only, and the generated
+# report + history land in ./data on the host (persisted across runs).
+
+services:
+  jobmatch:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: jobmatch-ai:latest
+    # Long-running scheduler: keep it up across crashes and host reboots.
+    restart: unless-stopped
+
+    # --- Security hardening ---
+    read_only: true                  # immutable root filesystem
+    security_opt:
+      - no-new-privileges:true       # block privilege escalation
+    cap_drop:
+      - ALL                          # drop all Linux capabilities
+    tmpfs:                           # writable scratch (root fs is read-only)
+      - /tmp
+      - /home/appuser
+
+    # --- Configuration & secrets (EDIT THESE) ---
+    environment:
+      # Required: set at least one provider key.
+      OPENROUTER_API_KEY: "your_openrouter_key_here"   # primary provider
+      GEMINI_API_KEY: "your_gemini_key_here"           # fallback provider
+
+      # Schedule (read by the Docker entrypoint, not by main.py):
+      RUN_INTERVAL_SECONDS: "21600"  # run every 6 hours; "0" = run once and exit
+      RUN_ON_START: "true"           # run immediately on start, then every interval
+
+      # Paths inside the container — point at the mounted volumes. Leave as-is.
+      KEYWORDS_CONFIG_PATH: "config/keywords.yaml"
+      HISTORY_PATH: "data/vagas_historico.json"
+      REPORT_OUTPUT_PATH: "data/vagas_filtradas.md"
+
+      # --- Optional tunables (uncomment to override defaults; see .env.example) ---
+      # OPENROUTER_MODEL: ""
+      # OPENROUTER_MODELS: "openai/gpt-oss-120b:free,meta-llama/llama-3.3-70b-instruct:free"
+      # GEMINI_MODEL: "gemini-2.5-flash"
+      # LLM_TEMPERATURE: "0.1"
+      # OPENROUTER_MAX_TOKENS: "2000"
+      # LLM_REQUEST_TIMEOUT: "60"
+      # LLM_MAX_PROVIDER_CYCLES: "3"
+      # LLM_QUOTA_RETRY_WAIT: "60"
+      # CONTRACT_DISCARD_CONFIDENCE: "0.6"
+      # REPORT_MIN_CLT_SCORE: "0.6"
+      # REPORT_MIN_MATCH_SCORE: "50"
+      # SCRAPER_MAX_RETRIES: "5"
+      # SCRAPER_RETRY_WAIT: "5"
+      # SCRAPER_REQUEST_TIMEOUT: "15"
+      # SCRAPER_MAX_PAGES: "10"
+      # SCRAPER_MIN_REQUEST_DELAY: "1.0"
+      # SCRAPER_MAX_REQUEST_DELAY: "3.0"
+
+    # --- Host <-> container files ---
+    volumes:
+      - ./config:/app/config:ro      # your keywords.yaml (read-only)
+      - ./data:/app/data             # generated report + history (writable)
+
+  # Web UI to mark jobs as viewed/applied. Shares the same image and the ./data
+  # volume, so its changes land in the same vagas_historico.json the scraper
+  # reads/writes. Open http://localhost:8000 after `docker compose up -d`.
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: jobmatch-ai:latest
+    # Override the scheduler entrypoint to run the Flask app instead.
+    entrypoint: ["python", "webapp.py"]
+    restart: unless-stopped
+
+    # --- Security hardening (same as the scraper) ---
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp
+      - /home/appuser
+
+    environment:
+      HISTORY_PATH: "data/vagas_historico.json"   # same file the scraper writes
+      WEB_HOST: "0.0.0.0"
+      WEB_PORT: "8000"
+
+    ports:
+      - "8000:8000"                  # browse at http://localhost:8000
+
+    volumes:
+      - ./data:/app/data             # shared history (read + write status)

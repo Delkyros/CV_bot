@@ -137,15 +137,27 @@ def load_job_history(history_path):
     return {}
 
 
+# User-owned fields set via the web UI (webapp.py). The pipeline must carry
+# these over verbatim so a new search run never wipes "viewed/applied/notes".
+USER_STATUS_FIELDS = ("status", "notes", "status_updated_at")
+
+
 def save_job_history(history_path, history, analyzed_jobs):
     now = datetime.now().isoformat(timespec="seconds")
+
+    # Reload from disk so any status/notes set via the web UI *during* this run
+    # (which started minutes ago with a now-stale in-memory copy) are not lost.
+    # Disk is authoritative for existing entries; fall back to the in-memory
+    # copy only if the file could not be read.
+    merged = load_job_history(history_path) or dict(history)
 
     for job in analyzed_jobs:
         link = job.get("job_link")
         if not link:
             continue
 
-        history[link] = {
+        prior = merged.get(link, {})
+        entry = {
             "job_title": job.get("job_title", "N/A"),
             "company": job.get("company", "N/A"),
             "location": job.get("location", "N/A"),
@@ -157,14 +169,20 @@ def save_job_history(history_path, history, analyzed_jobs):
             "contract_evidence": job.get("contract_evidence", "N/A"),
             "workplace_type": job.get("workplace_type", "N/A"),
             "match_score": job.get("match_score", 0),
-            "first_seen_at": history.get(link, {}).get("first_seen_at", now),
+            "first_seen_at": prior.get("first_seen_at", now),
             "last_processed_at": now,
         }
+        # Preserve user-set status/notes from the web UI.
+        for field in USER_STATUS_FIELDS:
+            if field in prior:
+                entry[field] = prior[field]
+
+        merged[link] = entry
 
     try:
         with open(history_path, "w", encoding="utf-8") as f:
-            json.dump(history, f, ensure_ascii=False, indent=2)
-        logger.info(f"History updated at '{history_path}' ({len(history)} known jobs).")
+            json.dump(merged, f, ensure_ascii=False, indent=2)
+        logger.info(f"History updated at '{history_path}' ({len(merged)} known jobs).")
         return True
     except Exception as e:
         logger.error(f"Failed to save history '{history_path}': {e}")
