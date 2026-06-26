@@ -1,0 +1,5 @@
+# Keep shell scripts and container files LF so they work inside Linux images,
+# even when checked out on Windows (where autocrlf may be enabled).
+*.sh text eol=lf
+docker-entrypoint.sh text eol=lf
+Dockerfile text eol=lf

@@ -1,0 +1,32 @@
+# Keep the build context small and avoid leaking local/secret files.
+.git
+.gitignore
+.github/
+.claude/
+
+# Python environments / caches
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Secrets and local config (provided at runtime via env / mounted volumes)
+.env
+docker-compose.yml
+config/keywords.yaml
+
+# Runtime outputs
+data/
+vagas_filtradas.md
+vagas_historico.json
+*.xlsx
+
+# Docs / examples / tests not needed in the runtime image
+README.md
+LICENSE
+docs/
+examples/
+tests/
+requirements-dev.txt
+Dockerfile
+.dockerignore

@@ -254,3 +254,91 @@ def test_format_candidate_profile_renders_sections():
 
 def test_format_candidate_profile_passthrough_string():
     assert main.format_candidate_profile("plain text") == "plain text"
+
+
+def test_save_job_history_preserves_user_status(tmp_path):
+    import json
+
+    history_path = tmp_path / "hist.json"
+    # Pre-existing entry already marked via the web UI.
+    history_path.write_text(json.dumps({
+        "https://job/1": {
+            "job_title": "Old title", "match_score": 40,
+            "first_seen_at": "2026-01-01T00:00:00",
+            "status": "applied", "notes": "candidatei-me",
+            "status_updated_at": "2026-02-02T00:00:00",
+        }
+    }), encoding="utf-8")
+
+    analyzed = [{
+        "job_link": "https://job/1", "job_title": "New title",
+        "company": "ACME", "match_score": 88, "score_clt": 0.9,
+    }]
+    assert main.save_job_history(str(history_path), {}, analyzed) is True
+
+    saved = json.loads(history_path.read_text(encoding="utf-8"))
+    entry = saved["https://job/1"]
+    # Scrape-derived fields refreshed...
+    assert entry["job_title"] == "New title"
+    assert entry["match_score"] == 88
+    # ...first_seen_at and user status/notes preserved.
+    assert entry["first_seen_at"] == "2026-01-01T00:00:00"
+    assert entry["status"] == "applied"
+    assert entry["notes"] == "candidatei-me"
+
+
+# --------------------------------------------------------------------------- #
+# webapp (Flask UI)
+# --------------------------------------------------------------------------- #
+@pytest.fixture
+def web_client(tmp_path, monkeypatch):
+    import json
+    import webapp
+
+    history_path = tmp_path / "hist.json"
+    history_path.write_text(json.dumps({
+        "https://job/a": {"job_title": "A", "match_score": 70, "score_clt": 0.9},
+        "https://job/b": {"job_title": "B", "match_score": 90, "score_clt": 0.8},
+    }), encoding="utf-8")
+    monkeypatch.setenv("HISTORY_PATH", str(history_path))
+    webapp.app.config.update(TESTING=True)
+    return webapp.app.test_client(), history_path
+
+
+def test_api_jobs_sorted_by_score_desc(web_client):
+    client, _ = web_client
+    data = client.get("/api/jobs").get_json()
+    assert data["count"] == 2
+    assert [j["match_score"] for j in data["jobs"]] == [90, 70]
+
+
+def test_api_status_persists(web_client):
+    import json
+
+    client, history_path = web_client
+    resp = client.post("/api/status", json={
+        "link": "https://job/a", "status": "applied", "notes": "ok",
+    })
+    assert resp.status_code == 200
+    saved = json.loads(history_path.read_text(encoding="utf-8"))
+    assert saved["https://job/a"]["status"] == "applied"
+    assert saved["https://job/a"]["notes"] == "ok"
+    assert "status_updated_at" in saved["https://job/a"]
+
+
+def test_api_status_rejects_invalid_status(web_client):
+    client, _ = web_client
+    resp = client.post("/api/status", json={"link": "https://job/a", "status": "bogus"})
+    assert resp.status_code == 400
+
+
+def test_api_status_unknown_link_404(web_client):
+    client, _ = web_client
+    resp = client.post("/api/status", json={"link": "https://job/zzz", "status": "viewed"})
+    assert resp.status_code == 404
+
+
+def test_api_status_requires_link(web_client):
+    client, _ = web_client
+    resp = client.post("/api/status", json={"status": "viewed"})
+    assert resp.status_code == 400

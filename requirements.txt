@@ -3,3 +3,5 @@ beautifulsoup4>=4.12.0
 pyyaml>=6.0.1
 python-dotenv>=1.0.1
 google-genai>=0.1.1
+# Web UI to mark jobs as viewed/applied (webapp.py)
+flask>=3.0,<4

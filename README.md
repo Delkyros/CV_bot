@@ -22,12 +22,6 @@ manual triage into a repeatable pipeline:
 - **Honest matching** — each job is scored 0–100 against your profile, with concrete strengths, gaps and a verdict — not just a number.
 - **Resilient by design** — a provider chain (OpenRouter free models first, Gemini as fallback) with retries means a single rate-limit (`429`) doesn't kill the run.
 
-## 📸 Demo
-
-> _Add a terminal GIF of a run here, plus a screenshot of the rendered `vagas_filtradas.md`._
->
-> A sample of the generated report lives in [`examples/vagas_filtradas.sample.md`](examples/vagas_filtradas.sample.md).
-
 ## 🧩 Architecture
 
 ```mermaid
@@ -76,7 +70,12 @@ flowchart LR
 ```bash
 git clone https://github.com/Delkyros/CV_bot.git
 cd CV_bot
-python -m venv .venv
+py -0
+# Installed Pythons found by C:\WINDOWS\py.exe Launcher for Windows
+# -3.9-64
+# -3.10-64
+# Select your correct version of python for this repo
+py -3.10 -m venv .venv
 # Windows
 .venv\Scripts\activate
 # macOS / Linux
@@ -108,6 +107,53 @@ python main.py
 
 The ranked report is written to `vagas_filtradas.md` at the project root, and `vagas_historico.json` is updated so the next run skips everything already seen.
 
+## 🐳 Run with Docker (recommended)
+
+No local Python or virtualenv needed — just Docker. The image is a hardened, multi-stage Python 3.10 build that runs as a non-root user on a read-only root filesystem, and the container re-runs the pipeline **every 6 hours** on its own.
+
+```bash
+# 1. Provide your search & profile (same as the native flow)
+cp config/keywords.example.yaml config/keywords.yaml   # then edit it
+
+# 2. Create your compose file and add your API key(s)
+cp docker-compose.example.yml docker-compose.yml        # then edit the environment: block
+
+# 3. Build and start the scheduler (runs now, then every 6h)
+docker compose build
+docker compose up -d
+
+# Follow the output / stop it
+docker compose logs -f
+docker compose down
+```
+
+- **Scheduling** is handled by the container entrypoint via `RUN_INTERVAL_SECONDS` (default `21600` = 6h) and `RUN_ON_START` (default `true`). No host cron / Task Scheduler needed, and it survives reboots (`restart: unless-stopped`). A failed run never breaks the schedule.
+- To run **once** instead of on a schedule, set `RUN_INTERVAL_SECONDS: "0"` (or `RUN_INTERVAL_SECONDS=0 docker compose run --rm jobmatch`).
+- API keys and all tunables live in the `environment:` block of `docker-compose.yml` (git-ignored). `docker-compose.example.yml` is the versioned template.
+- `config/keywords.yaml` is mounted read-only; the report and history are written to `./data/` on the host (`data/vagas_filtradas.md`, `data/vagas_historico.json`) and persist across runs so already-seen jobs are skipped.
+- Hardening: `read_only` root fs, `cap_drop: ALL`, `no-new-privileges`, non-root user, and no build tools in the runtime image.
+
+## ✅ Mark jobs as viewed / applied (web UI)
+
+The Markdown report is regenerated every run, so it's not the place to track which jobs you've already handled. Instead, a small web UI (`webapp.py`) reads the persistent `vagas_historico.json` and lets you mark each job **Novo / Visto / Inscrito** and add notes. Those are written straight back into the history JSON, so they **survive every new search run**.
+
+With Docker (the `web` service in the compose file is already wired up):
+
+```bash
+docker compose up -d            # starts both the 6h scraper and the web UI
+# open http://localhost:8000
+```
+
+Or natively:
+
+```bash
+python webapp.py                # open http://localhost:8000
+```
+
+- Status + notes live in `vagas_historico.json` (same `./data` volume the scraper uses) — the web UI and the pipeline share one source of truth.
+- The scraper re-reads the history at save time and preserves your `status`/`notes`, so a run that happens while you're triaging never clobbers your marks.
+- Filters in the UI: search, *Só relevantes* (same threshold as the report), *Só novas*, *Ocultar inscritas*.
+
 ## ⚙️ Configuration reference (`config/keywords.yaml`)
 
 | Key | Description |
@@ -135,6 +181,8 @@ Everything operational is configurable via environment variables — nothing is 
 | `SCRAPER_MAX_RETRIES` / `SCRAPER_RETRY_WAIT` / `SCRAPER_REQUEST_TIMEOUT` / `SCRAPER_MAX_PAGES` | `5` / `5` / `15` / `10` | Scraper retry, timeout and pagination limits. |
 | `SCRAPER_MIN_REQUEST_DELAY` / `SCRAPER_MAX_REQUEST_DELAY` | `1.0` / `3.0` | Random pause range (s) between requests. |
 | `KEYWORDS_CONFIG_PATH` / `HISTORY_PATH` / `REPORT_OUTPUT_PATH` | `config/keywords.yaml` / `vagas_historico.json` / `vagas_filtradas.md` | File locations. |
+| `WEB_HOST` / `WEB_PORT` | `0.0.0.0` / `8000` | Bind host/port for the web UI (`webapp.py`). |
+| `RUN_INTERVAL_SECONDS` / `RUN_ON_START` | `21600` / `true` | Docker scheduler: seconds between runs (`0` = once), run on start. |
 
 ## 📂 Project structure
 
@@ -149,9 +197,15 @@ CV_bot/
 │   ├── reporter.py             # Markdown report generation
 │   ├── settings.py             # Env-backed tunables (.env) with defaults
 │   └── logging_config.py       # Centralized logging setup
+├── web/
+│   └── index.html              # Web UI for marking jobs viewed/applied
 ├── docs/specs.md               # Original technical spec (pt-BR)
 ├── examples/                   # Sample output
 ├── main.py                     # End-to-end orchestrator
+├── webapp.py                   # Flask web UI (reads/writes status in history)
+├── docker-entrypoint.sh        # Scheduler loop (runs main.py every 6h)
+├── Dockerfile                  # Hardened multi-stage image
+├── docker-compose.example.yml  # Template stack (scraper + web)
 ├── requirements.txt
 ├── .env.example
 └── LICENSE
