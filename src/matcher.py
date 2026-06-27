@@ -8,7 +8,7 @@ import requests
 from google import genai
 from google.genai import types
 
-from src.text_signals import explicit_negative_evidence
+from src.text_signals import explicit_negative_evidence, strong_non_clt_evidence
 from src.settings import env_float, env_int, env_list, env_str
 
 logger = logging.getLogger(__name__)
@@ -143,15 +143,17 @@ Candidate Professional Profile:
 Analysis Instructions:
 1. Compare the job's technical requirements, experience level and competencies with the candidate's profile.
 2. Determine a realistic match score from 0 to 100 (be realistic and critical; do not give 100 unless every requirement matches perfectly).
-3. List up to 4 candidate strengths that directly match the job requirements.
-4. List the "gaps", i.e. the job's required or desired requirements that the candidate lacks or did not mention in their profile.
-5. Write a friendly, honest and direct verdict (at most 3 sentences) advising what to focus on or whether it is worth applying.
+3. Decide whether the job's CORE ROLE is in the candidate's primary professional area as described in the profile. Set "core_role_compatible" to false ONLY when the central function is clearly a different career track than the candidate's — for example: mobile/Android/iOS, embedded/firmware, dedicated QA/testing, front-end-only, Excel/data-entry, HR/People Analytics, business-process analysis, or research in an unrelated domain. If the role is in or adjacent to the candidate's area, or you are unsure, set it to true.
+4. List up to 4 candidate strengths that directly match the job requirements.
+5. List the "gaps", i.e. the job's required or desired requirements that the candidate lacks or did not mention in their profile.
+6. Write a friendly, honest and direct verdict (at most 3 sentences) advising what to focus on or whether it is worth applying.
 Write the strengths, gaps and verdict in Portuguese (the candidate's language).
 
 You MUST respond strictly in the JSON format below, with no explanatory blocks or markdown outside the JSON.
 Desired response structure:
 {{
   "match_score": <integer from 0 to 100>,
+  "core_role_compatible": <true or false>,
   "strengths": ["Strength 1", "Strength 2", ...],
   "gaps": ["Gap 1", "Gap 2", ...],
   "verdict": "<Verdict text>"
@@ -309,10 +311,23 @@ def _parse_result(raw_text):
 
     return {
         "match_score": max(0, min(100, score)),
+        "core_role_compatible": _coerce_bool(result.get("core_role_compatible", True)),
         "strengths": [str(x) for x in strengths] if isinstance(strengths, list) else [],
         "gaps": [str(x) for x in gaps] if isinstance(gaps, list) else [],
         "verdict": str(verdict),
     }
+
+
+def _coerce_bool(value, default=True):
+    """Interpret an LLM-provided boolean that may arrive as a real bool or a
+    string ("false"/"no"/"não"/"0"). Defaults to True (keep the job) so an
+    omitted/ambiguous value never discards a job — scope filtering only acts on
+    an EXPLICIT negative, mirroring the conservative default-CLT philosophy."""
+    if isinstance(value, str):
+        return value.strip().lower() not in ("false", "no", "nao", "não", "0", "")
+    if value is None:
+        return default
+    return bool(value)
 
 
 def _complete_with_providers(prompt, parse_fn, task="analysis", max_cycles=None, retry_wait=None):
@@ -490,19 +505,44 @@ def classify_contract(description, title=None, company=None, regex_signals=None)
     scraper/reporter/history expect (same keys as the old classifier).
 
     Default-CLT logic: the job is ACCEPTED (accepted=True) for CLT and INDEFINIDO;
-    it is only discarded when the regime is non-CLT with enough confidence. If no
-    LLM provider responds, the job is KEPT by default (we never discard due to an
-    infrastructure failure).
+    it is only discarded when the regime is non-CLT with enough confidence.
+
+    High-precision override: explicit contractor cues (USD-hourly pay, "Contract:"
+    titles, 1099/C2C, PJ/CNPJ markers, or a known contractor-marketplace company)
+    beat a CLT/INDEFINIDO guess from the LLM. This was added after auditing jobs
+    the LLM wrongly accepted as CLT. The same cues let us discard confidently even
+    when the LLM is unavailable, instead of keeping by default.
     """
-    prompt = _build_contract_prompt(title, company, description, regex_signals or [])
+    # Contractor cues frequently live in the TITLE ("$45/hr", "Contract: …") and
+    # the platform in the COMPANY name, so scan all three together.
+    scan_text = " ".join(part for part in (title, company, description) if part)
+    if regex_signals is None:
+        regex_signals = explicit_negative_evidence(scan_text, company=company)
+    strong_signals = strong_non_clt_evidence(scan_text, company=company)
+
+    prompt = _build_contract_prompt(title, company, description, regex_signals)
     # A single pass through the chain, without long waits: classification is a
-    # collection pre-filter; if the LLM fails, we keep the job (default CLT).
+    # collection pre-filter; if the LLM fails, we fall back to the regex signals.
     result = _complete_with_providers(
         prompt, _parse_contract, "Contract classification",
         max_cycles=1, retry_wait=0,
     )
 
+    discard_threshold = min_discard_confidence()
+
     if result is None:
+        if strong_signals:
+            return {
+                "inferred_contract_type": "PJ",
+                "accepted": False,
+                "score_clt": "N/A",
+                "score_non_clt": 1.0,
+                "contract_margin": "N/A",
+                "contract_evidence": (
+                    "LLM unavailable; discarded by strong non-CLT signal(s): "
+                    + ", ".join(strong_signals)
+                ),
+            }
         return {
             "inferred_contract_type": "INDEFINIDO",
             "accepted": True,
@@ -512,16 +552,27 @@ def classify_contract(description, title=None, company=None, regex_signals=None)
             "contract_evidence": "LLM unavailable; job kept by default (CLT assumed).",
         }
 
-    regime = result["regime"]
-    confidence = result["confidence"]
-    discard_threshold = min_discard_confidence()
+    llm_regime = result["regime"]
+    llm_confidence = result["confidence"]
+    regime, confidence = llm_regime, llm_confidence
+
+    # Override a CLT/INDEFINIDO guess when high-precision contractor cues are present.
+    forced = bool(strong_signals) and llm_regime in ("CLT", "INDEFINIDO")
+    if forced:
+        regime, confidence = "PJ", 1.0
+
     discard = regime in _NON_CLT_REGIMES and confidence >= discard_threshold
     accepted = not discard
 
     evidence = (
-        f"[LLM] regime={regime} confidence={confidence:.2f}. {result['evidence']}"
+        f"[LLM] regime={llm_regime} confidence={llm_confidence:.2f}. {result['evidence']}"
     ).strip()
-    if regime in _NON_CLT_REGIMES and not discard:
+    if forced:
+        evidence = (
+            f"[OVERRIDE->{regime}] strong non-CLT signal(s): "
+            f"{', '.join(strong_signals)}. " + evidence
+        )
+    elif regime in _NON_CLT_REGIMES and not discard:
         evidence += (
             f" (confidence below {discard_threshold:.2f}; "
             "kept conservatively as assumed CLT)."
@@ -547,7 +598,6 @@ class LLMContractClassifier:
     """
 
     def classify(self, description_text, title=None, company=None):
-        signals = explicit_negative_evidence(description_text)
-        return classify_contract(
-            description_text, title=title, company=company, regex_signals=signals,
-        )
+        # Signals are computed inside classify_contract over title+company+
+        # description (contractor cues often live in the title/company).
+        return classify_contract(description_text, title=title, company=company)
