@@ -212,6 +212,9 @@ def test_contract_discard_threshold_reads_from_env(monkeypatch):
 
 
 def test_openrouter_models_env_overrides(monkeypatch):
+    # Disable auto-discovery so this isolates the env-override resolution
+    # (and stays network-free).
+    monkeypatch.setenv("OPENROUTER_AUTO_FREE_MODELS", "false")
     monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
     monkeypatch.setenv("OPENROUTER_MODELS", "model-a:free, model-b:free")
     assert matcher._openrouter_models() == ["model-a:free", "model-b:free"]
