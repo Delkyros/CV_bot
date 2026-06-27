@@ -50,6 +50,23 @@ def env_int(name, default):
         return default
 
 
+def env_bool(name, default):
+    """Return the env var as a bool, or `default` if unset/empty.
+
+    Truthy: 1/true/yes/on/sim. Falsy: 0/false/no/off/nao/não (case-insensitive).
+    """
+    raw = os.getenv(name)
+    if raw is None or not raw.strip():
+        return default
+    value = raw.strip().lower()
+    if value in ("1", "true", "yes", "on", "sim"):
+        return True
+    if value in ("0", "false", "no", "off", "nao", "não"):
+        return False
+    logger.warning("Invalid bool for %s=%r; using default %s.", name, raw, default)
+    return default
+
+
 def env_list(name, default):
     """Return a comma-separated env var as a list of stripped items.
 

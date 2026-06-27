@@ -19,7 +19,7 @@ termos_busca:
 tipo_contratacao: "CLT"
 
 # Max jobs collected per (search term x filter) combination.
-max_vagas_por_termo: 3
+max_vagas_por_termo: 100
 
 # Job posting time filter (LinkedIn f_TPR parameter).
 # Accepted values: "24h", "semana", "mes". Leave empty to disable.
@@ -39,7 +39,7 @@ filtros_busca:
 
 # Your professional profile. Used by the LLM to score the match against each job.
 perfil_candidato:
-  nivel_experiencia: "Pleno / Sênior"
+  nivel_experiencia: "Pleno"
 
   resumo_profissional: |
     Data Scientist / Machine Learning Engineer with hands-on experience building
@@ -57,13 +57,14 @@ perfil_candidato:
       - "Python"
       - "SQL (PostgreSQL)"
       - "RESTful APIs"
-      - "Pandas, Scikit-learn, PyTorch"
+      - "Pandas, Scikit-learn, PyTorch, Langraph, LangSmith"
     engenharia_de_dados_e_cloud:
       - "ETL/ELT Pipelines"
       - "Docker"
-      - "AWS (S3, EC2, Lambda)"
+      - "Azure"
       - "CI/CD (GitHub Actions)"
 
   soft_skills:
     - "Clear communication and cross-functional collaboration."
     - "Turning complex business requirements into reliable software."
+    - "Fast problem understanding."

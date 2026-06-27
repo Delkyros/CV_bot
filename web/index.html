@@ -8,7 +8,7 @@
     :root {
       --bg: #0f1419; --panel: #1a212b; --panel-2: #222b38; --line: #2c3743;
       --txt: #e6edf3; --muted: #9aa7b4; --accent: #4f9cf9;
-      --new: #6b7785; --viewed: #d6a23a; --applied: #3fb950;
+      --new: #6b7785; --viewed: #d6a23a; --applied: #3fb950; --error: #f85149;
     }
     * { box-sizing: border-box; }
     body {
@@ -21,6 +21,22 @@
     }
     h1 { margin: 0 0 10px; font-size: 18px; }
     h1 small { color: var(--muted); font-weight: 400; font-size: 13px; }
+    .tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+    .tab {
+      background: var(--panel-2); border: 1px solid var(--line); color: var(--muted);
+      padding: 6px 14px; border-radius: 7px; cursor: pointer; font: inherit;
+    }
+    .tab:hover { color: var(--txt); }
+    .tab.on { background: var(--accent); color: #042; border-color: var(--accent); }
+    .tab.on#tabApplied { background: var(--applied); color: #04210d; border-color: var(--applied); }
+    .tab.on#tabErrors { background: var(--error); color: #fff; border-color: var(--error); }
+    .tab-count {
+      display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px;
+      border-radius: 99px; background: rgba(0,0,0,.25); font-size: 11px; text-align: center;
+    }
+    /* The classification column only matters on the Erros tab. */
+    .col-class { display: none; }
+    table.tab-errors .col-class { display: table-cell; }
     .controls { display: flex; flex-wrap: wrap; gap: 14px 18px; align-items: center; }
     .controls label { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); cursor: pointer; }
     .controls input[type=search] {
@@ -32,9 +48,13 @@
     .wrap { padding: 16px 20px 60px; overflow-x: auto; }
     table { border-collapse: collapse; width: 100%; min-width: 920px; }
     th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
-    th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; position: sticky; top: 0; }
+    th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; position: sticky; top: 0; background: var(--panel); }
+    th[data-sort] { cursor: pointer; user-select: none; white-space: nowrap; }
+    th[data-sort]:hover { color: var(--txt); }
+    th.sorted { color: var(--accent); }
     tbody tr:hover { background: #1c2530; }
     tr.applied { opacity: .62; }
+    tr.pending-error > td { background: #2a1213; box-shadow: inset 2px 0 0 var(--error); }
     td.score { font-variant-numeric: tabular-nums; font-weight: 700; }
     td.num { font-variant-numeric: tabular-nums; color: var(--muted); }
     a { color: var(--accent); text-decoration: none; }
@@ -50,6 +70,12 @@
     .status-btns button.on[data-s=new] { background: var(--new); color: #fff; }
     .status-btns button.on[data-s=viewed] { background: var(--viewed); color: #1a1205; }
     .status-btns button.on[data-s=applied] { background: var(--applied); color: #04210d; }
+    .status-btns button.on[data-s=error] { background: var(--error); color: #fff; }
+    select.error-class {
+      display: block; margin-top: 6px; max-width: 170px;
+      background: var(--panel-2); border: 1px solid var(--error); color: var(--txt);
+      border-radius: 6px; padding: 4px 6px; font: inherit;
+    }
     textarea.notes {
       width: 200px; max-width: 100%; min-height: 30px; resize: vertical;
       background: var(--panel-2); border: 1px solid var(--line); color: var(--txt);
@@ -69,6 +95,11 @@
 <body>
   <header>
     <h1>JobMatch — minhas vagas <small id="sub"></small></h1>
+    <div class="tabs">
+      <button class="tab on" id="tabJobs" data-tab="jobs">Vagas <span class="tab-count" id="cJobs">0</span></button>
+      <button class="tab" id="tabApplied" data-tab="applied">Inscritas <span class="tab-count" id="cApplied">0</span></button>
+      <button class="tab" id="tabErrors" data-tab="errors">Erros <span class="tab-count" id="cErrors">0</span></button>
+    </div>
     <div class="controls">
       <input type="search" id="q" placeholder="Buscar por título, empresa, local…" />
       <label><input type="checkbox" id="onlyRelevant" checked /> Só relevantes</label>
@@ -82,8 +113,13 @@
     <table id="tbl">
       <thead>
         <tr>
-          <th>Status</th><th>Score</th><th>CLT</th><th>Vaga</th>
-          <th>Contrato</th><th>Modelo</th><th>Local</th><th>Notas</th>
+          <th data-sort="status">Status</th><th data-sort="match_score">Score</th>
+          <th data-sort="score_clt">CLT</th><th data-sort="job_title">Vaga</th>
+          <th data-sort="inferred_contract_type">Contrato</th><th data-sort="workplace_type">Modelo</th>
+          <th data-sort="location">Local</th>
+          <th data-sort="error_class" class="col-class">Classificação</th>
+          <th data-sort="first_seen_at">Visto em</th>
+          <th data-sort="notes">Notas</th>
         </tr>
       </thead>
       <tbody id="rows"></tbody>
@@ -94,12 +130,62 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    const STATUSES = [["new", "Novo"], ["viewed", "Visto"], ["applied", "Inscrito"]];
+    const STATUSES = [["new", "Novo"], ["viewed", "Visto"], ["applied", "Inscrito"], ["error", "Erro"]];
     let JOBS = [];
+    let ERROR_CLASSES = [];
+    let LAST_RUN = null;
+
+    // Column sort. Numeric/date columns default to descending (highest/newest
+    // first); text columns to ascending (A–Z). Default view: newest first.
+    const SORT_TYPES = {
+      status: "status", match_score: "num", score_clt: "num",
+      job_title: "str", inferred_contract_type: "str", workplace_type: "str",
+      location: "str", error_class: "str", first_seen_at: "date", notes: "str",
+    };
+    const STATUS_RANK = { new: 0, viewed: 1, applied: 2, error: 3 };
+    let SORT = { key: "first_seen_at", dir: "desc" };
+    let ACTIVE_TAB = "jobs";  // "jobs" (default) | "errors"
+    const numOr = (v) => { const n = parseFloat(v); return isNaN(n) ? -Infinity : n; };
+
+    function sortVal(j) {
+      const t = SORT_TYPES[SORT.key];
+      if (t === "num") return numOr(j[SORT.key]);
+      if (t === "status") return STATUS_RANK[j.status] ?? 99;
+      return String(j[SORT.key] ?? "");
+    }
+    function cmp(a, b) {
+      const x = sortVal(a), y = sortVal(b);
+      const r = typeof x === "number" ? x - y : x.localeCompare(y, "pt-BR", { sensitivity: "base" });
+      return SORT.dir === "asc" ? r : -r;
+    }
 
     const el = (id) => document.getElementById(id);
     const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const fmtDateTime = (iso) => {
+      const d = new Date(iso);
+      return isNaN(d) ? iso : d.toLocaleString("pt-BR");
+    };
+    const fmtDate = (iso) => {
+      if (!iso) return "—";
+      const d = new Date(iso);
+      return isNaN(d) ? iso : d.toLocaleDateString("pt-BR");
+    };
+
+    // A job marked "error" without a classification yet must be classified
+    // before anything else can be touched. (Survives reloads — it's derived
+    // from the data, not a transient flag.)
+    const isPending = (j) => j.status === "error" && !j.error_class;
+    const pendingLink = () => (JOBS.find(isPending) || {}).link || null;
+
+    function errorClassSelect(j) {
+      if (j.status !== "error") return "";
+      const opts = ['<option value="">— classificação —</option>'].concat(
+        ERROR_CLASSES.map((c) =>
+          `<option value="${esc(c)}" ${j.error_class === c ? "selected" : ""}>${esc(c)}</option>`)
+      ).join("");
+      return `<select class="error-class" data-link="${esc(j.link)}">${opts}</select>`;
+    }
 
     let toastTimer;
     function toast(msg, isErr) {
@@ -115,6 +201,9 @@
         const r = await fetch("/api/jobs");
         const data = await r.json();
         JOBS = data.jobs || [];
+        ERROR_CLASSES = data.error_classes || [];
+        LAST_RUN = data.last_run || null;
+        el("sub").textContent = LAST_RUN ? `· última execução do motor: ${fmtDateTime(LAST_RUN)}` : "";
         render();
       } catch (e) {
         toast("Falha ao carregar vagas", true);
@@ -126,20 +215,46 @@
       const onlyRelevant = el("onlyRelevant").checked;
       const onlyNew = el("onlyNew").checked;
       const hideApplied = el("hideApplied").checked;
+      const matchesQuery = (j) => {
+        if (!q) return true;
+        return (j.job_title + " " + j.company + " " + j.location).toLowerCase().includes(q);
+      };
       return JOBS.filter((j) => {
+        // An error still awaiting classification stays pinned in view (past all
+        // filters, in both tabs) so it can't vanish before it's classified.
+        if (isPending(j)) return true;
+        // Errors and applied jobs each live in their own tab.
+        if (ACTIVE_TAB === "errors") {
+          if (j.status !== "error") return false;
+          if (onlyRelevant && !j.relevant) return false;
+          return matchesQuery(j);
+        }
+        if (ACTIVE_TAB === "applied") {
+          if (j.status !== "applied") return false;
+          if (onlyRelevant && !j.relevant) return false;
+          return matchesQuery(j);
+        }
+        if (j.status === "error") return false;
         if (onlyRelevant && !j.relevant) return false;
         if (onlyNew && j.status !== "new") return false;
         if (hideApplied && j.status === "applied") return false;
-        if (q) {
-          const hay = (j.job_title + " " + j.company + " " + j.location).toLowerCase();
-          if (!hay.includes(q)) return false;
-        }
-        return true;
+        return matchesQuery(j);
+      });
+    }
+
+    function updateHeaders() {
+      el("tbl").querySelectorAll("th[data-sort]").forEach((th) => {
+        const base = th.dataset.label || (th.dataset.label = th.textContent.trim());
+        const active = SORT.key === th.dataset.sort;
+        th.textContent = base + (active ? (SORT.dir === "asc" ? " ▲" : " ▼") : "");
+        th.classList.toggle("sorted", active);
       });
     }
 
     function render() {
-      const list = filtered();
+      const list = filtered().sort(cmp);
+      el("tbl").className = "tab-" + ACTIVE_TAB;
+      updateHeaders();
       const rows = el("rows");
       rows.innerHTML = "";
       el("empty").hidden = list.length > 0;
@@ -147,6 +262,7 @@
       for (const j of list) {
         const tr = document.createElement("tr");
         if (j.status === "applied") tr.className = "applied";
+        if (isPending(j)) tr.className = "pending-error";
 
         const btns = STATUSES.map(([s, lbl]) =>
           `<button data-s="${s}" class="${j.status === s ? "on" : ""}">${lbl}</button>`
@@ -154,7 +270,7 @@
         const clt = (j.score_clt === null || j.score_clt === undefined) ? "—" : j.score_clt;
 
         tr.innerHTML = `
-          <td><span class="status-btns" data-link="${esc(j.link)}">${btns}</span></td>
+          <td><span class="status-btns" data-link="${esc(j.link)}">${btns}</span>${errorClassSelect(j)}</td>
           <td class="score">${esc(j.match_score)}</td>
           <td class="num">${esc(clt)}</td>
           <td>
@@ -164,20 +280,32 @@
           <td><span class="badge">${esc(j.inferred_contract_type)}</span></td>
           <td class="num">${esc(j.workplace_type)}</td>
           <td class="num">${esc(j.location)}</td>
+          <td class="num col-class">${esc(j.error_class || "—")}</td>
+          <td class="num">${esc(fmtDate(j.first_seen_at))}</td>
           <td><textarea class="notes" data-link="${esc(j.link)}" rows="1" placeholder="anotações…">${esc(j.notes)}</textarea></td>
         `;
         rows.appendChild(tr);
+      }
+      // Bring the pending classification into focus so the next action is obvious.
+      const pend = pendingLink();
+      if (pend) {
+        const sel = rows.querySelector(".error-class");
+        if (sel) sel.focus();
       }
       updateStats();
     }
 
     function updateStats() {
       const total = JOBS.length;
+      const errors = JOBS.filter((j) => j.status === "error").length;
       const applied = JOBS.filter((j) => j.status === "applied").length;
       const viewed = JOBS.filter((j) => j.status === "viewed").length;
       const shown = filtered().length;
+      el("cErrors").textContent = errors;
+      el("cApplied").textContent = applied;
+      el("cJobs").textContent = total - errors;
       el("stats").innerHTML =
-        `Exibindo <b>${shown}</b> · total <b>${total}</b> · vistas <b>${viewed}</b> · inscritas <b>${applied}</b>`;
+        `Exibindo <b>${shown}</b> · total <b>${total - errors}</b> · vistas <b>${viewed}</b> · inscritas <b>${applied}</b> · erros <b>${errors}</b>`;
     }
 
     async function postStatus(link, body) {
@@ -195,10 +323,18 @@
       const btn = ev.target.closest(".status-btns button");
       if (!btn) return;
       const link = btn.parentElement.dataset.link;
+      // While an error awaits classification, lock every other row.
+      const pend = pendingLink();
+      if (pend && pend !== link) {
+        toast("Classifique o erro pendente primeiro", true);
+        return;
+      }
       const status = btn.dataset.s;
       const job = JOBS.find((j) => j.link === link);
       const prev = job.status;
       job.status = status;
+      // Leaving "error" drops any stale classification (matches the backend).
+      if (status !== "error") job.error_class = "";
       render();
       try {
         await postStatus(link, { status });
@@ -207,6 +343,43 @@
         job.status = prev;
         render();
         toast("Erro ao salvar", true);
+      }
+    });
+
+    // Error classification dropdown.
+    el("rows").addEventListener("change", async (ev) => {
+      const sel = ev.target.closest("select.error-class");
+      if (!sel) return;
+      const link = sel.dataset.link;
+      const job = JOBS.find((j) => j.link === link);
+      const prev = job.error_class;
+      const val = sel.value;
+      if (!val) {
+        // A classification is mandatory; don't let it be cleared back to none.
+        toast("Escolha uma classificação", true);
+        sel.value = prev || "";
+        return;
+      }
+      job.error_class = val;
+      try {
+        await postStatus(link, { error_class: val });
+        toast("Classificação salva: " + val);
+        render();  // resolved → filters apply again (e.g. leaves "só novas")
+      } catch (e) {
+        job.error_class = prev;
+        sel.value = prev || "";
+        toast("Erro ao salvar classificação", true);
+      }
+    });
+
+    // While an error awaits classification, don't let other rows' fields take focus.
+    el("rows").addEventListener("focusin", (ev) => {
+      const pend = pendingLink();
+      if (!pend) return;
+      const owner = ev.target.closest("textarea.notes, select.error-class");
+      if (owner && owner.dataset.link !== pend) {
+        toast("Classifique o erro pendente primeiro", true);
+        owner.blur();
       }
     });
 
@@ -228,6 +401,34 @@
         toast("Erro ao salvar nota", true);
       }
     }, true);
+
+    // Column sorting: click a header to sort; click again to flip direction.
+    el("tbl").querySelector("thead").addEventListener("click", (ev) => {
+      const th = ev.target.closest("th[data-sort]");
+      if (!th) return;
+      const key = th.dataset.sort;
+      if (SORT.key === key) {
+        SORT.dir = SORT.dir === "asc" ? "desc" : "asc";
+      } else {
+        SORT.key = key;
+        SORT.dir = SORT_TYPES[key] === "str" ? "asc" : "desc";
+      }
+      render();
+    });
+
+    // Tabs: "Vagas" (default), "Inscritas", "Erros".
+    const TABS = [["jobs", "tabJobs"], ["applied", "tabApplied"], ["errors", "tabErrors"]];
+    function setTab(tab) {
+      if (tab === ACTIVE_TAB) return;
+      if (pendingLink()) {
+        toast("Classifique o erro pendente primeiro", true);
+        return;
+      }
+      ACTIVE_TAB = tab;
+      TABS.forEach(([t, id]) => el(id).classList.toggle("on", t === tab));
+      render();
+    }
+    TABS.forEach(([t, id]) => el(id).addEventListener("click", () => setTab(t)));
 
     ["q", "onlyRelevant", "onlyNew", "hideApplied"].forEach((id) =>
       el(id).addEventListener("input", render));

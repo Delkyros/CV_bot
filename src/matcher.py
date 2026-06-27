@@ -8,8 +8,8 @@ import requests
 from google import genai
 from google.genai import types
 
-from src.text_signals import explicit_negative_evidence
-from src.settings import env_float, env_int, env_list, env_str
+from src.text_signals import explicit_negative_evidence, strong_non_clt_evidence
+from src.settings import env_bool, env_float, env_int, env_list, env_str
 
 logger = logging.getLogger(__name__)
 
@@ -28,11 +28,23 @@ OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 # single model via OPENROUTER_MODEL.
 DEFAULT_OPENROUTER_MODELS = (
     "openai/gpt-oss-120b:free",
-    "nvidia/nemotron-3-super-120b-a12b:free",
+    "deepseek/deepseek-chat-v3-0324:free",
     "meta-llama/llama-3.3-70b-instruct:free",
     "qwen/qwen3-next-80b-a3b-instruct:free",
+    "nvidia/nemotron-3-super-120b-a12b:free",
+    "google/gemini-2.0-flash-exp:free",
 )
 PROVIDER_ORDER = ("openrouter", "gemini")
+
+# Public catalog of OpenRouter models (no API key needed). Used to auto-discover
+# the currently-free models (pricing == 0) and append them to the fallback list,
+# so the chain keeps working as free model IDs come and go. There is no official
+# "free-only auto" model on OpenRouter (openrouter/auto can route to PAID models),
+# so we filter by price ourselves.
+OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
+DEFAULT_AUTO_FREE_MODELS = True
+MAX_AUTO_FREE_MODELS = 25
+_free_models_cache = None  # None = not fetched yet; list = fetched (maybe empty)
 
 # How many times to walk the full provider chain before giving up and falling
 # back to main's simulated analysis. Raise (LLM_MAX_PROVIDER_CYCLES) for an
@@ -102,15 +114,90 @@ def _gemini_key():
     return None
 
 
+def auto_free_models_enabled():
+    return env_bool("OPENROUTER_AUTO_FREE_MODELS", DEFAULT_AUTO_FREE_MODELS)
+
+
+def _is_zero_price(price):
+    try:
+        return float(price) == 0.0
+    except (TypeError, ValueError):
+        return False
+
+
+def _outputs_text(model):
+    """True if the model outputs TEXT ONLY (what we can consume).
+
+    Requires text to be the sole output modality, so multi-modal generators that
+    also emit audio/image (e.g. lyria) are excluded. Reads OpenRouter's
+    architecture.output_modalities; defaults to True when the metadata is absent
+    so we never drop a usable model over missing fields.
+    """
+    arch = model.get("architecture") or {}
+    outputs = arch.get("output_modalities")
+    if isinstance(outputs, list):
+        return outputs == ["text"]
+    modality = arch.get("modality")
+    if isinstance(modality, str) and modality:
+        return modality.endswith("->text")
+    return True
+
+
+def _fetch_free_openrouter_models():
+    """Discover currently-free OpenRouter models (prompt and completion priced 0).
+
+    Best-effort and cached for the process lifetime: returns [] on any failure so
+    the curated list still drives the chain. The /models endpoint is public, so
+    no API key is required.
+    """
+    global _free_models_cache
+    if _free_models_cache is not None:
+        return _free_models_cache
+
+    free = []
+    try:
+        resp = requests.get(OPENROUTER_MODELS_URL, timeout=llm_request_timeout())
+        if resp.status_code == 200:
+            for model in resp.json().get("data", []):
+                pricing = model.get("pricing") or {}
+                model_id = model.get("id")
+                if not (model_id and _is_zero_price(pricing.get("prompt")) and _is_zero_price(pricing.get("completion"))):
+                    continue
+                # Keep only text-output models: skips audio/image/safety models
+                # (e.g. lyria, content-safety) that can't answer our JSON prompt.
+                if not _outputs_text(model):
+                    continue
+                free.append(model_id)
+            if free:
+                logger.info(f"[openrouter] auto-discovered {len(free)} free model(s) from /models.")
+        else:
+            logger.warning(f"[openrouter] /models returned HTTP {resp.status_code}; using curated list only.")
+    except requests.RequestException as exc:
+        logger.warning(f"[openrouter] could not fetch the free model list: {exc}. Using curated list only.")
+
+    _free_models_cache = free[:MAX_AUTO_FREE_MODELS]
+    return _free_models_cache
+
+
 def _openrouter_models():
     # Resolution order:
     #   1. OPENROUTER_MODEL  -> pin a single model (highest priority).
     #   2. OPENROUTER_MODELS -> comma-separated list, tried in order.
     #   3. DEFAULT_OPENROUTER_MODELS built-in list.
+    # Then, unless disabled, append any currently-free models discovered from
+    # OpenRouter (deduped, after the curated ones) as extra fallbacks.
     single = os.getenv("OPENROUTER_MODEL")
     if single and single.strip():
         return [single.strip()]
-    return env_list("OPENROUTER_MODELS", DEFAULT_OPENROUTER_MODELS)
+
+    models = env_list("OPENROUTER_MODELS", DEFAULT_OPENROUTER_MODELS)
+    if auto_free_models_enabled():
+        seen = set(models)
+        for model_id in _fetch_free_openrouter_models():
+            if model_id not in seen:
+                models.append(model_id)
+                seen.add(model_id)
+    return models
 
 
 def _is_retryable_quota_error(exc):
@@ -143,15 +230,17 @@ Candidate Professional Profile:
 Analysis Instructions:
 1. Compare the job's technical requirements, experience level and competencies with the candidate's profile.
 2. Determine a realistic match score from 0 to 100 (be realistic and critical; do not give 100 unless every requirement matches perfectly).
-3. List up to 4 candidate strengths that directly match the job requirements.
-4. List the "gaps", i.e. the job's required or desired requirements that the candidate lacks or did not mention in their profile.
-5. Write a friendly, honest and direct verdict (at most 3 sentences) advising what to focus on or whether it is worth applying.
+3. Decide whether the job's CORE ROLE is in the candidate's primary professional area as described in the profile. Set "core_role_compatible" to false ONLY when the central function is clearly a different career track than the candidate's — for example: mobile/Android/iOS, embedded/firmware, dedicated QA/testing, front-end-only, Excel/data-entry, HR/People Analytics, business-process analysis, or research in an unrelated domain. If the role is in or adjacent to the candidate's area, or you are unsure, set it to true.
+4. List up to 4 candidate strengths that directly match the job requirements.
+5. List the "gaps", i.e. the job's required or desired requirements that the candidate lacks or did not mention in their profile.
+6. Write a friendly, honest and direct verdict (at most 3 sentences) advising what to focus on or whether it is worth applying.
 Write the strengths, gaps and verdict in Portuguese (the candidate's language).
 
 You MUST respond strictly in the JSON format below, with no explanatory blocks or markdown outside the JSON.
 Desired response structure:
 {{
   "match_score": <integer from 0 to 100>,
+  "core_role_compatible": <true or false>,
   "strengths": ["Strength 1", "Strength 2", ...],
   "gaps": ["Gap 1", "Gap 2", ...],
   "verdict": "<Verdict text>"
@@ -309,10 +398,23 @@ def _parse_result(raw_text):
 
     return {
         "match_score": max(0, min(100, score)),
+        "core_role_compatible": _coerce_bool(result.get("core_role_compatible", True)),
         "strengths": [str(x) for x in strengths] if isinstance(strengths, list) else [],
         "gaps": [str(x) for x in gaps] if isinstance(gaps, list) else [],
         "verdict": str(verdict),
     }
+
+
+def _coerce_bool(value, default=True):
+    """Interpret an LLM-provided boolean that may arrive as a real bool or a
+    string ("false"/"no"/"não"/"0"). Defaults to True (keep the job) so an
+    omitted/ambiguous value never discards a job — scope filtering only acts on
+    an EXPLICIT negative, mirroring the conservative default-CLT philosophy."""
+    if isinstance(value, str):
+        return value.strip().lower() not in ("false", "no", "nao", "não", "0", "")
+    if value is None:
+        return default
+    return bool(value)
 
 
 def _complete_with_providers(prompt, parse_fn, task="analysis", max_cycles=None, retry_wait=None):
@@ -490,11 +592,40 @@ def classify_contract(description, title=None, company=None, regex_signals=None)
     scraper/reporter/history expect (same keys as the old classifier).
 
     Default-CLT logic: the job is ACCEPTED (accepted=True) for CLT and INDEFINIDO;
-    it is only discarded when the regime is non-CLT with enough confidence. If no
-    LLM provider responds, the job is KEPT by default (we never discard due to an
-    infrastructure failure).
+    it is only discarded when the regime is non-CLT with enough confidence.
+
+    High-precision short-circuit: when explicit contractor cues are present
+    (USD-hourly pay, "Contract:" titles, 1099/C2C, PJ/CNPJ markers, or a known
+    contractor-marketplace company), the job is discarded WITHOUT calling the LLM
+    at all. This both fixes the LLM's false "CLT" verdicts found during the audit
+    and saves an LLM call on every obvious contractor/PJ posting.
     """
-    prompt = _build_contract_prompt(title, company, description, regex_signals or [])
+    # Contractor cues frequently live in the TITLE ("$45/hr", "Contract: …") and
+    # the platform in the COMPANY name, so scan all three together.
+    scan_text = " ".join(part for part in (title, company, description) if part)
+    strong_signals = strong_non_clt_evidence(scan_text, company=company)
+
+    # Short-circuit: high-precision contractor/PJ evidence discards the job
+    # WITHOUT spending an LLM call. We would override a contrary CLT verdict
+    # anyway, so calling the model here is pure waste — this is the main saving
+    # on free/rate-limited providers.
+    if strong_signals:
+        return {
+            "inferred_contract_type": "PJ",
+            "accepted": False,
+            "score_clt": "N/A",
+            "score_non_clt": 1.0,
+            "contract_margin": "N/A",
+            "contract_evidence": (
+                "Discarded by strong non-CLT signal(s), no LLM call: "
+                + ", ".join(strong_signals)
+            ),
+        }
+
+    if regex_signals is None:
+        regex_signals = explicit_negative_evidence(scan_text, company=company)
+
+    prompt = _build_contract_prompt(title, company, description, regex_signals)
     # A single pass through the chain, without long waits: classification is a
     # collection pre-filter; if the LLM fails, we keep the job (default CLT).
     result = _complete_with_providers(
@@ -547,7 +678,6 @@ class LLMContractClassifier:
     """
 
     def classify(self, description_text, title=None, company=None):
-        signals = explicit_negative_evidence(description_text)
-        return classify_contract(
-            description_text, title=title, company=company, regex_signals=signals,
-        )
+        # Signals are computed inside classify_contract over title+company+
+        # description (contractor cues often live in the title/company).
+        return classify_contract(description_text, title=title, company=company)
