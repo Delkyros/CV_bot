@@ -26,16 +26,18 @@ max_vagas_por_termo: 100
 tempo_publicacao: "24h"
 
 # geo_id is LinkedIn's location identifier (geoId). It is what reliably
-# restricts the country on the Guest API; the `localizacao` text alone returns
-# US jobs. 106057199 = Brazil. For hybrid filters we keep Brazil's geoId and
-# refine the target city by the job's location text.
+# restricts the region on the Guest API; the `localizacao` text alone returns
+# US jobs. 106057199 = Brazil. For hybrid/on-site filters, use the geoId of the
+# TARGET CITY so LinkedIn pre-restricts the region (otherwise Brazil-wide jobs
+# bury the few local ones). Look a geoId up with:
+#   https://www.linkedin.com/jobs-guest/api/typeaheadHits?typeaheadType=GEO&query=<city>
 filtros_busca:
   - modelo_trabalho: "remoto"
     localizacao: "Brasil"
     geo_id: "106057199"
   - modelo_trabalho: "hibrido"
     localizacao: "São Paulo, São Paulo, Brasil"
-    geo_id: "106057199"
+    geo_id: "104746682"   # São Paulo city geoId (example)
 
 # Your professional profile. Used by the LLM to score the match against each job.
 perfil_candidato:
