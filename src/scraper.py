@@ -148,18 +148,24 @@ def workplace_matches(location_text, description_text, workplace_type, search_lo
         return not any(token in location_norm for token in foreign)
 
     if normalized_workplace in ("hibrido", "hybrid"):
-        # Keep only hybrid jobs in Sao Jose-SC / Florianopolis-SC.
+        # Keep ONLY hybrid jobs in Sao Jose-SC or Florianopolis-SC -- NOT the
+        # whole state of Santa Catarina. (Other SC cities like Criciuma,
+        # Joinville and Mafra used to slip through because the check accepted any
+        # "santa catarina"/"sc" location.)
         # Florianopolis/Floripa are unambiguously in Santa Catarina.
         if "florianopolis" in location_norm or "floripa" in location_norm:
             return True
-        # "Sao Jose" alone is ambiguous: reject the Sao Paulo homonyms
-        # ("Sao Jose dos Campos", "Sao Jose do Rio Preto") that contain the
-        # same prefix and used to slip through.
-        if "dos campos" in location_norm or "do rio preto" in location_norm:
-            return False
-        # Otherwise require an explicit Santa Catarina marker (full name or the
-        # "SC" state abbreviation) so other "Sao Jose" homonyms don't pass.
-        return "santa catarina" in location_norm or bool(re.search(r"\bsc\b", location_norm))
+        if "sao jose" in location_norm:
+            # Reject the Sao Paulo homonyms ("Sao Jose dos Campos", "Sao Jose do
+            # Rio Preto") that share the same prefix.
+            if "dos campos" in location_norm or "do rio preto" in location_norm:
+                return False
+            # Require an explicit Santa Catarina marker so other "Sao Jose"
+            # homonyms (in other states) don't pass.
+            return "santa catarina" in location_norm or bool(re.search(r"\bsc\b", location_norm))
+        # Any other location (including other SC cities, or a bare "Santa
+        # Catarina" with no city) is not one of our two hybrid hubs -> reject.
+        return False
 
     return True
 

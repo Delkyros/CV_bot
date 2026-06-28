@@ -19,27 +19,29 @@ termos_busca:
 tipo_contratacao: "CLT"
 
 # Max jobs collected per (search term x filter) combination.
-max_vagas_por_termo: 3
+max_vagas_por_termo: 100
 
 # Job posting time filter (LinkedIn f_TPR parameter).
 # Accepted values: "24h", "semana", "mes". Leave empty to disable.
 tempo_publicacao: "24h"
 
 # geo_id is LinkedIn's location identifier (geoId). It is what reliably
-# restricts the country on the Guest API; the `localizacao` text alone returns
-# US jobs. 106057199 = Brazil. For hybrid filters we keep Brazil's geoId and
-# refine the target city by the job's location text.
+# restricts the region on the Guest API; the `localizacao` text alone returns
+# US jobs. 106057199 = Brazil. For hybrid/on-site filters, use the geoId of the
+# TARGET CITY so LinkedIn pre-restricts the region (otherwise Brazil-wide jobs
+# bury the few local ones). Look a geoId up with:
+#   https://www.linkedin.com/jobs-guest/api/typeaheadHits?typeaheadType=GEO&query=<city>
 filtros_busca:
   - modelo_trabalho: "remoto"
     localizacao: "Brasil"
     geo_id: "106057199"
   - modelo_trabalho: "hibrido"
     localizacao: "São Paulo, São Paulo, Brasil"
-    geo_id: "106057199"
+    geo_id: "104746682"   # São Paulo city geoId (example)
 
 # Your professional profile. Used by the LLM to score the match against each job.
 perfil_candidato:
-  nivel_experiencia: "Pleno / Sênior"
+  nivel_experiencia: "Pleno"
 
   resumo_profissional: |
     Data Scientist / Machine Learning Engineer with hands-on experience building
@@ -57,13 +59,14 @@ perfil_candidato:
       - "Python"
       - "SQL (PostgreSQL)"
       - "RESTful APIs"
-      - "Pandas, Scikit-learn, PyTorch"
+      - "Pandas, Scikit-learn, PyTorch, Langraph, LangSmith"
     engenharia_de_dados_e_cloud:
       - "ETL/ELT Pipelines"
       - "Docker"
-      - "AWS (S3, EC2, Lambda)"
+      - "Azure"
       - "CI/CD (GitHub Actions)"
 
   soft_skills:
     - "Clear communication and cross-functional collaboration."
     - "Turning complex business requirements into reliable software."
+    - "Fast problem understanding."

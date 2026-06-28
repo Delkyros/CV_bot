@@ -139,7 +139,7 @@ def load_job_history(history_path):
 
 # User-owned fields set via the web UI (webapp.py). The pipeline must carry
 # these over verbatim so a new search run never wipes "viewed/applied/notes".
-USER_STATUS_FIELDS = ("status", "notes", "status_updated_at")
+USER_STATUS_FIELDS = ("status", "notes", "status_updated_at", "error_class")
 
 
 def save_job_history(history_path, history, analyzed_jobs):
@@ -187,6 +187,62 @@ def save_job_history(history_path, history, analyzed_jobs):
     except Exception as e:
         logger.error(f"Failed to save history '{history_path}': {e}")
         return False
+
+
+def _fallback_analysis(has_llm_provider):
+    """Neutral simulated analysis so the pipeline never breaks when the LLM is
+    unavailable or fails. core_role_compatible defaults True: we never discard a
+    job as out-of-scope on an infrastructure failure."""
+    if not has_llm_provider:
+        logger.warning("Using simulated fallback analysis: no LLM provider configured (OPENROUTER_API_KEY/GEMINI_API_KEY).")
+    else:
+        logger.warning("Using simulated fallback analysis due to failure of all LLM providers.")
+    return {
+        "match_score": 50,  # Neutral score
+        "core_role_compatible": True,
+        "strengths": ["Job collected successfully", "Available for evaluation"],
+        "gaps": ["LLM analysis unavailable (check OPENROUTER_API_KEY/GEMINI_API_KEY in .env)"],
+        "verdict": "Set a valid OPENROUTER_API_KEY and/or GEMINI_API_KEY in the .env file to get a real AI analysis of this job.",
+    }
+
+
+def analyze_and_filter_jobs(collected_jobs, candidate_profile, has_llm_provider):
+    """Run the match analysis on each collected job and DROP the ones whose core
+    role does not match the candidate's area (scope filter), so they never reach
+    the report or the history DB.
+
+    Returns the list of in-scope analyzed jobs (job data merged with the analysis).
+    """
+    analyzed_jobs = []
+    total_jobs = len(collected_jobs)
+
+    for idx, job in enumerate(collected_jobs, start=1):
+        logger.info(f"Analyzing job {idx} of {total_jobs}: {job['job_title']} | Company: {job['company']}")
+
+        analysis_result = None
+        if has_llm_provider:
+            try:
+                analysis_result = analyze_match(job, candidate_profile)
+            except Exception:
+                logger.exception("LLM call failed for this job")
+        if not analysis_result:
+            analysis_result = _fallback_analysis(has_llm_provider)
+
+        # Scope filter: discard jobs whose central role is a different career
+        # track than the candidate's (e.g. Android/QA/Excel/People Analytics).
+        # Only an EXPLICIT false discards (see matcher._coerce_bool default).
+        if not analysis_result.get("core_role_compatible", True):
+            logger.info(
+                "Discarded as out of scope (core role mismatch): "
+                f"{job['job_title']} | {job['company']} (match {analysis_result.get('match_score')})"
+            )
+            continue
+
+        analyzed_job = {**job, **analysis_result}
+        analyzed_jobs.append(analyzed_job)
+        logger.info(f"Result: Score {analyzed_job['match_score']}/100")
+
+    return analyzed_jobs
 
 
 def main():
@@ -309,47 +365,20 @@ def main():
         logger.info("No new job could be collected. Ending pipeline.")
         sys.exit(0)
 
-    # 4. Run the matcher to analyze each collected job
-    analyzed_jobs = []
-
+    # 4. Run the matcher to analyze each collected job (and drop out-of-scope ones)
     logger.info("=" * 40)
     logger.info("STARTING MATCH ANALYSIS")
     logger.info("=" * 40)
 
-    for idx, job in enumerate(collected_jobs, start=1):
-        logger.info(f"Analyzing job {idx} of {total_jobs}: {job['job_title']} | Company: {job['company']}")
+    analyzed_jobs = analyze_and_filter_jobs(collected_jobs, candidate_profile, has_llm_provider)
 
-        analysis_result = None
+    out_of_scope = total_jobs - len(analyzed_jobs)
+    if out_of_scope:
+        logger.info(f"Scope filter: {out_of_scope} of {total_jobs} job(s) discarded as out of scope (not persisted).")
 
-        # Run the analysis if there is at least one LLM provider configured
-        # (OpenRouter as primary, Gemini as fallback).
-        if has_llm_provider:
-            try:
-                analysis_result = analyze_match(job, candidate_profile)
-            except Exception:
-                logger.exception("LLM call failed for this job")
-
-        # Smart fallback (resilience) if the analysis fails or there is no provider
-        if not analysis_result:
-            if not has_llm_provider:
-                logger.warning("Using simulated fallback analysis: no LLM provider configured (OPENROUTER_API_KEY/GEMINI_API_KEY).")
-            else:
-                logger.warning("Using simulated fallback analysis due to failure of all LLM providers.")
-
-            # Create a friendly simulated/fallback result so the pipeline does not break
-            # and so the user can test the full pipeline without a key if desired
-            analysis_result = {
-                "match_score": 50,  # Neutral score
-                "strengths": ["Job collected successfully", "Available for evaluation"],
-                "gaps": ["LLM analysis unavailable (check OPENROUTER_API_KEY/GEMINI_API_KEY in .env)"],
-                "verdict": "Set a valid OPENROUTER_API_KEY and/or GEMINI_API_KEY in the .env file to get a real AI analysis of this job."
-            }
-
-        # Merge the job data with the analysis
-        analyzed_job = {**job, **analysis_result}
-        analyzed_jobs.append(analyzed_job)
-
-        logger.info(f"Result: Score {analyzed_job['match_score']}/100")
+    if not analyzed_jobs:
+        logger.info("No in-scope job left after analysis. Ending pipeline.")
+        sys.exit(0)
 
     # 5. Run the reporter to generate the output Markdown file
     output_path = env_str("REPORT_OUTPUT_PATH", "vagas_filtradas.md")
