@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 VALID_STATUSES = ("new", "viewed", "applied", "error")
 # Classification options shown when a job is marked as "error". Kept in
 # Portuguese on purpose (user-facing labels, persisted verbatim in the history).
-ERROR_CLASSES = ("Localidade incorreta", "Não é CLT", "Escopo incorreto")
+ERROR_CLASSES = ("Localidade/Modelo incorreto", "Não é CLT", "Escopo incorreto")
 # User-owned fields the pipeline must never overwrite (see main.save_job_history).
 USER_STATUS_FIELDS = ("status", "notes", "status_updated_at", "error_class")
 

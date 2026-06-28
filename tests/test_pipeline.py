@@ -83,6 +83,15 @@ def test_workplace_matches_hybrid_rejects_bare_sao_jose_without_sc():
     assert scraper.workplace_matches("São José", "", "hibrido", "x") is False
 
 
+def test_workplace_matches_hybrid_rejects_other_sc_cities():
+    # Only São José-SC / Florianópolis-SC are wanted, NOT the whole state.
+    assert scraper.workplace_matches("Criciúma, SC", "", "hibrido", "x") is False
+    assert scraper.workplace_matches("Joinville, SC", "", "hibrido", "x") is False
+    assert scraper.workplace_matches("Mafra, SC", "", "hibrido", "x") is False
+    # A bare state with no target city is too vague -> reject.
+    assert scraper.workplace_matches("Santa Catarina, Brasil", "", "hibrido", "x") is False
+
+
 def test_job_is_closed_detects_banner_and_phrases():
     from bs4 import BeautifulSoup
     closed_text = BeautifulSoup("<div>No longer accepting applications</div>", "html.parser")
