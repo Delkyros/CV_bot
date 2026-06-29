@@ -24,6 +24,7 @@ services:
       context: .
       dockerfile: Dockerfile
     image: jobmatch-ai:latest
+    container_name: jobmatch-ai     # distinct name in `docker ps` (the scraper/AI)
     # Long-running scheduler: keep it up across crashes and host reboots.
     restart: unless-stopped
 
@@ -82,6 +83,7 @@ services:
   web:
     # Reuse the image built by `jobmatch` (no second build -> no tag race).
     image: jobmatch-ai:latest
+    container_name: jobmatch-web    # distinct name in `docker ps` (the web UI)
     depends_on:
       - jobmatch
     # Override the scheduler entrypoint to run the Flask app instead.

@@ -13,14 +13,14 @@
 # going. SIGTERM/SIGINT (docker stop / compose down) shuts down promptly.
 set -eu
 
-INTERVAL="${RUN_INTERVAL_SECONDS:-21600}"
+INTERVAL="${RUN_INTERVAL_SECONDS:-43200}"
 RUN_ON_START="${RUN_ON_START:-true}"
 
 # Validate INTERVAL is a non-negative integer; fall back to 6h otherwise.
 case "$INTERVAL" in
   ''|*[!0-9]*)
-    echo "[entrypoint] invalid RUN_INTERVAL_SECONDS='$INTERVAL'; using 21600 (6h)."
-    INTERVAL=21600
+    echo "[entrypoint] invalid RUN_INTERVAL_SECONDS='$INTERVAL'; using 43200 (6h)."
+    INTERVAL=43200
     ;;
 esac
 
