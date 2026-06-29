@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 from src.scraper import scrape_linkedin_jobs, normalize_text
+from src.text_signals import out_of_scope_title
 from src.matcher import analyze_match, has_provider, LLMContractClassifier, min_discard_confidence
 from src.reporter import generate_report
 from src.logging_config import setup_logging
@@ -218,6 +219,19 @@ def analyze_and_filter_jobs(collected_jobs, candidate_profile, has_llm_provider)
 
     for idx, job in enumerate(collected_jobs, start=1):
         logger.info(f"Analyzing job {idx} of {total_jobs}: {job['job_title']} | Company: {job['company']}")
+
+        # Deterministic title-based scope gate: the job TITLE is the most
+        # reliable scope signal, so drop clearly out-of-track roles (BI/Qlik
+        # dev, market intelligence/research, systems analyst, generic Node/
+        # graduate dev) BEFORE spending an LLM call. Ambiguous titles fall
+        # through to the LLM's core_role_compatible judgment below.
+        out_reason = out_of_scope_title(job.get("job_title"))
+        if out_reason:
+            logger.info(
+                "Discarded as out of scope by title "
+                f"({out_reason}): {job['job_title']} | {job['company']}"
+            )
+            continue
 
         analysis_result = None
         if has_llm_provider:
