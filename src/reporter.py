@@ -13,7 +13,9 @@ logger = logging.getLogger(__name__)
 # - profile match (match_score, 0-100) must be >= the match threshold.
 # Env overrides: REPORT_MIN_CLT_SCORE, REPORT_MIN_MATCH_SCORE.
 DEFAULT_MIN_CLT_SCORE = 0.6
-DEFAULT_MIN_MATCH_SCORE = 50
+# Below a 0.70 match the job is not worth surfacing (user rule: "score < 0,7
+# não me interessa"). Override per deployment with REPORT_MIN_MATCH_SCORE.
+DEFAULT_MIN_MATCH_SCORE = 70
 
 
 def min_clt_score():

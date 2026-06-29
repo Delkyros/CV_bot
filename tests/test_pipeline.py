@@ -87,6 +87,25 @@ def test_workplace_matches_hybrid_rejects_other_sc_cities():
     # Only São José-SC / Florianópolis-SC are wanted, NOT the whole state.
     assert scraper.workplace_matches("Criciúma, SC", "", "hibrido", "x") is False
     assert scraper.workplace_matches("Joinville, SC", "", "hibrido", "x") is False
+
+
+def test_description_conflicts_with_remote_flags_explicit_hybrid_onsite():
+    # LinkedIn's f_WT=2 leaks hybrid/on-site jobs; an explicit declaration with
+    # no remote option must be flagged (real case: hybrid São Paulo job tagged
+    # "remoto" / "Localidade/Modelo incorreto").
+    assert scraper.description_conflicts_with_remote(
+        "The work location of this role is hybrid, both from home and a LinkedIn office."
+    ) is True
+    assert scraper.description_conflicts_with_remote("Vaga 100% presencial em nosso escritório.") is True
+    assert scraper.description_conflicts_with_remote("Modelo híbrido, 3 dias no escritório.") is True
+
+
+def test_description_conflicts_with_remote_is_conservative():
+    # A remote possibility vetoes the guard; silence about the model does too.
+    assert scraper.description_conflicts_with_remote("Trabalho remoto ou híbrido, você escolhe.") is False
+    assert scraper.description_conflicts_with_remote("100% remoto, home office.") is False
+    assert scraper.description_conflicts_with_remote("Ótima vaga de analista, sem menção a modelo.") is False
+    assert scraper.description_conflicts_with_remote("") is False
     assert scraper.workplace_matches("Mafra, SC", "", "hibrido", "x") is False
     # A bare state with no target city is too vague -> reject.
     assert scraper.workplace_matches("Santa Catarina, Brasil", "", "hibrido", "x") is False
@@ -166,10 +185,10 @@ def test_table_text_escapes_pipes_and_newlines():
 
 
 @pytest.mark.parametrize("score_clt,match_score,expected", [
-    (0.6, 50, True),       # both at the threshold
+    (0.6, 70, True),       # both at the threshold (match >= 70)
     (0.9, 80, True),       # comfortably above
     (0.59, 90, False),     # CLT below threshold
-    (0.8, 49, False),      # profile below threshold
+    (0.8, 69, False),      # profile below threshold
     ("N/A", 90, False),    # non-numeric CLT score is excluded
     (None, 90, False),     # missing CLT score is excluded
     (0.8, None, False),    # missing match score treated as 0

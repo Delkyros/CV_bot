@@ -101,3 +101,42 @@ def explicit_negative_evidence(text, company=None):
     if platform:
         labels.append(f"Contractor platform: {platform}")
     return labels
+
+
+# Job-TITLE patterns whose central role is a different career track than a
+# senior Data Scientist / ML-AI Engineer. Matched against the accent-stripped,
+# lowercased TITLE only: the title is the most reliable scope signal, while the
+# description's incidental Python/SQL overlap is what made the LLM keep these.
+# Kept deliberately conservative so data-science/ML/AI/data-engineering titles
+# are never caught (e.g. "Analista de Dados e BI" is ambiguous -> left to the
+# LLM + match-score threshold, NOT hard-dropped here).
+_OUT_OF_SCOPE_TITLE_PATTERNS = [
+    # BI / Qlik / Power BI developer (dashboard/BI tooling, not DS/ML).
+    ("desenvolvedor de BI/Qlik/Power BI",
+     r"\bqlik\b|power\s*bi|\bbi\b[^.,|]*\b(developer|desenvolvedor)\b|\b(developer|desenvolvedor)\b[^.,|]*\bbi\b"),
+    # Market intelligence / market research (pesquisa de mercado), not data science.
+    ("inteligencia de mercado/pesquisa",
+     r"intelig\w* de mercado|market intelligence|pesquisa de mercado|market research"),
+    # Systems analyst — a different track from data science.
+    ("analista de sistemas", r"\banalista de sistemas?\b"),
+    # Generic / junior / graduate software development (Node.js, trainee, graduate).
+    ("dev generico Jr/Node/Graduate", r"\bnode\.?js\b|\bnodejs\b|\bgraduate\b|\btrainee\b"),
+]
+
+
+def out_of_scope_title(title):
+    """Return a human-readable reason if the job TITLE's central role is a
+    different career track than the candidate's (BI/Qlik dev, market
+    intelligence/research, systems analyst, generic junior/Node/graduate dev),
+    else None.
+
+    Deterministic, title-only scope gate. The LLM still judges scope on the
+    ambiguous titles this leaves through (see matcher._build_prompt).
+    """
+    normalized = normalize_text(title)
+    if not normalized:
+        return None
+    for reason, pattern in _OUT_OF_SCOPE_TITLE_PATTERNS:
+        if re.search(pattern, normalized):
+            return reason
+    return None

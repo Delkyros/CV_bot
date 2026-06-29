@@ -25,6 +25,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 import main
 from src import matcher, reporter
+from src.text_signals import out_of_scope_title
 
 
 # Real (score_clt, match_score) recorded for the 19 jobs the user flagged as
@@ -57,6 +58,15 @@ def _split():
     caught = [j for j in ESCOPO_INCORRETO if not reporter.passes_relevance_filter(j)]
     slipped = [j for j in ESCOPO_INCORRETO if reporter.passes_relevance_filter(j)]
     return caught, slipped
+
+
+@pytest.fixture(autouse=True)
+def _pin_audit_threshold(monkeypatch):
+    # These tests characterize the relevance filter at the AUDIT-time threshold
+    # (match_score >= 50). Pin it so they keep documenting that baseline even
+    # after the default match threshold was raised (to 70).
+    monkeypatch.setenv("REPORT_MIN_MATCH_SCORE", "50")
+    monkeypatch.setenv("REPORT_MIN_CLT_SCORE", "0.6")
 
 
 def test_current_scope_catch_rate_baseline():
@@ -165,3 +175,47 @@ def test_scope_filter_keeps_job_when_llm_call_raises(monkeypatch):
         "perfil", has_llm_provider=True,
     )
     assert len(analyzed) == 1
+
+
+# --------------------------------------------------------------------------- #
+# Deterministic TITLE scope gate (text_signals.out_of_scope_title). The real
+# out-of-scope roles the user flagged in the web UI, matched by title.
+# --------------------------------------------------------------------------- #
+
+@pytest.mark.parametrize("title", [
+    "Desenvolvedor Qlik",
+    "Market Intelligence Analyst",
+    "Analista de Inteligência de Mercado JR",
+    "Analista de sistema",
+    "Analista de Sistemas Pleno",
+    "Desenvolvedor Junior Node.js - Trabalho Remoto",
+    "Associate-Graduate:Developer",
+])
+def test_out_of_scope_title_flags_off_track_roles(title):
+    assert out_of_scope_title(title) is not None
+
+
+@pytest.mark.parametrize("title", [
+    "Cientista de Dados Sênior",
+    "Machine Learning Engineer",
+    "Engenheiro de Dados",
+    "Analista de Dados",
+    "Analista de Dados e BI",   # ambiguous -> NOT hard-dropped (left to the LLM)
+    "AI Developer",
+    "Data Insights - Tech Senior Associate",
+])
+def test_out_of_scope_title_keeps_in_or_adjacent_roles(title):
+    assert out_of_scope_title(title) is None
+
+
+def test_out_of_scope_title_drops_before_llm(monkeypatch):
+    # Title-gated jobs must be dropped without ever calling the LLM.
+    def _boom(*a, **k):
+        raise AssertionError("analyze_match must not run for a title-gated job")
+    monkeypatch.setattr(main, "analyze_match", _boom)
+    collected = [
+        {"job_title": "Desenvolvedor Qlik", "company": "X", "job_link": "l/1"},
+        {"job_title": "Analista de Inteligência de Mercado", "company": "X", "job_link": "l/2"},
+    ]
+    analyzed = main.analyze_and_filter_jobs(collected, "perfil", has_llm_provider=True)
+    assert analyzed == []

@@ -169,6 +169,58 @@ def workplace_matches(location_text, description_text, workplace_type, search_lo
 
     return True
 
+
+# Strong, explicit signals that a posting is HYBRID or ON-SITE, matched against
+# the accent-stripped, lowercased description.
+_ONSITE_HYBRID_PATTERNS = (
+    r"\bhibrid[oa]s?\b",
+    r"\bhybrid\b",
+    r"\bpresenci(?:al|ais)\b",
+    r"\bon[\s-]?site\b",
+    r"\bin[\s-]?office\b",
+    r"work location of this role is hybrid",
+    r"\bdias? no escritorio\b",
+)
+# Any indication the role CAN be done remotely. Its presence vetoes the guard
+# below: a posting that mentions "hibrido" only in passing while also offering
+# remote work (e.g. "remoto ou hibrido") must NOT be rejected.
+_REMOTE_PATTERNS = (
+    r"\bremot[oa]s?\b",
+    r"\bremote\b",
+    r"\bremotamente\b",
+    r"home[\s-]?office",
+    r"\bhomeoffice\b",
+    r"\bteletrabalho\b",
+    r"\banywhere\b",
+    r"de qualquer lugar",
+)
+
+
+def description_conflicts_with_remote(description_text):
+    """
+    True when a job description EXPLICITLY declares a hybrid/on-site model and
+    gives no sign of remote work.
+
+    LinkedIn's f_WT=2 (remote) filter is leaky and occasionally returns
+    hybrid/on-site jobs. A remote search trusts f_WT for the model and accepts
+    any Brazilian location, so such a leak gets mislabeled "remoto" and slips
+    through (see history: hybrid São Paulo jobs flagged "Localidade/Modelo
+    incorreto"). This is the only model signal the Guest API exposes per job.
+
+    Conservative by design: a posting that mentions any remote possibility, or
+    that says nothing about the work model, is left for f_WT to decide and
+    returns False.
+    """
+    if not description_text:
+        return False
+    norm = normalize_text(description_text)
+    has_onsite = any(re.search(p, norm) for p in _ONSITE_HYBRID_PATTERNS)
+    if not has_onsite:
+        return False
+    has_remote = any(re.search(p, norm) for p in _REMOTE_PATTERNS)
+    return not has_remote
+
+
 def linkedin_time_filter(period):
     """
     Map a friendly period to LinkedIn's f_TPR (time posted range) parameter, in
@@ -432,6 +484,15 @@ def scrape_linkedin_jobs(
                     # spending an LLM classification/match call on them.
                     if is_closed:
                         logger.info(f"Job no longer accepting applications, skipping: {title} | {company} ({job_id})")
+                        continue
+
+                    # f_WT only filters at the search level and LinkedIn's remote
+                    # filter leaks hybrid/on-site jobs. The card has no work-model
+                    # field, so the description is the only per-job signal: in a
+                    # remote search, drop jobs that explicitly declare hybrid/
+                    # on-site with no remote option.
+                    if normalize_text(workplace_type) == "remoto" and description_conflicts_with_remote(description):
+                        logger.info(f"Job declared hybrid/on-site in a remote search, skipping: {title} | {company} | {loc}")
                         continue
 
                     contract_inference = {
