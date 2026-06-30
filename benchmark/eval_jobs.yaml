@@ -1,0 +1,119 @@
+# Curated evaluation set for the free-model benchmark (benchmark_models.py).
+#
+# Each entry is a job posting with a full description and the EXPECTED verdict
+# for our objective (senior Data Scientist / ML-AI Engineer):
+#   expected_in_scope: true  -> the model SHOULD score it high  (>= threshold)
+#   expected_in_scope: false -> the model SHOULD score it low   (<  threshold)
+#
+# The benchmark measures how well each free model separates these two groups
+# (plus tokens, latency and parse reliability). Grow this set over time with
+# real cases you have judged — keep the in/out balance roughly even.
+
+jobs:
+  # ---------------------------- IN SCOPE ----------------------------
+  - job_title: "Cientista de Dados Sênior"
+    company: "DataCorp"
+    location: "Remoto, Brasil"
+    expected_in_scope: true
+    full_description: |
+      Buscamos Cientista de Dados Sênior para liderar projetos de ponta a ponta.
+      Responsabilidades: desenvolver e colocar em produção modelos de machine
+      learning (classificação, regressão, séries temporais), análise estatística
+      e comunicação de insights para stakeholders.
+      Requisitos: Python (pandas, scikit-learn), SQL avançado, experiência com
+      deploy de modelos (Docker, APIs), e 5+ anos na área de dados.
+
+  - job_title: "Machine Learning Engineer"
+    company: "ScaleAI Brasil"
+    location: "Híbrido, São Paulo"
+    expected_in_scope: true
+    full_description: |
+      We are hiring a Machine Learning Engineer to build and operate ML systems
+      in production. You will design training/inference pipelines, deploy models
+      with MLOps best practices, and optimize for latency and cost.
+      Requirements: strong Python, experience with PyTorch/TensorFlow, Spark,
+      cloud (AWS/GCP), CI/CD for models, and feature stores.
+
+  - job_title: "Engenheiro de IA - LLMs e RAG"
+    company: "Nubank"
+    location: "Remoto, Brasil"
+    expected_in_scope: true
+    full_description: |
+      Vaga para Engenheiro de IA com foco em LLMs. Você vai construir agentes
+      autônomos baseados em LLMs, arquiteturas RAG, busca vetorial e servidores
+      MCP para produção. Stack: Python, LangChain/LlamaIndex, embeddings, bancos
+      vetoriais (pgvector, Pinecone), e avaliação de modelos. Forte base em NLP.
+
+  - job_title: "Engenheiro de Dados Pleno"
+    company: "iFood"
+    location: "Remoto, Brasil"
+    expected_in_scope: true
+    full_description: |
+      Procuramos Engenheiro de Dados para construir e manter pipelines de dados
+      escaláveis (ETL/ELT). Trabalhará com Spark, Airflow, data lakes e
+      modelagem de dados para suportar times de analytics e ciência de dados.
+      Requisitos: Python, SQL avançado, Spark, orquestração (Airflow), cloud.
+
+  # -------------------------- OUT OF SCOPE --------------------------
+  - job_title: "Desenvolvedor Qlik Sense"
+    company: "BI Solutions"
+    location: "Remoto, Brasil"
+    expected_in_scope: false
+    full_description: |
+      Vaga para Desenvolvedor Qlik Sense. Responsável por criar e manter
+      dashboards e aplicativos de Business Intelligence no Qlik Sense/QlikView,
+      modelagem de dados no Qlik, scripts de carga e atendimento a áreas de
+      negócio. Requisitos: experiência sólida com Qlik, SQL e visualização de
+      dados. Conhecimento em Power BI é diferencial.
+
+  - job_title: "Analista de Inteligência de Mercado"
+    company: "Consultoria XYZ"
+    location: "Híbrido, São Paulo"
+    expected_in_scope: false
+    full_description: |
+      Buscamos Analista de Inteligência de Mercado para monitorar concorrência,
+      tendências de mercado e comportamento do consumidor. Atividades: pesquisa
+      de mercado, elaboração de relatórios competitivos, análise de share e apoio
+      à estratégia comercial. Requisitos: Excel avançado, PowerPoint, boa
+      comunicação e visão de negócio. Desejável conhecimento em pesquisa.
+
+  - job_title: "Analista de Sistemas"
+    company: "Indústria ABC"
+    location: "Presencial, Joinville"
+    expected_in_scope: false
+    full_description: |
+      Vaga de Analista de Sistemas para levantamento de requisitos, análise e
+      documentação de processos, parametrização e suporte a sistemas ERP
+      (Protheus/SAP), e interface entre áreas de negócio e TI. Requisitos:
+      experiência com ERP, modelagem de processos e levantamento de requisitos.
+
+  - job_title: "Desenvolvedor Node.js Júnior"
+    company: "Startup Tech"
+    location: "Remoto, Brasil"
+    expected_in_scope: false
+    full_description: |
+      Procuramos Desenvolvedor Back-end Júnior (Node.js) para desenvolver e
+      manter APIs REST. Stack: Node.js, Express, MongoDB, integração com
+      serviços externos. Buscamos pessoa em início de carreira com vontade de
+      aprender. Requisitos: JavaScript/Node.js, Git, noções de banco de dados.
+
+  - job_title: "Chief of Staff"
+    company: "GrowthCo"
+    location: "Híbrido, São Paulo"
+    expected_in_scope: false
+    full_description: |
+      Vaga de Chief of Staff para atuar junto ao CEO em iniciativas estratégicas,
+      coordenação entre áreas, gestão de projetos executivos, preparação de
+      reuniões de board e acompanhamento de OKRs. Requisitos: experiência em
+      consultoria ou operações, forte comunicação executiva e gestão de
+      stakeholders. Não é uma vaga técnica.
+
+  - job_title: "Desenvolvedor Mobile Android"
+    company: "AppFactory"
+    location: "Remoto, Brasil"
+    expected_in_scope: false
+    full_description: |
+      Vaga para Desenvolvedor Android. Você vai desenvolver e manter aplicativos
+      móveis nativos em Kotlin, integrar com APIs REST, publicar na Play Store e
+      garantir performance e qualidade. Requisitos: Kotlin, Android SDK, Jetpack,
+      e experiência com apps em produção.
