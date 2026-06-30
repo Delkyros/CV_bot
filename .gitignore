@@ -17,5 +17,6 @@ config/keywords.yaml
 # Runtime outputs (generated on each run)
 vagas_filtradas.md
 vagas_historico.json
+vagas_historico.backup-*.json
 data/benchmark_*.md
 *.xlsx
