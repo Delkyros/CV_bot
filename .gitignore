@@ -8,6 +8,8 @@ __pycache__/
 
 # Secrets
 .env
+# Local compose holds real API keys; docker-compose.example.yml is the template.
+docker-compose.yml
 
 # Local user configuration (use config/keywords.example.yaml as a template)
 config/keywords.yaml
@@ -15,4 +17,5 @@ config/keywords.yaml
 # Runtime outputs (generated on each run)
 vagas_filtradas.md
 vagas_historico.json
+data/benchmark_*.md
 *.xlsx
