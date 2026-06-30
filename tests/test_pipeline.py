@@ -144,6 +144,36 @@ def test_parse_contract_rejects_unknown_regime():
     assert matcher._parse_contract('{"regime": "WHATEVER", "confidence": 0.9}') is None
 
 
+def test_nemotron_is_the_default_primary_model():
+    # Benchmark winner (0 failures) must be tried first.
+    assert matcher._openrouter_models()[0] == "nvidia/nemotron-3-super-120b-a12b:free"
+
+
+def test_contract_classification_retries_persistently(monkeypatch):
+    # classify_contract must drive the provider chain with the contract-specific
+    # (high) cycle count, not the old single pass — so a transient blip retries
+    # instead of collapsing to score_clt="N/A".
+    captured = {}
+
+    def fake_complete(prompt, parse_fn, task, max_cycles=None, retry_wait=None):
+        captured["max_cycles"] = max_cycles
+        captured["retry_wait"] = retry_wait
+        return {"regime": "CLT", "confidence": 0.9, "evidence": "ok"}
+
+    monkeypatch.setattr(matcher, "_complete_with_providers", fake_complete)
+    monkeypatch.delenv("CONTRACT_MAX_CYCLES", raising=False)
+    matcher.classify_contract("alguma descrição", title="Dev", company="ACME")
+
+    assert captured["max_cycles"] == matcher.contract_max_cycles()
+    assert captured["max_cycles"] >= 2          # genuinely retries (not a single pass)
+    assert captured["retry_wait"] == matcher.contract_retry_wait()
+
+
+def test_contract_retry_cycles_overridable_via_env(monkeypatch):
+    monkeypatch.setenv("CONTRACT_MAX_CYCLES", "20")
+    assert matcher.contract_max_cycles() == 20
+
+
 # --------------------------------------------------------------------------- #
 # reporter
 # --------------------------------------------------------------------------- #

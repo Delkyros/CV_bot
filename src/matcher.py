@@ -20,15 +20,16 @@ DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 # Primary provider: OpenRouter (free models). Gemini is the fallback.
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-# Default list of free OpenRouter models, tried in order. The most popular ones
-# (Llama 70B, Qwen) live in 429 ("rate-limited upstream") because the free
-# pool is congested, so we prioritize strong but less contested models. On a
-# 429 for one model, we move on to the next.
+# Default list of free OpenRouter models, tried in order. Ordering follows the
+# benchmark (benchmark_models.py): nemotron returned clean JSON with 0 failures,
+# gpt-oss truncates its JSON (reasoning), and Llama 70B / Qwen sit in 429
+# ("rate-limited upstream") because the free pool is congested. On a 429 / bad
+# response for one model, we move on to the next.
 # Override the whole list via OPENROUTER_MODELS (comma-separated) or pin a
 # single model via OPENROUTER_MODEL.
 DEFAULT_OPENROUTER_MODELS = (
-    "openai/gpt-oss-120b:free",
     "nvidia/nemotron-3-super-120b-a12b:free",
+    "openai/gpt-oss-120b:free",
     "meta-llama/llama-3.3-70b-instruct:free",
     "qwen/qwen3-next-80b-a3b-instruct:free",
 )
@@ -40,6 +41,13 @@ PROVIDER_ORDER = ("openrouter", "gemini")
 # LLM_QUOTA_RETRY_WAIT seconds.
 DEFAULT_MAX_PROVIDER_CYCLES = 3
 DEFAULT_QUOTA_RETRY_WAIT = 60.0
+
+# Contract classification retries its own (longer) chain: a transient failure
+# here yields score_clt="N/A", which the relevance filter then excludes — i.e. a
+# blip silently buries a good job. So we retry persistently ("eventually it must
+# work") instead of the old single pass. Override via the env vars below.
+DEFAULT_CONTRACT_MAX_CYCLES = 8
+DEFAULT_CONTRACT_RETRY_WAIT = 30.0
 
 # Sampling/budget defaults for the LLM calls.
 DEFAULT_LLM_TEMPERATURE = 0.1
@@ -57,6 +65,14 @@ def max_provider_cycles():
 
 def quota_retry_wait():
     return env_float("LLM_QUOTA_RETRY_WAIT", DEFAULT_QUOTA_RETRY_WAIT)
+
+
+def contract_max_cycles():
+    return env_int("CONTRACT_MAX_CYCLES", DEFAULT_CONTRACT_MAX_CYCLES)
+
+
+def contract_retry_wait():
+    return env_float("CONTRACT_RETRY_WAIT", DEFAULT_CONTRACT_RETRY_WAIT)
 
 
 def llm_temperature():
@@ -495,11 +511,14 @@ def classify_contract(description, title=None, company=None, regex_signals=None)
     infrastructure failure).
     """
     prompt = _build_contract_prompt(title, company, description, regex_signals or [])
-    # A single pass through the chain, without long waits: classification is a
-    # collection pre-filter; if the LLM fails, we keep the job (default CLT).
+    # Retry the chain persistently: a transient failure here returns
+    # score_clt="N/A", which the relevance filter excludes, silently burying a
+    # good job. Crank CONTRACT_MAX_CYCLES / CONTRACT_RETRY_WAIT if the free pool
+    # is congested. The default-CLT fallback below only triggers if every cycle
+    # across every provider still fails.
     result = _complete_with_providers(
         prompt, _parse_contract, "Contract classification",
-        max_cycles=1, retry_wait=0,
+        max_cycles=contract_max_cycles(), retry_wait=contract_retry_wait(),
     )
 
     if result is None:
