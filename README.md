@@ -159,11 +159,11 @@ CV_bot/
 
 ## 🗺️ Roadmap
 
-- [ ] Pydantic-based structured LLM output (replace manual JSON parsing)
-- [ ] Scheduled runs via GitHub Actions (cron) + Telegram/email notification
-- [ ] Streamlit dashboard over the job history
-- [ ] Async matching with a concurrency limit (respecting rate limits)
-- [ ] Token/cost tracking per run
+- [ ] Token usage tracking per run/job (in/out tokens; cost only when a paid model is set, else "free tier")
+- [ ] Free-model benchmark: run all free models over an eval set and rank them by
+      accuracy (vs expected verdicts), tokens, latency and parse reliability — to
+      pick the best free model for our objective
+- [ ] (later) Async matching across jobs with a concurrency limit, once the primary model is chosen
 
 ## ⚠️ Legal & ethical notice
 
