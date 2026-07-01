@@ -349,6 +349,44 @@ def test_save_job_history_preserves_user_status(tmp_path):
     assert entry["notes"] == "candidatei-me"
 
 
+def test_save_job_history_flags_sub_bar_jobs_irrelevant(tmp_path):
+    import json
+
+    history_path = tmp_path / "hist.json"
+    analyzed = [
+        # Above the bar -> stays a normal "new" job (no explicit status).
+        {"job_link": "https://job/ok", "job_title": "DS", "company": "A",
+         "match_score": 85, "score_clt": 0.9},
+        # Below on match -> flagged irrelevant.
+        {"job_link": "https://job/lowmatch", "job_title": "DS", "company": "A",
+         "match_score": 55, "score_clt": 0.9},
+        # N/A CLT -> flagged irrelevant.
+        {"job_link": "https://job/nacl", "job_title": "DS", "company": "A",
+         "match_score": 85, "score_clt": "N/A"},
+    ]
+    assert main.save_job_history(str(history_path), {}, analyzed) is True
+    saved = json.loads(history_path.read_text(encoding="utf-8"))
+
+    assert saved["https://job/ok"].get("status") != "irrelevant"
+    assert saved["https://job/lowmatch"]["status"] == "irrelevant"
+    assert saved["https://job/nacl"]["status"] == "irrelevant"
+
+
+def test_save_job_history_never_overrides_user_status_with_irrelevant(tmp_path):
+    import json
+
+    history_path = tmp_path / "hist.json"
+    # User already applied to a sub-bar job — must NOT be flagged irrelevant.
+    history_path.write_text(json.dumps({
+        "https://job/1": {"job_title": "X", "status": "applied"}
+    }), encoding="utf-8")
+    analyzed = [{"job_link": "https://job/1", "job_title": "X", "company": "A",
+                 "match_score": 40, "score_clt": "N/A"}]
+    assert main.save_job_history(str(history_path), {}, analyzed) is True
+    saved = json.loads(history_path.read_text(encoding="utf-8"))
+    assert saved["https://job/1"]["status"] == "applied"
+
+
 # --------------------------------------------------------------------------- #
 # webapp (Flask UI)
 # --------------------------------------------------------------------------- #

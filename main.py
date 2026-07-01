@@ -178,6 +178,12 @@ def save_job_history(history_path, history, analyzed_jobs):
             if field in prior:
                 entry[field] = prior[field]
 
+        # First time we see a sub-bar job (no user status yet), flag it
+        # "irrelevant" so the web UI keeps it out of the "new" list. A user
+        # status (viewed/applied/error/new) always wins and is never overwritten.
+        if "status" not in prior and not passes_relevance_filter(job):
+            entry["status"] = "irrelevant"
+
         merged[link] = entry
 
     try:
@@ -394,27 +400,24 @@ def main():
         logger.info("No in-scope job left after analysis. Ending pipeline.")
         sys.exit(0)
 
-    # Relevance gate BEFORE persisting/reporting: only surface jobs that are
-    # confidently CLT (score_clt >= 0.7, no "N/A") AND well matched
-    # (match_score >= 70). Everything below the bar is dropped here so it never
-    # reaches the history DB or the web UI ("não quero nem que sejam
-    # selecionados scores inferiores a 0,7"). Persistent contract retry (see
-    # matcher.contract_max_cycles) keeps "N/A" from occurring in the first place.
+    # Relevance split: jobs that are confidently CLT (score_clt >= 0.7, no "N/A")
+    # AND well matched (match_score >= 70) are the ones worth surfacing. Sub-bar
+    # jobs are still PERSISTED (so they are not re-scraped/re-classified every
+    # run) but flagged status="irrelevant" so they never clutter the "new" list
+    # in the web UI. Persistent contract retry keeps "N/A" from happening.
     relevant_jobs = [j for j in analyzed_jobs if passes_relevance_filter(j)]
-    dropped = len(analyzed_jobs) - len(relevant_jobs)
-    if dropped:
+    irrelevant = len(analyzed_jobs) - len(relevant_jobs)
+    if irrelevant:
         logger.info(
-            f"Relevance gate: {dropped} of {len(analyzed_jobs)} job(s) below the bar "
-            f"(CLT >= {min_clt_score():.2f} and match >= {min_match_score():.0f}) — not persisted."
+            f"Relevance split: {irrelevant} of {len(analyzed_jobs)} job(s) below the bar "
+            f"(CLT >= {min_clt_score():.2f} and match >= {min_match_score():.0f}) — "
+            "persisted as 'irrelevant', hidden from the new list."
         )
-    if not relevant_jobs:
-        logger.info("No job cleared the relevance bar. Ending pipeline.")
-        sys.exit(0)
 
-    # 5. Run the reporter to generate the output Markdown file
+    # 5. Report shows only the relevant ones; the history keeps ALL (flagged).
     output_path = env_str("REPORT_OUTPUT_PATH", "vagas_filtradas.md")
     report_saved = generate_report(relevant_jobs, output_path=output_path)
-    history_saved = save_job_history(history_path, job_history, relevant_jobs)
+    history_saved = save_job_history(history_path, job_history, analyzed_jobs)
 
     if report_saved and history_saved:
         logger.info("=" * 60)

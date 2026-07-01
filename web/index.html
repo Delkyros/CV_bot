@@ -105,6 +105,7 @@
       <label><input type="checkbox" id="onlyRelevant" checked /> Só relevantes</label>
       <label><input type="checkbox" id="onlyNew" checked /> Só novas</label>
       <label><input type="checkbox" id="hideApplied" /> Ocultar inscritas</label>
+      <label><input type="checkbox" id="showIrrelevant" /> Mostrar irrelevantes</label>
       <span class="stats" id="stats"></span>
     </div>
   </header>
@@ -215,6 +216,7 @@
       const onlyRelevant = el("onlyRelevant").checked;
       const onlyNew = el("onlyNew").checked;
       const hideApplied = el("hideApplied").checked;
+      const showIrrelevant = el("showIrrelevant").checked;
       const matchesQuery = (j) => {
         if (!q) return true;
         return (j.job_title + " " + j.company + " " + j.location).toLowerCase().includes(q);
@@ -235,6 +237,8 @@
           return matchesQuery(j);
         }
         if (j.status === "error") return false;
+        // Sub-bar jobs (pipeline-flagged) stay out of the main list unless asked for.
+        if (j.status === "irrelevant" && !showIrrelevant) return false;
         if (onlyRelevant && !j.relevant) return false;
         if (onlyNew && j.status !== "new") return false;
         if (hideApplied && j.status === "applied") return false;
@@ -300,12 +304,13 @@
       const errors = JOBS.filter((j) => j.status === "error").length;
       const applied = JOBS.filter((j) => j.status === "applied").length;
       const viewed = JOBS.filter((j) => j.status === "viewed").length;
+      const irrelevant = JOBS.filter((j) => j.status === "irrelevant").length;
       const shown = filtered().length;
       el("cErrors").textContent = errors;
       el("cApplied").textContent = applied;
-      el("cJobs").textContent = total - errors;
+      el("cJobs").textContent = total - errors - irrelevant;
       el("stats").innerHTML =
-        `Exibindo <b>${shown}</b> · total <b>${total - errors}</b> · vistas <b>${viewed}</b> · inscritas <b>${applied}</b> · erros <b>${errors}</b>`;
+        `Exibindo <b>${shown}</b> · total <b>${total - errors - irrelevant}</b> · vistas <b>${viewed}</b> · inscritas <b>${applied}</b> · erros <b>${errors}</b> · irrelevantes <b>${irrelevant}</b>`;
     }
 
     async function postStatus(link, body) {
@@ -430,7 +435,7 @@
     }
     TABS.forEach(([t, id]) => el(id).addEventListener("click", () => setTab(t)));
 
-    ["q", "onlyRelevant", "onlyNew", "hideApplied"].forEach((id) =>
+    ["q", "onlyRelevant", "onlyNew", "hideApplied", "showIrrelevant"].forEach((id) =>
       el(id).addEventListener("input", render));
 
     load();
