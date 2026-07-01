@@ -1,115 +1,23 @@
-"""Characterization test: how well does the CURRENT pipeline keep out-of-scope
-jobs away (the ones the user hand-flagged "Escopo incorreto")?
+"""Tests for the collection/persist-level scope gate that drops out-of-scope
+jobs before they reach the report or the history DB.
 
-Scope is decided by the LLM `match_score`. There is NO scope gate at collection
-time (the scraper only runs the contract classifier), so every out-of-scope job
-still enters the history DB today. The single existing scope-ish gate is the
-report/UI relevance filter — reporter.passes_relevance_filter:
-
-    score_clt >= 0.6  AND  match_score >= 50
-
-…and that is view-level only (it hides rows from the report / "Só relevantes"
-view; it does NOT stop the job from being written to the DB).
-
-This test feeds the REAL recorded scores of the 19 flagged jobs into that filter
-to quantify the current catch rate, and pins it as a baseline. It exists to show
-the gap that justifies a collection-time scope filter.
+Two layers, both default-in-scope (a job is dropped only on an explicit
+off-track signal): the deterministic TITLE gate (text_signals.out_of_scope_title)
+and the LLM `core_role_compatible` judgment wired through
+main.analyze_and_filter_jobs.
 """
-
-import os
-import sys
 
 import pytest
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 import main
-from src import matcher, reporter
+from src import matcher
 from src.text_signals import out_of_scope_title
 
 
-# Real (score_clt, match_score) recorded for the 19 jobs the user flagged as
-# "Escopo incorreto". score_clt=None means the contract LLM said INDEFINIDO
-# (stored as "N/A"). These are the actual LLM outputs from the audited run.
-ESCOPO_INCORRETO = [
-    {"role": "Staff SWE @ WEX",                         "score_clt": 0.9,  "match_score": 55},
-    {"role": "C# Engineer @ Nortal",                    "score_clt": 0.95, "match_score": 22},
-    {"role": "Assistente Desenvolvimento @ Jobbol",     "score_clt": 0.95, "match_score": 75},
-    {"role": "Rust Engineer @ Crossing Hurdles",        "score_clt": None, "match_score": 15},
-    {"role": "Kotlin Engineer @ Crossing Hurdles",      "score_clt": None, "match_score": 22},
-    {"role": "Engenheiro de IA Pleno @ EY (Vitória)",   "score_clt": None, "match_score": 85},
-    {"role": "C# Engineer @ Nortal (SC)",               "score_clt": 0.93, "match_score": 32},
-    {"role": "Mobile Android Sênior @ Deliver IT",      "score_clt": 0.99, "match_score": 22},
-    {"role": "Software Engineer II @ Teachable",        "score_clt": 1.0,  "match_score": 32},
-    {"role": "Cloud/AI Platforms @ Ericsson",           "score_clt": 0.92, "match_score": 55},
-    {"role": "QA Engineer @ Integer Consulting",        "score_clt": None, "match_score": 20},
-    {"role": "People Analytics @ BIP Brasil",           "score_clt": 0.95, "match_score": 55},
-    {"role": "Software Engineer Especialista @ Qive",   "score_clt": 0.95, "match_score": 55},
-    {"role": "Programador Júnior @ SetState",           "score_clt": 1.0,  "match_score": 23},
-    {"role": "FullStack Júnior @ FCamara",              "score_clt": 0.85, "match_score": 22},
-    {"role": "Eng. Software Fullstack Sênior @ TOTVS",  "score_clt": 0.9,  "match_score": 30},
-    {"role": "Excel Expert @ YO IT Consulting",         "score_clt": 0.6,  "match_score": 30},
-    {"role": "Analista de Processos II @ Serasa",       "score_clt": 0.9,  "match_score": 50},
-    {"role": "Pesquisador II @ Bracell",                "score_clt": 0.85, "match_score": 55},
-]
-
-
-def _split():
-    caught = [j for j in ESCOPO_INCORRETO if not reporter.passes_relevance_filter(j)]
-    slipped = [j for j in ESCOPO_INCORRETO if reporter.passes_relevance_filter(j)]
-    return caught, slipped
-
-
-@pytest.fixture(autouse=True)
-def _pin_audit_threshold(monkeypatch):
-    # These tests characterize the relevance filter at the AUDIT-time threshold
-    # (match_score >= 50). Pin it so they keep documenting that baseline even
-    # after the default match threshold was raised (to 70).
-    monkeypatch.setenv("REPORT_MIN_MATCH_SCORE", "50")
-    monkeypatch.setenv("REPORT_MIN_CLT_SCORE", "0.6")
-
-
-def test_current_scope_catch_rate_baseline():
-    """Pin the current catch rate of the relevance filter on out-of-scope jobs.
-
-    Baseline at audit time: 12/19 hidden, 7/19 slip through. The 7 that slip are
-    all CLT (score_clt >= 0.6) AND match_score >= 50 — i.e. exactly the
-    "escopo incorreto sendo CLT" the user wants removed. The relevance filter
-    cannot catch them because it only looks at CLT confidence + match score.
-    """
-    caught, slipped = _split()
-    assert len(caught) == 12
-    assert len(slipped) == 7
-
-
-def test_scope_filter_is_view_level_not_collection_level():
-    """There is no collection-time scope gate today, so ALL 19 enter the DB.
-
-    The relevance filter only changes what the report / UI shows; it never sets
-    `accepted=False`, which is what would stop a job from being persisted. This
-    test documents that gap: even the "caught" jobs are still in the history.
-    """
-    caught, _ = _split()
-    # Every flagged job lacks an `accepted` decision (no scope classifier ran),
-    # so nothing here was prevented from reaching the DB.
-    assert all("accepted" not in j for j in ESCOPO_INCORRETO)
-    assert len(caught) < len(ESCOPO_INCORRETO)  # the filter is not even a full view-level gate
-
-
-def test_out_of_scope_clt_jobs_slip_through_today():
-    """The specific failure the user reported: CLT + decent match, wrong scope."""
-    _, slipped = _split()
-    # All slipped jobs are CLT-confident and above the match threshold.
-    assert slipped, "expected out-of-scope CLT jobs to slip through the current filter"
-    for j in slipped:
-        assert j["score_clt"] is not None and j["score_clt"] >= reporter.min_clt_score()
-        assert j["match_score"] >= reporter.min_match_score()
-
-
 # --------------------------------------------------------------------------- #
-# NEW collection/persist-level scope gate (matcher core_role_compatible +
-# main.analyze_and_filter_jobs). These prove out-of-scope jobs are dropped
-# before reaching the report / history DB.
+# LLM core_role_compatible scope gate, wired through
+# main.analyze_and_filter_jobs — proves out-of-scope jobs are dropped before
+# reaching the report / history DB.
 # --------------------------------------------------------------------------- #
 
 @pytest.mark.parametrize("raw,expected", [

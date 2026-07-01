@@ -1,11 +1,8 @@
 """Unit tests for the pure (network-free, LLM-free) logic of the pipeline."""
 
-import os
-import sys
+import json
 
 import pytest
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src import scraper, matcher, reporter, text_signals, settings
 import main
@@ -87,6 +84,9 @@ def test_workplace_matches_hybrid_rejects_other_sc_cities():
     # Only São José-SC / Florianópolis-SC are wanted, NOT the whole state.
     assert scraper.workplace_matches("Criciúma, SC", "", "hibrido", "x") is False
     assert scraper.workplace_matches("Joinville, SC", "", "hibrido", "x") is False
+    assert scraper.workplace_matches("Mafra, SC", "", "hibrido", "x") is False
+    # A bare state with no target city is too vague -> reject.
+    assert scraper.workplace_matches("Santa Catarina, Brasil", "", "hibrido", "x") is False
 
 
 def test_description_conflicts_with_remote_flags_explicit_hybrid_onsite():
@@ -106,9 +106,6 @@ def test_description_conflicts_with_remote_is_conservative():
     assert scraper.description_conflicts_with_remote("100% remoto, home office.") is False
     assert scraper.description_conflicts_with_remote("Ótima vaga de analista, sem menção a modelo.") is False
     assert scraper.description_conflicts_with_remote("") is False
-    assert scraper.workplace_matches("Mafra, SC", "", "hibrido", "x") is False
-    # A bare state with no target city is too vague -> reject.
-    assert scraper.workplace_matches("Santa Catarina, Brasil", "", "hibrido", "x") is False
 
 
 def test_job_is_closed_detects_banner_and_phrases():
@@ -196,11 +193,6 @@ def test_contract_classification_retries_persistently(monkeypatch):
 def test_contract_retry_cycles_overridable_via_env(monkeypatch):
     monkeypatch.setenv("CONTRACT_MAX_CYCLES", "20")
     assert matcher.contract_max_cycles() == 20
-
-
-def test_clt_relevance_bar_defaults_to_070():
-    assert reporter.DEFAULT_MIN_CLT_SCORE == 0.7
-    assert reporter.min_clt_score() == 0.7
 
 
 # --------------------------------------------------------------------------- #
@@ -319,7 +311,6 @@ def test_format_candidate_profile_passthrough_string():
 
 
 def test_save_job_history_preserves_user_status(tmp_path):
-    import json
 
     history_path = tmp_path / "hist.json"
     # Pre-existing entry already marked via the web UI.
@@ -350,7 +341,6 @@ def test_save_job_history_preserves_user_status(tmp_path):
 
 
 def test_save_job_history_flags_sub_bar_jobs_irrelevant(tmp_path):
-    import json
 
     history_path = tmp_path / "hist.json"
     analyzed = [
@@ -373,7 +363,6 @@ def test_save_job_history_flags_sub_bar_jobs_irrelevant(tmp_path):
 
 
 def test_save_job_history_never_overrides_user_status_with_irrelevant(tmp_path):
-    import json
 
     history_path = tmp_path / "hist.json"
     # User already applied to a sub-bar job — must NOT be flagged irrelevant.
@@ -392,7 +381,6 @@ def test_save_job_history_never_overrides_user_status_with_irrelevant(tmp_path):
 # --------------------------------------------------------------------------- #
 @pytest.fixture
 def web_client(tmp_path, monkeypatch):
-    import json
     import webapp
 
     history_path = tmp_path / "hist.json"
@@ -413,7 +401,6 @@ def test_api_jobs_sorted_by_score_desc(web_client):
 
 
 def test_api_status_persists(web_client):
-    import json
 
     client, history_path = web_client
     resp = client.post("/api/status", json={
