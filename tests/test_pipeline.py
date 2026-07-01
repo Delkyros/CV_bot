@@ -172,6 +172,37 @@ def test_parse_contract_rejects_unknown_regime():
     assert matcher._parse_contract('{"regime": "WHATEVER", "confidence": 0.9}') is None
 
 
+def test_contract_classification_retries_persistently(monkeypatch):
+    # classify_contract must drive the chain with the contract-specific (high)
+    # cycle count, not the old single pass — so a transient blip retries instead
+    # of collapsing to score_clt="N/A".
+    captured = {}
+
+    def fake_complete(prompt, parse_fn, task, max_cycles=None, retry_wait=None):
+        captured["max_cycles"] = max_cycles
+        captured["retry_wait"] = retry_wait
+        return {"regime": "CLT", "confidence": 0.9, "evidence": "ok"}
+
+    monkeypatch.setattr(matcher, "_complete_with_providers", fake_complete)
+    monkeypatch.delenv("CONTRACT_MAX_CYCLES", raising=False)
+    # Benign text: no strong non-CLT signal, so it reaches the LLM chain.
+    matcher.classify_contract("Vaga efetiva de cientista de dados.", title="DS", company="ACME")
+
+    assert captured["max_cycles"] == matcher.contract_max_cycles()
+    assert captured["max_cycles"] >= 2          # genuinely retries (not a single pass)
+    assert captured["retry_wait"] == matcher.contract_retry_wait()
+
+
+def test_contract_retry_cycles_overridable_via_env(monkeypatch):
+    monkeypatch.setenv("CONTRACT_MAX_CYCLES", "20")
+    assert matcher.contract_max_cycles() == 20
+
+
+def test_clt_relevance_bar_defaults_to_070():
+    assert reporter.DEFAULT_MIN_CLT_SCORE == 0.7
+    assert reporter.min_clt_score() == 0.7
+
+
 # --------------------------------------------------------------------------- #
 # reporter
 # --------------------------------------------------------------------------- #
@@ -185,9 +216,9 @@ def test_table_text_escapes_pipes_and_newlines():
 
 
 @pytest.mark.parametrize("score_clt,match_score,expected", [
-    (0.6, 70, True),       # both at the threshold (match >= 70)
+    (0.7, 70, True),       # both at the threshold (CLT >= 0.7, match >= 70)
     (0.9, 80, True),       # comfortably above
-    (0.59, 90, False),     # CLT below threshold
+    (0.69, 90, False),     # CLT below threshold
     (0.8, 69, False),      # profile below threshold
     ("N/A", 90, False),    # non-numeric CLT score is excluded
     (None, 90, False),     # missing CLT score is excluded

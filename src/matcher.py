@@ -53,6 +53,13 @@ _free_models_cache = None  # None = not fetched yet; list = fetched (maybe empty
 DEFAULT_MAX_PROVIDER_CYCLES = 3
 DEFAULT_QUOTA_RETRY_WAIT = 60.0
 
+# Contract classification retries its OWN (longer) chain: a transient failure
+# here returns score_clt="N/A", which the relevance filter excludes — a blip
+# silently buries a good job. So we retry persistently ("eventually it must
+# work") instead of the old single pass. Override via the env vars below.
+DEFAULT_CONTRACT_MAX_CYCLES = 8
+DEFAULT_CONTRACT_RETRY_WAIT = 30.0
+
 # Sampling/budget defaults for the LLM calls.
 DEFAULT_LLM_TEMPERATURE = 0.1
 DEFAULT_OPENROUTER_MAX_TOKENS = 2000
@@ -69,6 +76,14 @@ def max_provider_cycles():
 
 def quota_retry_wait():
     return env_float("LLM_QUOTA_RETRY_WAIT", DEFAULT_QUOTA_RETRY_WAIT)
+
+
+def contract_max_cycles():
+    return env_int("CONTRACT_MAX_CYCLES", DEFAULT_CONTRACT_MAX_CYCLES)
+
+
+def contract_retry_wait():
+    return env_float("CONTRACT_RETRY_WAIT", DEFAULT_CONTRACT_RETRY_WAIT)
 
 
 def llm_temperature():
@@ -626,11 +641,14 @@ def classify_contract(description, title=None, company=None, regex_signals=None)
         regex_signals = explicit_negative_evidence(scan_text, company=company)
 
     prompt = _build_contract_prompt(title, company, description, regex_signals)
-    # A single pass through the chain, without long waits: classification is a
-    # collection pre-filter; if the LLM fails, we keep the job (default CLT).
+    # Retry the chain persistently: a transient failure here returns
+    # score_clt="N/A", which the relevance filter excludes, silently burying a
+    # good job. Raise CONTRACT_MAX_CYCLES / CONTRACT_RETRY_WAIT if the free pool
+    # is congested. The default-CLT fallback below only triggers if every cycle
+    # across every provider still fails.
     result = _complete_with_providers(
         prompt, _parse_contract, "Contract classification",
-        max_cycles=1, retry_wait=0,
+        max_cycles=contract_max_cycles(), retry_wait=contract_retry_wait(),
     )
 
     if result is None:

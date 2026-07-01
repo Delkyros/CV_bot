@@ -12,7 +12,7 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 from src.scraper import scrape_linkedin_jobs, normalize_text
 from src.text_signals import out_of_scope_title
 from src.matcher import analyze_match, has_provider, LLMContractClassifier, min_discard_confidence
-from src.reporter import generate_report
+from src.reporter import generate_report, passes_relevance_filter, min_clt_score, min_match_score
 from src.logging_config import setup_logging
 from src.settings import env_str
 
@@ -394,10 +394,27 @@ def main():
         logger.info("No in-scope job left after analysis. Ending pipeline.")
         sys.exit(0)
 
+    # Relevance gate BEFORE persisting/reporting: only surface jobs that are
+    # confidently CLT (score_clt >= 0.7, no "N/A") AND well matched
+    # (match_score >= 70). Everything below the bar is dropped here so it never
+    # reaches the history DB or the web UI ("não quero nem que sejam
+    # selecionados scores inferiores a 0,7"). Persistent contract retry (see
+    # matcher.contract_max_cycles) keeps "N/A" from occurring in the first place.
+    relevant_jobs = [j for j in analyzed_jobs if passes_relevance_filter(j)]
+    dropped = len(analyzed_jobs) - len(relevant_jobs)
+    if dropped:
+        logger.info(
+            f"Relevance gate: {dropped} of {len(analyzed_jobs)} job(s) below the bar "
+            f"(CLT >= {min_clt_score():.2f} and match >= {min_match_score():.0f}) — not persisted."
+        )
+    if not relevant_jobs:
+        logger.info("No job cleared the relevance bar. Ending pipeline.")
+        sys.exit(0)
+
     # 5. Run the reporter to generate the output Markdown file
     output_path = env_str("REPORT_OUTPUT_PATH", "vagas_filtradas.md")
-    report_saved = generate_report(analyzed_jobs, output_path=output_path)
-    history_saved = save_job_history(history_path, job_history, analyzed_jobs)
+    report_saved = generate_report(relevant_jobs, output_path=output_path)
+    history_saved = save_job_history(history_path, job_history, relevant_jobs)
 
     if report_saved and history_saved:
         logger.info("=" * 60)
