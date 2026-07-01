@@ -1,11 +1,8 @@
 """Unit tests for the pure (network-free, LLM-free) logic of the pipeline."""
 
-import os
-import sys
+import json
 
 import pytest
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src import scraper, matcher, reporter, text_signals, settings
 import main
@@ -87,6 +84,9 @@ def test_workplace_matches_hybrid_rejects_other_sc_cities():
     # Only São José-SC / Florianópolis-SC are wanted, NOT the whole state.
     assert scraper.workplace_matches("Criciúma, SC", "", "hibrido", "x") is False
     assert scraper.workplace_matches("Joinville, SC", "", "hibrido", "x") is False
+    assert scraper.workplace_matches("Mafra, SC", "", "hibrido", "x") is False
+    # A bare state with no target city is too vague -> reject.
+    assert scraper.workplace_matches("Santa Catarina, Brasil", "", "hibrido", "x") is False
 
 
 def test_description_conflicts_with_remote_flags_explicit_hybrid_onsite():
@@ -106,9 +106,6 @@ def test_description_conflicts_with_remote_is_conservative():
     assert scraper.description_conflicts_with_remote("100% remoto, home office.") is False
     assert scraper.description_conflicts_with_remote("Ótima vaga de analista, sem menção a modelo.") is False
     assert scraper.description_conflicts_with_remote("") is False
-    assert scraper.workplace_matches("Mafra, SC", "", "hibrido", "x") is False
-    # A bare state with no target city is too vague -> reject.
-    assert scraper.workplace_matches("Santa Catarina, Brasil", "", "hibrido", "x") is False
 
 
 def test_job_is_closed_detects_banner_and_phrases():
@@ -172,6 +169,32 @@ def test_parse_contract_rejects_unknown_regime():
     assert matcher._parse_contract('{"regime": "WHATEVER", "confidence": 0.9}') is None
 
 
+def test_contract_classification_retries_persistently(monkeypatch):
+    # classify_contract must drive the chain with the contract-specific (high)
+    # cycle count, not the old single pass — so a transient blip retries instead
+    # of collapsing to score_clt="N/A".
+    captured = {}
+
+    def fake_complete(prompt, parse_fn, task, max_cycles=None, retry_wait=None):
+        captured["max_cycles"] = max_cycles
+        captured["retry_wait"] = retry_wait
+        return {"regime": "CLT", "confidence": 0.9, "evidence": "ok"}
+
+    monkeypatch.setattr(matcher, "_complete_with_providers", fake_complete)
+    monkeypatch.delenv("CONTRACT_MAX_CYCLES", raising=False)
+    # Benign text: no strong non-CLT signal, so it reaches the LLM chain.
+    matcher.classify_contract("Vaga efetiva de cientista de dados.", title="DS", company="ACME")
+
+    assert captured["max_cycles"] == matcher.contract_max_cycles()
+    assert captured["max_cycles"] >= 2          # genuinely retries (not a single pass)
+    assert captured["retry_wait"] == matcher.contract_retry_wait()
+
+
+def test_contract_retry_cycles_overridable_via_env(monkeypatch):
+    monkeypatch.setenv("CONTRACT_MAX_CYCLES", "20")
+    assert matcher.contract_max_cycles() == 20
+
+
 # --------------------------------------------------------------------------- #
 # reporter
 # --------------------------------------------------------------------------- #
@@ -185,9 +208,9 @@ def test_table_text_escapes_pipes_and_newlines():
 
 
 @pytest.mark.parametrize("score_clt,match_score,expected", [
-    (0.6, 70, True),       # both at the threshold (match >= 70)
+    (0.7, 70, True),       # both at the threshold (CLT >= 0.7, match >= 70)
     (0.9, 80, True),       # comfortably above
-    (0.59, 90, False),     # CLT below threshold
+    (0.69, 90, False),     # CLT below threshold
     (0.8, 69, False),      # profile below threshold
     ("N/A", 90, False),    # non-numeric CLT score is excluded
     (None, 90, False),     # missing CLT score is excluded
@@ -288,7 +311,6 @@ def test_format_candidate_profile_passthrough_string():
 
 
 def test_save_job_history_preserves_user_status(tmp_path):
-    import json
 
     history_path = tmp_path / "hist.json"
     # Pre-existing entry already marked via the web UI.
@@ -318,12 +340,47 @@ def test_save_job_history_preserves_user_status(tmp_path):
     assert entry["notes"] == "candidatei-me"
 
 
+def test_save_job_history_flags_sub_bar_jobs_irrelevant(tmp_path):
+
+    history_path = tmp_path / "hist.json"
+    analyzed = [
+        # Above the bar -> stays a normal "new" job (no explicit status).
+        {"job_link": "https://job/ok", "job_title": "DS", "company": "A",
+         "match_score": 85, "score_clt": 0.9},
+        # Below on match -> flagged irrelevant.
+        {"job_link": "https://job/lowmatch", "job_title": "DS", "company": "A",
+         "match_score": 55, "score_clt": 0.9},
+        # N/A CLT -> flagged irrelevant.
+        {"job_link": "https://job/nacl", "job_title": "DS", "company": "A",
+         "match_score": 85, "score_clt": "N/A"},
+    ]
+    assert main.save_job_history(str(history_path), {}, analyzed) is True
+    saved = json.loads(history_path.read_text(encoding="utf-8"))
+
+    assert saved["https://job/ok"].get("status") != "irrelevant"
+    assert saved["https://job/lowmatch"]["status"] == "irrelevant"
+    assert saved["https://job/nacl"]["status"] == "irrelevant"
+
+
+def test_save_job_history_never_overrides_user_status_with_irrelevant(tmp_path):
+
+    history_path = tmp_path / "hist.json"
+    # User already applied to a sub-bar job — must NOT be flagged irrelevant.
+    history_path.write_text(json.dumps({
+        "https://job/1": {"job_title": "X", "status": "applied"}
+    }), encoding="utf-8")
+    analyzed = [{"job_link": "https://job/1", "job_title": "X", "company": "A",
+                 "match_score": 40, "score_clt": "N/A"}]
+    assert main.save_job_history(str(history_path), {}, analyzed) is True
+    saved = json.loads(history_path.read_text(encoding="utf-8"))
+    assert saved["https://job/1"]["status"] == "applied"
+
+
 # --------------------------------------------------------------------------- #
 # webapp (Flask UI)
 # --------------------------------------------------------------------------- #
 @pytest.fixture
 def web_client(tmp_path, monkeypatch):
-    import json
     import webapp
 
     history_path = tmp_path / "hist.json"
@@ -344,7 +401,6 @@ def test_api_jobs_sorted_by_score_desc(web_client):
 
 
 def test_api_status_persists(web_client):
-    import json
 
     client, history_path = web_client
     resp = client.post("/api/status", json={

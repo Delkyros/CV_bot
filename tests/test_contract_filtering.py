@@ -11,12 +11,7 @@ wrongly answering "CLT" with high confidence — and assert the textual override
 still rejects the job. A separate fixture simulates the LLM being unavailable.
 """
 
-import os
-import sys
-
 import pytest
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src import matcher, text_signals
 

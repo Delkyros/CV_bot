@@ -12,7 +12,7 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 from src.scraper import scrape_linkedin_jobs, normalize_text
 from src.text_signals import out_of_scope_title
 from src.matcher import analyze_match, has_provider, LLMContractClassifier, min_discard_confidence
-from src.reporter import generate_report
+from src.reporter import generate_report, passes_relevance_filter, min_clt_score, min_match_score
 from src.logging_config import setup_logging
 from src.settings import env_str
 
@@ -177,6 +177,12 @@ def save_job_history(history_path, history, analyzed_jobs):
         for field in USER_STATUS_FIELDS:
             if field in prior:
                 entry[field] = prior[field]
+
+        # First time we see a sub-bar job (no user status yet), flag it
+        # "irrelevant" so the web UI keeps it out of the "new" list. A user
+        # status (viewed/applied/error/new) always wins and is never overwritten.
+        if "status" not in prior and not passes_relevance_filter(job):
+            entry["status"] = "irrelevant"
 
         merged[link] = entry
 
@@ -394,9 +400,23 @@ def main():
         logger.info("No in-scope job left after analysis. Ending pipeline.")
         sys.exit(0)
 
-    # 5. Run the reporter to generate the output Markdown file
+    # Relevance split: jobs that are confidently CLT (score_clt >= 0.7, no "N/A")
+    # AND well matched (match_score >= 70) are the ones worth surfacing. Sub-bar
+    # jobs are still PERSISTED (so they are not re-scraped/re-classified every
+    # run) but flagged status="irrelevant" so they never clutter the "new" list
+    # in the web UI. Persistent contract retry keeps "N/A" from happening.
+    relevant_jobs = [j for j in analyzed_jobs if passes_relevance_filter(j)]
+    irrelevant = len(analyzed_jobs) - len(relevant_jobs)
+    if irrelevant:
+        logger.info(
+            f"Relevance split: {irrelevant} of {len(analyzed_jobs)} job(s) below the bar "
+            f"(CLT >= {min_clt_score():.2f} and match >= {min_match_score():.0f}) — "
+            "persisted as 'irrelevant', hidden from the new list."
+        )
+
+    # 5. Report shows only the relevant ones; the history keeps ALL (flagged).
     output_path = env_str("REPORT_OUTPUT_PATH", "vagas_filtradas.md")
-    report_saved = generate_report(analyzed_jobs, output_path=output_path)
+    report_saved = generate_report(relevant_jobs, output_path=output_path)
     history_saved = save_job_history(history_path, job_history, analyzed_jobs)
 
     if report_saved and history_saved:

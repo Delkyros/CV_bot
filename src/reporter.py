@@ -12,9 +12,9 @@ logger = logging.getLogger(__name__)
 #   "N/A" (non-CLT regime kept conservatively, or LLM unavailable) is excluded.
 # - profile match (match_score, 0-100) must be >= the match threshold.
 # Env overrides: REPORT_MIN_CLT_SCORE, REPORT_MIN_MATCH_SCORE.
-DEFAULT_MIN_CLT_SCORE = 0.6
-# Below a 0.70 match the job is not worth surfacing (user rule: "score < 0,7
-# não me interessa"). Override per deployment with REPORT_MIN_MATCH_SCORE.
+# User rule: "abaixo de 0,7 no CLT não me interessa" and "score < 0,7 não me
+# interessa". Both bars at 0.70. Override per deployment via the env vars below.
+DEFAULT_MIN_CLT_SCORE = 0.7
 DEFAULT_MIN_MATCH_SCORE = 70
 
 
