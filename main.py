@@ -11,7 +11,8 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 from src.scraper import scrape_linkedin_jobs, normalize_text
 from src.text_signals import out_of_scope_title
-from src.matcher import analyze_match, has_provider, LLMContractClassifier, min_discard_confidence
+from src.matcher import analyze_match, has_provider, ContractClassifier
+from src.local_match import local_match_analysis
 from src.reporter import generate_report, passes_relevance_filter, min_clt_score, min_match_score
 from src.logging_config import setup_logging
 from src.settings import env_str
@@ -196,21 +197,25 @@ def save_job_history(history_path, history, analyzed_jobs):
         return False
 
 
-def _fallback_analysis(has_llm_provider):
-    """Neutral simulated analysis so the pipeline never breaks when the LLM is
-    unavailable or fails. core_role_compatible defaults True: we never discard a
-    job as out-of-scope on an infrastructure failure."""
-    if not has_llm_provider:
-        logger.warning("Using simulated fallback analysis: no LLM provider configured (OPENROUTER_API_KEY/GEMINI_API_KEY).")
-    else:
-        logger.warning("Using simulated fallback analysis due to failure of all LLM providers.")
-    return {
-        "match_score": 50,  # Neutral score
-        "core_role_compatible": True,
-        "strengths": ["Job collected successfully", "Available for evaluation"],
-        "gaps": ["LLM analysis unavailable (check OPENROUTER_API_KEY/GEMINI_API_KEY in .env)"],
-        "verdict": "Set a valid OPENROUTER_API_KEY and/or GEMINI_API_KEY in the .env file to get a real AI analysis of this job.",
-    }
+def _fallback_analysis(has_llm_provider, job, candidate_profile):
+    """LLM-free analysis so the pipeline never breaks when the LLM is unavailable
+    or fails. Scores the job locally by embedding proximity (src/local_match.py);
+    only if even that fails do we fall back to a neutral fixed score.
+    core_role_compatible stays True: we never discard a job on infra failure."""
+    reason = "no LLM provider configured" if not has_llm_provider else "all LLM providers failed"
+    try:
+        result = local_match_analysis(job, candidate_profile)
+        logger.warning(f"Local embedding fallback ({reason}): score {result['match_score']}/100.")
+        return result
+    except Exception:
+        logger.exception(f"Local embedding fallback failed ({reason}); using neutral score.")
+        return {
+            "match_score": 50,  # Neutral score
+            "core_role_compatible": True,
+            "strengths": ["Job collected successfully", "Available for evaluation"],
+            "gaps": ["LLM and local analysis unavailable"],
+            "verdict": "Nenhum provedor LLM disponível e o fallback local falhou; revise manualmente.",
+        }
 
 
 def analyze_and_filter_jobs(collected_jobs, candidate_profile, has_llm_provider):
@@ -246,7 +251,7 @@ def analyze_and_filter_jobs(collected_jobs, candidate_profile, has_llm_provider)
             except Exception:
                 logger.exception("LLM call failed for this job")
         if not analysis_result:
-            analysis_result = _fallback_analysis(has_llm_provider)
+            analysis_result = _fallback_analysis(has_llm_provider, job, candidate_profile)
 
         # Scope filter: discard jobs whose central role is a different career
         # track than the candidate's (e.g. Android/QA/Excel/People Analytics).
@@ -319,16 +324,10 @@ def main():
 
     contract_classifier = None
     if str(contract_type).strip().lower() == "clt":
-        if not has_llm_provider:
-            logger.error(
-                "CLT contract filtering uses the LLM (same OpenRouter/Gemini chain "
-                "as the match). Configure OPENROUTER_API_KEY and/or GEMINI_API_KEY in .env."
-            )
-            sys.exit(1)
-        contract_classifier = LLMContractClassifier()
+        contract_classifier = ContractClassifier()
         logger.info(
-            "LLM contract classification enabled (default-CLT: only discards "
-            f"non-CLT types with confidence >= {min_discard_confidence():.2f})."
+            "Local contract classification enabled (default-CLT: discards only on "
+            "explicit non-CLT signals — contractor/PJ/USD-hourly or internship)."
         )
 
     history_path = env_str("HISTORY_PATH", "vagas_historico.json")

@@ -1,8 +1,9 @@
 > **Nota histórica:** este é o documento de especificação **original (v1)** do projeto.
 > A implementação evoluiu desde então — em especial, a classificação de contratação
-> migrou de um classificador local por **embeddings** (`sentence-transformers`) para um
-> classificador via **LLM** (`src/matcher.py::LLMContractClassifier`). Para a arquitetura
-> atual, consulte o [README](../README.md).
+> passou por embeddings (`sentence-transformers`) e depois por **LLM**, e hoje é
+> novamente **local, por regex** (`src/matcher.py::classify_contract`), sem LLM. O
+> match usa LLM com fallback local por embeddings (`src/local_match.py`) quando todos
+> os provedores falham. Para a arquitetura atual, consulte o [README](../README.md).
 
 # Especificações Técnicas: Pipeline de Busca e Match de Vagas do LinkedIn
 

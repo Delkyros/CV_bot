@@ -53,6 +53,11 @@ services:
       HISTORY_PATH: "data/vagas_historico.json"
       REPORT_OUTPUT_PATH: "data/vagas_filtradas.md"
 
+      # Local embedding-model cache (match fallback, src/local_match.py). Point it
+      # into the persisted ./data volume so the ~30MB model is downloaded once and
+      # survives restarts — the container root fs is read-only and $HOME is tmpfs.
+      HF_HOME: "/app/data/hf-cache"
+
       # --- Optional tunables (uncomment to override defaults; see .env.example) ---
       # OPENROUTER_MODEL: ""
       # OPENROUTER_MODELS: "openai/gpt-oss-120b:free,meta-llama/llama-3.3-70b-instruct:free"
@@ -60,9 +65,11 @@ services:
       # LLM_TEMPERATURE: "0.1"
       # OPENROUTER_MAX_TOKENS: "2000"
       # LLM_REQUEST_TIMEOUT: "60"
-      # LLM_MAX_PROVIDER_CYCLES: "3"
-      # LLM_QUOTA_RETRY_WAIT: "60"
-      # CONTRACT_DISCARD_CONFIDENCE: "0.6"
+      # LLM_MAX_PROVIDER_CYCLES: "2"
+      # LLM_QUOTA_RETRY_WAIT: "5"
+      # LOCAL_MATCH_MODEL: "minishlab/potion-base-32M"
+      # LOCAL_MATCH_SIM_FLOOR: "0.30"
+      # LOCAL_MATCH_SIM_CEIL: "0.70"
       # REPORT_MIN_CLT_SCORE: "0.6"
       # REPORT_MIN_MATCH_SCORE: "50"
       # SCRAPER_MAX_RETRIES: "5"
