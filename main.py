@@ -229,7 +229,7 @@ def _scope_title_key(title):
     (drop the city / work-model suffixes LinkedIn appends after '|' or a newline),
     accent-stripped and whitespace-collapsed, so a repost of the same role under a
     new link/city still matches."""
-    head = str(title or "").split("|")[0].splitlines()[0] if title else ""
+    head = (str(title or "").split("|")[0].splitlines() or [""])[0]
     return " ".join(normalize_text(head).split())
 
 
