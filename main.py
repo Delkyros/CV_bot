@@ -218,13 +218,49 @@ def _fallback_analysis(has_llm_provider, job, candidate_profile):
         }
 
 
-def analyze_and_filter_jobs(collected_jobs, candidate_profile, has_llm_provider):
+# Web-UI classification label (webapp.ERROR_CLASSES) for jobs the user marks as
+# out-of-scope. Kept verbatim so the learned blocklist below reads the same string
+# the UI persists; must match webapp.py.
+SCOPE_ERROR_CLASS = "Escopo incorreto"
+
+
+def _scope_title_key(title):
+    """Normalized title key for the learned scope blocklist: role portion only
+    (drop the city / work-model suffixes LinkedIn appends after '|' or a newline),
+    accent-stripped and whitespace-collapsed, so a repost of the same role under a
+    new link/city still matches."""
+    head = str(title or "").split("|")[0].splitlines()[0] if title else ""
+    return " ".join(normalize_text(head).split())
+
+
+def learned_scope_blocklist(history):
+    """Titles the user marked 'Escopo incorreto' in the web UI, as normalized keys.
+
+    This is the auto-adjusting scope filter: your own corrections feed straight
+    back into the deterministic gate, so a role you rejected once is dropped on
+    sight next time — no LLM call, no hand-written regex. Grows every time you
+    triage. Complements the curated out_of_scope_title() patterns.
+    """
+    keys = set()
+    for entry in history.values():
+        if isinstance(entry, dict) and entry.get("error_class") == SCOPE_ERROR_CLASS:
+            key = _scope_title_key(entry.get("job_title") or entry.get("titulo_vaga"))
+            if key:
+                keys.add(key)
+    return keys
+
+
+def analyze_and_filter_jobs(collected_jobs, candidate_profile, has_llm_provider, scope_blocklist=None):
     """Run the match analysis on each collected job and DROP the ones whose core
     role does not match the candidate's area (scope filter), so they never reach
     the report or the history DB.
 
+    `scope_blocklist` is the learned set of normalized titles (learned_scope_blocklist)
+    the user already rejected as out-of-scope — dropped deterministically here.
+
     Returns the list of in-scope analyzed jobs (job data merged with the analysis).
     """
+    scope_blocklist = scope_blocklist or set()
     analyzed_jobs = []
     total_jobs = len(collected_jobs)
 
@@ -241,6 +277,15 @@ def analyze_and_filter_jobs(collected_jobs, candidate_profile, has_llm_provider)
             logger.info(
                 "Discarded as out of scope by title "
                 f"({out_reason}): {job['job_title']} | {job['company']}"
+            )
+            continue
+
+        # Learned gate: a title you already flagged 'Escopo incorreto' is dropped
+        # deterministically, before the (unreliable, free) LLM can rubber-stamp it.
+        if _scope_title_key(job.get("job_title")) in scope_blocklist:
+            logger.info(
+                "Discarded as out of scope (learned from your 'Escopo incorreto' marks): "
+                f"{job['job_title']} | {job['company']}"
             )
             continue
 
@@ -335,6 +380,12 @@ def main():
     history_links = set(job_history.keys())
     logger.info(f"Known jobs loaded from history: {len(history_links)}")
 
+    # Auto-adjusting scope filter: titles you rejected as 'Escopo incorreto' in
+    # the web UI become a deterministic blocklist for this run.
+    scope_blocklist = learned_scope_blocklist(job_history)
+    if scope_blocklist:
+        logger.info(f"Learned scope blocklist: {len(scope_blocklist)} title(s) from your 'Escopo incorreto' marks.")
+
     # 3. Run the scraper to collect LinkedIn jobs.
     # max_jobs_per_term (config: max_vagas_por_termo) caps how many jobs we pull
     # per search term to stay quick and avoid blocks; raise it in the YAML.
@@ -389,7 +440,7 @@ def main():
     logger.info("STARTING MATCH ANALYSIS")
     logger.info("=" * 40)
 
-    analyzed_jobs = analyze_and_filter_jobs(collected_jobs, candidate_profile, has_llm_provider)
+    analyzed_jobs = analyze_and_filter_jobs(collected_jobs, candidate_profile, has_llm_provider, scope_blocklist)
 
     out_of_scope = total_jobs - len(analyzed_jobs)
     if out_of_scope:
