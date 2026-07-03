@@ -5,31 +5,13 @@ as "Não é CLT" in the web UI. The goal: such jobs are discarded at COLLECTION
 time (accepted=False) and never reach the history DB, so there is nothing left
 to mark by hand.
 
-LLM-free and network-free: matcher._complete_with_providers is monkeypatched so
-the contract classifier is deterministic. We simulate the WORST case — the LLM
-wrongly answering "CLT" with high confidence — and assert the textual override
-still rejects the job. A separate fixture simulates the LLM being unavailable.
+The classifier is now fully local (regex only, no LLM), so these tests are
+inherently network- and LLM-free.
 """
 
 import pytest
 
 from src import matcher, text_signals
-
-
-# A wrong-but-confident "CLT" verdict, used to prove the override beats the LLM.
-_LLM_SAYS_CLT = {"regime": "CLT", "confidence": 0.95, "evidence": "Mentions benefits."}
-
-
-@pytest.fixture
-def llm_says_clt(monkeypatch):
-    """Force the LLM chain to (wrongly) answer a confident CLT for every job."""
-    monkeypatch.setattr(matcher, "_complete_with_providers", lambda *a, **k: dict(_LLM_SAYS_CLT))
-
-
-@pytest.fixture
-def llm_unavailable(monkeypatch):
-    """Simulate a total LLM outage (provider chain returns nothing)."""
-    monkeypatch.setattr(matcher, "_complete_with_providers", lambda *a, **k: None)
 
 
 # Real jobs the user flagged "Não é CLT", where the signal is in title+company
@@ -84,60 +66,36 @@ MIN_TITLE_COMPANY_COVERAGE = 7
 
 
 @pytest.mark.parametrize("title,company", CONTRACTOR_BY_TITLE_COMPANY)
-def test_contractor_title_company_rejected_despite_clt_llm(llm_says_clt, title, company):
+def test_contractor_title_company_rejected(title, company):
     result = matcher.classify_contract("", title=title, company=company)
     assert result["accepted"] is False, f"{title} @ {company} should be discarded"
     assert result["inferred_contract_type"] != "CLT"
 
 
 @pytest.mark.parametrize("title,company,desc", CONTRACTOR_BY_DESCRIPTION)
-def test_contractor_description_rejected_despite_clt_llm(llm_says_clt, title, company, desc):
+def test_contractor_description_rejected(title, company, desc):
     result = matcher.classify_contract(desc, title=title, company=company)
     assert result["accepted"] is False, f"{title} @ {company} should be discarded"
 
 
 @pytest.mark.parametrize("title,company,desc", CLT_SAFE)
-def test_clt_jobs_not_discarded(llm_says_clt, title, company, desc):
+def test_clt_jobs_not_discarded(title, company, desc):
     result = matcher.classify_contract(desc, title=title, company=company)
     assert result["accepted"] is True, f"{title} @ {company} must NOT be discarded"
 
 
-def test_contractor_rejected_even_when_llm_unavailable(llm_unavailable):
-    result = matcher.classify_contract("", title="Dev | $50/hr Remote", company="Toptal")
+def test_internship_rejected():
+    result = matcher.classify_contract(
+        "Programa de estágio em ciência de dados.", title="Estagiário de Dados", company="Magalu"
+    )
     assert result["accepted"] is False
+    assert result["inferred_contract_type"] == "ESTAGIO"
 
 
-def test_clt_kept_when_llm_unavailable(llm_unavailable):
+def test_clt_kept_when_no_signal():
     result = matcher.classify_contract(
         "Vaga CLT com carteira assinada.", title="Data Scientist", company="Magalu"
     )
-    assert result["accepted"] is True
-
-
-def test_strong_signal_skips_the_llm_call(monkeypatch):
-    """Regex already says non-CLT -> no LLM call at all (the saving on free tiers)."""
-    calls = []
-
-    def spy(*a, **k):
-        calls.append(1)
-        return {"regime": "CLT", "confidence": 0.95, "evidence": "x"}
-
-    monkeypatch.setattr(matcher, "_complete_with_providers", spy)
-    result = matcher.classify_contract("", title="Dev | $50/hr Remote", company="Toptal")
-    assert result["accepted"] is False
-    assert calls == [], "LLM must not be called when a strong signal already decides"
-
-
-def test_no_signal_still_calls_the_llm(monkeypatch):
-    calls = []
-
-    def spy(*a, **k):
-        calls.append(1)
-        return {"regime": "CLT", "confidence": 0.9, "evidence": "ok"}
-
-    monkeypatch.setattr(matcher, "_complete_with_providers", spy)
-    result = matcher.classify_contract("Vaga CLT", title="Data Scientist", company="Magalu")
-    assert calls == [1]
     assert result["accepted"] is True
 
 

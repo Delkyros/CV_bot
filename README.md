@@ -173,11 +173,13 @@ Everything operational is configurable via environment variables — nothing is 
 | --- | --- | --- |
 | `REPORT_MIN_CLT_SCORE` | `0.6` | Min CLT confidence (`score_clt`) for a job to appear in the report. `N/A` is always hidden. |
 | `REPORT_MIN_MATCH_SCORE` | `50` | Min profile match (`match_score`, 0–100) for a job to appear. |
-| `CONTRACT_DISCARD_CONFIDENCE` | `0.6` | Min confidence to discard a job as non-CLT during collection. |
 | `OPENROUTER_MODEL` / `OPENROUTER_MODELS` | built-in list | Pin one model, or override the whole comma-separated list. |
 | `GEMINI_MODEL` | `gemini-2.5-flash` | Gemini fallback model. |
 | `LLM_TEMPERATURE` / `OPENROUTER_MAX_TOKENS` / `LLM_REQUEST_TIMEOUT` | `0.1` / `2000` / `60` | LLM sampling, output budget, HTTP timeout. |
-| `LLM_MAX_PROVIDER_CYCLES` / `LLM_QUOTA_RETRY_WAIT` | `3` / `60` | Provider-chain retry cycles and wait between them. |
+| `LLM_MAX_PROVIDER_CYCLES` / `LLM_QUOTA_RETRY_WAIT` | `2` / `5` | Provider-chain retry cycles and wait between them (kept low to fail fast to the local fallback instead of grinding a saturated free pool). |
+| `LOCAL_MATCH_MODEL` | `minishlab/potion-base-32M` | model2vec model for the offline match score used when all LLM providers fail. |
+| `LOCAL_MATCH_SIM_FLOOR` / `LOCAL_MATCH_SIM_CEIL` | `0.30` / `0.70` | Cosine band mapped to the 0–100 local match score. |
+| `HF_HOME` | `~/.cache/huggingface` | Where the local model is cached; point at a persisted path under Docker. |
 | `SCRAPER_MAX_RETRIES` / `SCRAPER_RETRY_WAIT` / `SCRAPER_REQUEST_TIMEOUT` / `SCRAPER_MAX_PAGES` | `5` / `5` / `15` / `10` | Scraper retry, timeout and pagination limits. |
 | `SCRAPER_MIN_REQUEST_DELAY` / `SCRAPER_MAX_REQUEST_DELAY` | `1.0` / `3.0` | Random pause range (s) between requests. |
 | `KEYWORDS_CONFIG_PATH` / `HISTORY_PATH` / `REPORT_OUTPUT_PATH` | `config/keywords.yaml` / `vagas_historico.json` / `vagas_filtradas.md` | File locations. |

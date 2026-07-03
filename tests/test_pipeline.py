@@ -159,40 +159,19 @@ def test_parse_result_invalid_returns_none():
     assert matcher._parse_result("not json at all") is None
 
 
-def test_parse_contract_valid_and_clamped():
-    result = matcher._parse_contract('{"regime": "PJ", "confidence": 1.5, "evidence": "CNPJ"}')
-    assert result["regime"] == "PJ"
-    assert result["confidence"] == 1.0
+def test_contract_local_default_clt_passes_report_bar():
+    # No non-CLT signal -> kept as CLT with a numeric score_clt above the report
+    # bar (a "N/A" here would silently hide every kept job from the report).
+    result = matcher.classify_contract("Vaga efetiva de cientista de dados.", title="DS", company="ACME")
+    assert result["accepted"] is True
+    assert result["inferred_contract_type"] == "CLT"
+    assert float(result["score_clt"]) >= reporter.min_clt_score()
 
 
-def test_parse_contract_rejects_unknown_regime():
-    assert matcher._parse_contract('{"regime": "WHATEVER", "confidence": 0.9}') is None
-
-
-def test_contract_classification_retries_persistently(monkeypatch):
-    # classify_contract must drive the chain with the contract-specific (high)
-    # cycle count, not the old single pass — so a transient blip retries instead
-    # of collapsing to score_clt="N/A".
-    captured = {}
-
-    def fake_complete(prompt, parse_fn, task, max_cycles=None, retry_wait=None):
-        captured["max_cycles"] = max_cycles
-        captured["retry_wait"] = retry_wait
-        return {"regime": "CLT", "confidence": 0.9, "evidence": "ok"}
-
-    monkeypatch.setattr(matcher, "_complete_with_providers", fake_complete)
-    monkeypatch.delenv("CONTRACT_MAX_CYCLES", raising=False)
-    # Benign text: no strong non-CLT signal, so it reaches the LLM chain.
-    matcher.classify_contract("Vaga efetiva de cientista de dados.", title="DS", company="ACME")
-
-    assert captured["max_cycles"] == matcher.contract_max_cycles()
-    assert captured["max_cycles"] >= 2          # genuinely retries (not a single pass)
-    assert captured["retry_wait"] == matcher.contract_retry_wait()
-
-
-def test_contract_retry_cycles_overridable_via_env(monkeypatch):
-    monkeypatch.setenv("CONTRACT_MAX_CYCLES", "20")
-    assert matcher.contract_max_cycles() == 20
+def test_contract_local_discards_internship():
+    result = matcher.classify_contract("Vaga de estágio em dados.", title="Estagiário de Dados", company="ACME")
+    assert result["accepted"] is False
+    assert result["inferred_contract_type"] == "ESTAGIO"
 
 
 # --------------------------------------------------------------------------- #
@@ -253,13 +232,6 @@ def test_report_thresholds_read_from_env(monkeypatch):
     # A job that passes the defaults (0.6/50) must now fail the stricter env values.
     job = {"score_clt": 0.8, "match_score": 60}
     assert reporter.passes_relevance_filter(job) is False
-
-
-def test_contract_discard_threshold_reads_from_env(monkeypatch):
-    monkeypatch.delenv("CONTRACT_DISCARD_CONFIDENCE", raising=False)
-    assert matcher.min_discard_confidence() == 0.6
-    monkeypatch.setenv("CONTRACT_DISCARD_CONFIDENCE", "0.75")
-    assert matcher.min_discard_confidence() == 0.75
 
 
 def test_openrouter_models_env_overrides(monkeypatch):

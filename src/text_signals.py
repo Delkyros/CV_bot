@@ -1,10 +1,10 @@
 """Lightweight text helpers shared across the pipeline.
 
-This module replaces the former embeddings-based contract classifier
-(sentence-transformers). The contract type is now inferred by the LLM
-(see src/matcher.py::LLMContractClassifier); the keyword logic kept here is
-a cheap set of non-CLT signals fed to the LLM as an auditing hint, plus a
-high-precision subset that can override the "assume CLT" default outright.
+Contract type (CLT vs PJ/freelancer/internship) is decided entirely here, with
+no LLM: `strong_non_clt_evidence` and `internship_evidence` are high-precision
+non-CLT signals that override the "assume CLT" default (see
+src/matcher.py::classify_contract). `explicit_negative_evidence` is a broader,
+lower-precision set kept for auditing/inspection.
 """
 
 import re
@@ -61,8 +61,24 @@ _HINT_ONLY_PATTERNS = [
 ]
 
 
+# Internship is a reliable non-CLT marker on its own (an internship is never a
+# CLT employment bond). High-precision: "estagi" stem (estágio/estagiário) and
+# the explicit English words, with a word boundary so "intern" does not match
+# "internal"/"international". "temporário" is deliberately excluded — fixed-term
+# CLT contracts exist, so it is not decisive.
+_INTERNSHIP_PATTERN = r"\bestagi\w*|\binternship\b|\bintern\b"
+
+
 def _match_labels(normalized, patterns):
     return [label for label, pattern in patterns if re.search(pattern, normalized)]
+
+
+def internship_evidence(text):
+    """Return a one-item label list if the text explicitly signals an internship,
+    else []. High-precision enough to discard on its own (see classify_contract)."""
+    if re.search(_INTERNSHIP_PATTERN, normalize_text(text)):
+        return ["Internship/estágio"]
+    return []
 
 
 def contractor_platform(company):
@@ -107,9 +123,11 @@ def explicit_negative_evidence(text, company=None):
 # senior Data Scientist / ML-AI Engineer. Matched against the accent-stripped,
 # lowercased TITLE only: the title is the most reliable scope signal, while the
 # description's incidental Python/SQL overlap is what made the LLM keep these.
-# Kept deliberately conservative so data-science/ML/AI/data-engineering titles
-# are never caught (e.g. "Analista de Dados e BI" is ambiguous -> left to the
-# LLM + match-score threshold, NOT hard-dropped here).
+# Anchored so the candidate's target titles (Cientista de Dados, Data Scientist,
+# Engenheiro/Analista de Engenharia de Dados, ML/AI Engineer, "…Software – IA
+# Generativa") are NEVER caught, while the flagged off-track ones are. Genuinely
+# ambiguous titles that overlap the target (e.g. "Engenheiro de MLOps") are left
+# to the LLM + match-score threshold, NOT hard-dropped here.
 _OUT_OF_SCOPE_TITLE_PATTERNS = [
     # BI / Qlik / Power BI developer (dashboard/BI tooling, not DS/ML).
     ("desenvolvedor de BI/Qlik/Power BI",
@@ -120,18 +138,96 @@ _OUT_OF_SCOPE_TITLE_PATTERNS = [
     # Systems analyst — a different track from data science.
     ("analista de sistemas", r"\banalista de sistemas?\b"),
     # Generic / junior / graduate software development (Node.js, trainee, graduate).
-    ("dev generico Jr/Node/Graduate", r"\bnode\.?js\b|\bnodejs\b|\bgraduate\b|\btrainee\b"),
+    ("dev generico Jr/Node/Graduate", r"\bnode\.?js\b|\bnodejs\b|\bgraduate\b|\btrainees?\b"),
+    # Clearly non-technical roles a broad/loose LinkedIn search can surface
+    # (cook, waiter, salesperson, driver, nurse, admin...). None overlap with
+    # data-science / ML / AI / data-engineering titles, so they are safe to
+    # hard-drop here — deterministically, without an LLM call. This is the
+    # load-bearing scope defense when the LLM is unavailable/rate-limited and the
+    # fallback keeps jobs in-scope by default. Word-boundaried on the stripped,
+    # lowercased title. Deliberately avoids ambiguous stems ("analista",
+    # "consultor", "seguranca", "operador") that also name tech/DS roles.
+    ("função não-técnica (alimentação/atendimento)",
+     r"\bcozinheir[oa]\b|\bchef\b|auxiliar de cozinha|\bgarcom\b|\bgarconete\b|\bbarista\b|"
+     r"\bbartender\b|\batendente\b|recepcionist[ao]|\bcamareir[oa]\b|\bcopeir[oa]\b"),
+    ("função não-técnica (vendas/varejo)",
+     r"\bvendedor(?:a)?\b|representante comercial|consultor(?:a)? de vendas|consultor(?:a)? comercial|"
+     r"promotor(?:a)? de vendas|executiv[oa] de vendas|operador(?:a)? de caixa|\bbalconist[ao]\b|"
+     r"\bestoquist[ao]\b|\brepositor(?:a)?\b"),
+    ("função não-técnica (logística/operação/ofícios)",
+     r"\bmotorist[ao]\b|\bentregador(?:a)?\b|\bmotoboy\b|\beletricist[ao]\b|\bmecanic[oa]\b|"
+     r"\bsoldador\b|\bpedreir[oa]\b|\bpintor\b|\bencanador\b|auxiliar de producao|"
+     r"operador(?:a)? de empilhadeira|\bvigilante\b|\bporteir[oa]\b|\bzelador\b"),
+    ("função não-técnica (saúde/administrativo)",
+     r"\benfermeir[oa]\b|tecnico de enfermagem|\bmedic[oa]\b|\bdentista\b|\bfisioterapeuta\b|"
+     r"\bnutricionista\b|\bfarmaceutic[oa]\b|auxiliar administrativ[oa]|assistente administrativ[oa]|"
+     r"\btelemarketing\b|\bsecretari[ao]\b|\bcostureir[oa]\b"),
+
+    # --- Off-track TECH/BUSINESS roles the user hand-flagged "Escopo incorreto"
+    # in the web UI. The candidate's scope is senior Data Scientist / ML / AI /
+    # data engineering — NOT general software engineering, data ANALYST, BI,
+    # infosec, or business analysis. These anchor on the discriminating token so
+    # they never catch the target roles (validated in test_scope_filtering.py):
+    # "backend" (not "AI Engineer"), "analista de dados" (not "engenharia de
+    # dados" / "cientista de dados"), etc.
+
+    # Software / backend / mobile / stack developer (not DS/ML). Anchored on
+    # backend/frontend/mobile/stack tokens so "AI Engineer", "Engenheiro de
+    # Dados" and "Engenheiro de Software – IA Generativa" are NOT caught.
+    ("desenvolvedor de software/backend/mobile",
+     r"\bback[\s-]?end\b|\bfront[\s-]?end\b|\bfull[\s-]?stack\b|\bmobile\b|\bandroid\b|\bios\b|"
+     r"\bflutter\b|react native|\bdelphi\b|\bcamunda\b|\bdynamics\b|\blaravel\b|\bvue\.?js\b|"
+     r"\bphp\b|\bjava\b|\brpa\b|\bprogramador\b|desenvolvedor de software|software developer|"
+     r"desenvolvedor de sistemas|desenvolvimento de sistemas|analista de desenvolvimento"),
+
+    # Data ANALYST / BI analytics — a different track from data science for this
+    # candidate (they flagged "Analista de Dados", "Data Analyst", "Web Analytics").
+    # Anchored on "analista de dados"/"data analyst" adjacency so "Cientista de
+    # Dados", "Engenheiro de Dados" and "Analista Sênior Engenharia de Dados" survive.
+    ("data analyst/analytics (não é ciência de dados)",
+     r"analista de dados\b|\bdata analyst\b|web analytics"),
+
+    # HR / people / recruiting.
+    ("RH/recrutamento",
+     r"business partner|\bhr\b|recursos humanos|atracao e selecao|recrutamento|people analytics"),
+
+    # Sales / commercial / marketing / retail management.
+    ("vendas/comercial/marketing",
+     r"\bcomercial\b|de vendas\b|vendas externas|pre[\s-]?vendas|customer success|grandes contas|"
+     r"executiv[oa] de|gerente de vendas|supervisor de vendas|\bmarketing\b|merchandising|\bbanker\b|"
+     r"incorporacao imobiliaria|imobiliari"),
+
+    # QA / testing.
+    ("QA/testes", r"\bqa\b|quality assurance|analista de teste"),
+
+    # Finance / controllership / fraud / audit.
+    ("finanças/controladoria/fraude",
+     r"controladoria|prevencao a fraude|\bauditoria\b|financeir[ao] de ti"),
+
+    # Logistics / supply / operations.
+    ("logística/operações", r"\bwms\b|transportes|logistica|gestao de estoque"),
+
+    # Support / franchise / CRM / Salesforce admin.
+    ("suporte/CRM/franquias", r"suporte a franquias|\bfranquias\b|salesforce|\bcrm\b"),
+
+    # IT support / systems and generic research/planning/trainee roles.
+    ("TI/pesquisa/planejamento genérico",
+     r"analista de ti\b|\bpesquisador\b|analista de planejamento\b"),
+
+    # Information security — out of scope for this DS/ML candidate.
+    ("segurança da informação", r"seguranca da informacao|information security"),
 ]
 
 
 def out_of_scope_title(title):
     """Return a human-readable reason if the job TITLE's central role is a
-    different career track than the candidate's (BI/Qlik dev, market
-    intelligence/research, systems analyst, generic junior/Node/graduate dev),
-    else None.
+    different career track than the candidate's (BI/Qlik dev, systems analyst,
+    generic/backend/mobile software dev, data analyst/BI, HR, sales/commercial,
+    QA, finance, logistics, infosec, non-technical roles), else None.
 
-    Deterministic, title-only scope gate. The LLM still judges scope on the
-    ambiguous titles this leaves through (see matcher._build_prompt).
+    Deterministic, title-only scope gate — the load-bearing scope defense when
+    the LLM is rate-limited/unavailable (the fallback keeps jobs in-scope by
+    default). The LLM still judges the ambiguous titles this leaves through.
     """
     normalized = normalize_text(title)
     if not normalized:

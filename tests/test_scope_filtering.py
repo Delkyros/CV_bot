@@ -38,6 +38,11 @@ OUT_OF_SCOPE_ROLES = [
 ]
 IN_SCOPE_ROLES = ["Machine Learning Engineer", "Cientista de Dados Sênior"]
 
+# Titles that PASS the deterministic title gate (so scope is decided only by the
+# LLM/fallback) — used to exercise the infra-failure path without the gate
+# short-circuiting first.
+NOT_TITLE_GATED = ["Excel Expert", "Analista de Processos II", "Kotlin Engineer"]
+
 
 def _fake_analyze_match(job, _profile):
     """Simulate the LLM: out-of-scope roles get core_role_compatible=False."""
@@ -68,7 +73,7 @@ def test_scope_filter_never_discards_when_llm_unavailable(monkeypatch):
         raise AssertionError("analyze_match should not run without a provider")
     monkeypatch.setattr(main, "analyze_match", _boom)
     collected = [{"job_title": t, "company": "X", "job_link": f"l/{i}"}
-                 for i, t in enumerate(OUT_OF_SCOPE_ROLES)]
+                 for i, t in enumerate(NOT_TITLE_GATED)]
     analyzed = main.analyze_and_filter_jobs(collected, "perfil", has_llm_provider=False)
     assert len(analyzed) == len(collected)  # nothing dropped on infra failure
 
@@ -79,7 +84,7 @@ def test_scope_filter_keeps_job_when_llm_call_raises(monkeypatch):
         raise RuntimeError("provider exploded")
     monkeypatch.setattr(main, "analyze_match", _raise)
     analyzed = main.analyze_and_filter_jobs(
-        [{"job_title": "QA Engineer", "company": "X", "job_link": "l/1"}],
+        [{"job_title": "Kotlin Engineer", "company": "X", "job_link": "l/1"}],
         "perfil", has_llm_provider=True,
     )
     assert len(analyzed) == 1
@@ -98,6 +103,28 @@ def test_scope_filter_keeps_job_when_llm_call_raises(monkeypatch):
     "Analista de Sistemas Pleno",
     "Desenvolvedor Junior Node.js - Trabalho Remoto",
     "Associate-Graduate:Developer",
+    # Clearly non-technical roles that a loose search surfaces and that leaked
+    # through when the LLM scope call was unavailable (the regression this fixes).
+    "Cozinheiro", "Cozinheira", "Chef de Cozinha", "Garçom", "Auxiliar de Cozinha",
+    "Vendedor", "Vendedora", "Consultor de Vendas", "Representante Comercial",
+    "Operador de Caixa", "Repositor", "Motorista", "Entregador", "Motoboy",
+    "Eletricista", "Pedreiro", "Enfermeiro", "Técnico de Enfermagem", "Médico",
+    "Recepcionista", "Atendente de Loja", "Auxiliar Administrativo", "Telemarketing",
+    # Off-track tech/business roles the user flagged "Escopo incorreto": general
+    # software/backend/mobile dev, data analyst/BI, HR, sales, QA, logistics,
+    # finance, infosec. The candidate's scope is DS/ML/AI/data-engineering only.
+    "Backend Engineer", "Desenvolvedor Backend", "Desenvolvedor Back end",
+    "Senior AI Backend Engineer", "Pessoa Desenvolvedora Android Sr.",
+    "Desenvolvedor(a) Mobile Flutter Sênior", "Programador Delphi SR",
+    "Full-stack pleno Laravel, PHP, Vue.js", "Desenvolvedor JAVA+Camunda",
+    "Analista de Dados", "Analista de Dados e BI", "Data Analyst", "Web Analytics",
+    "Analista de Dados - Trabalho Remoto",
+    "HR Business Partner", "Analista de Atração e Seleção",
+    "Analista Planejamento Comercial Pleno", "Analista de pré-vendas",
+    "Gerente de vendas - imobiliário", "Supervisor de Vendas Externas",
+    "Líder De Marketing", "Analista de QA Júnior", "Analista de Controladoria Pleno",
+    "Especialista WMS", "Analista de Transportes Júnior", "Analista de Suporte a Franquias",
+    "Analista de Segurança da Informação Sr", "Programa de Trainees 2026",
 ])
 def test_out_of_scope_title_flags_off_track_roles(title):
     assert out_of_scope_title(title) is not None
@@ -107,10 +134,17 @@ def test_out_of_scope_title_flags_off_track_roles(title):
     "Cientista de Dados Sênior",
     "Machine Learning Engineer",
     "Engenheiro de Dados",
-    "Analista de Dados",
-    "Analista de Dados e BI",   # ambiguous -> NOT hard-dropped (left to the LLM)
     "AI Developer",
     "Data Insights - Tech Senior Associate",
+    # Guards: the new off-track patterns must NOT catch the target DS/ML/AI roles,
+    # including ones that share an ambiguous stem (consultor de dados vs analista
+    # de dados; engenharia de dados vs analista de dados; software+IA vs backend).
+    "Consultor de Dados", "Chief Data Officer", "Gerente de Dados",
+    "Cientista de Dados Pleno", "AI Engineer - RAG & Semantic Search",
+    "Analista Sênior Engenharia de Dados - Mercado Pago",
+    "Engenheiro(a) de Software – IA Generativa e Agentes",
+    "Engenheiro(a) de MLOps & Edge Computing (Pleno)",
+    "Especialista em Ciências de Dados",
 ])
 def test_out_of_scope_title_keeps_in_or_adjacent_roles(title):
     assert out_of_scope_title(title) is None
