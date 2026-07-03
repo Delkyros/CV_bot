@@ -93,8 +93,10 @@ def _job_view(link, entry):
         ),
         "score_clt": entry.get("score_clt", "N/A"),
         "match_score": entry.get("match_score", 0),
-        "first_seen_at": entry.get("first_seen_at"),
-        "last_processed_at": entry.get("last_processed_at"),
+        # Fall back to the legacy pt-BR keys so pre-migration entries still date.
+        "first_seen_at": entry.get("first_seen_at") or entry.get("primeira_vez_vista_em"),
+        "last_processed_at": entry.get("last_processed_at") or entry.get("ultima_vez_processada_em"),
+        "status_updated_at": entry.get("status_updated_at"),
         "status": entry.get("status", "new"),
         "error_class": entry.get("error_class", ""),
         "notes": entry.get("notes", ""),

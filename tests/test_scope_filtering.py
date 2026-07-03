@@ -161,3 +161,37 @@ def test_out_of_scope_title_drops_before_llm(monkeypatch):
     ]
     analyzed = main.analyze_and_filter_jobs(collected, "perfil", has_llm_provider=True)
     assert analyzed == []
+
+
+# --------------------------------------------------------------------------- #
+# Learned scope blocklist: the user's 'Escopo incorreto' marks auto-feed the
+# deterministic gate (main.learned_scope_blocklist / analyze_and_filter_jobs).
+# --------------------------------------------------------------------------- #
+
+def test_learned_blocklist_derives_normalized_role_keys():
+    history = {
+        "l/1": {"job_title": "Designer Gráfico", "error_class": "Escopo incorreto"},
+        # City/work-model suffix must be stripped so a repost matches.
+        "l/2": {"job_title": "Gerente de Loja | Florianópolis\nFull-time", "error_class": "Escopo incorreto"},
+        "l/3": {"titulo_vaga": "Analista Financeiro", "error_class": "Escopo incorreto"},  # legacy pt-BR key
+        "l/4": {"job_title": "Cientista de Dados", "error_class": "Não é CLT"},  # other class -> ignored
+        "l/5": {"job_title": "Data Scientist"},  # unmarked -> ignored
+    }
+    bl = main.learned_scope_blocklist(history)
+    assert bl == {"designer grafico", "gerente de loja", "analista financeiro"}
+
+
+def test_learned_blocklist_drops_reposts_before_llm(monkeypatch):
+    def _boom(*a, **k):
+        raise AssertionError("analyze_match must not run for a learned-blocked job")
+    monkeypatch.setattr(main, "analyze_match", _boom)
+    blocklist = {"analista de suporte junior"}
+    collected = [
+        # Same role reposted under a new link + city suffix -> dropped, no LLM.
+        {"job_title": "Analista de Suporte Júnior | Curitiba", "company": "Y", "job_link": "l/9"},
+        # Not on the blocklist and not title-gated -> would go to the LLM (kept).
+        {"job_title": "Cientista de Dados Sênior", "company": "Y", "job_link": "l/10"},
+    ]
+    monkeypatch.setattr(main, "analyze_match", lambda *a, **k: {"match_score": 80, "core_role_compatible": True})
+    analyzed = main.analyze_and_filter_jobs(collected, "perfil", has_llm_provider=True, scope_blocklist=blocklist)
+    assert {j["job_title"] for j in analyzed} == {"Cientista de Dados Sênior"}
