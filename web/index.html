@@ -83,6 +83,14 @@
     }
     textarea.notes.saved { border-color: var(--applied); }
     .empty { color: var(--muted); padding: 40px; text-align: center; }
+    #granBtns button.on { background: var(--accent); color: #042; }
+    .legend { display: flex; gap: 18px; margin-bottom: 14px; color: var(--muted); }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+    #chart { width: 100%; min-width: 640px; height: 340px; font-variant-numeric: tabular-nums; }
+    #chart .bar:hover { opacity: .8; }
+    #chart text { fill: var(--muted); font-size: 11px; }
+    #chart .val { fill: var(--txt); font-size: 10px; }
     .toast {
       position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
       background: var(--applied); color: #04210d; padding: 8px 16px; border-radius: 8px;
@@ -99,6 +107,7 @@
       <button class="tab on" id="tabJobs" data-tab="jobs">Vagas <span class="tab-count" id="cJobs">0</span></button>
       <button class="tab" id="tabApplied" data-tab="applied">Inscritas <span class="tab-count" id="cApplied">0</span></button>
       <button class="tab" id="tabErrors" data-tab="errors">Erros <span class="tab-count" id="cErrors">0</span></button>
+      <button class="tab" id="tabMetrics" data-tab="metrics">Métricas</button>
     </div>
     <div class="controls">
       <input type="search" id="q" placeholder="Buscar por título, empresa, local…" />
@@ -108,9 +117,18 @@
       <label><input type="checkbox" id="showIrrelevant" /> Mostrar irrelevantes</label>
       <span class="stats" id="stats"></span>
     </div>
+    <div class="controls" id="metricsCtl" hidden>
+      <label>Agrupar por</label>
+      <div class="status-btns" id="granBtns">
+        <button data-g="day">Dia</button>
+        <button data-g="week" class="on">Semana</button>
+        <button data-g="month">Mês</button>
+      </div>
+      <span class="stats" id="metricsStats"></span>
+    </div>
   </header>
 
-  <div class="wrap">
+  <div class="wrap" id="tableWrap">
     <table id="tbl">
       <thead>
         <tr>
@@ -126,6 +144,12 @@
       <tbody id="rows"></tbody>
     </table>
     <div class="empty" id="empty" hidden>Nenhuma vaga encontrada.</div>
+  </div>
+
+  <div class="wrap" id="metricsWrap" hidden>
+    <div class="legend" id="legend"></div>
+    <svg id="chart" role="img" aria-label="Gráfico de vagas por período"></svg>
+    <div class="empty" id="metricsEmpty" hidden>Sem dados com data no período.</div>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -145,7 +169,8 @@
     };
     const STATUS_RANK = { new: 0, viewed: 1, applied: 2, error: 3 };
     let SORT = { key: "first_seen_at", dir: "desc" };
-    let ACTIVE_TAB = "jobs";  // "jobs" (default) | "errors"
+    let ACTIVE_TAB = "jobs";  // "jobs" (default) | "applied" | "errors" | "metrics"
+    let GRAN = "week";        // metrics bucket size: "day" | "week" | "month"
     const numOr = (v) => { const n = parseFloat(v); return isNaN(n) ? -Infinity : n; };
 
     function sortVal(j) {
@@ -256,6 +281,13 @@
     }
 
     function render() {
+      const metrics = ACTIVE_TAB === "metrics";
+      el("tableWrap").hidden = metrics;
+      el("metricsWrap").hidden = !metrics;
+      document.querySelector(".controls").hidden = metrics;      // job filters
+      el("metricsCtl").hidden = !metrics;                        // granularity picker
+      if (metrics) { renderMetrics(); return; }
+
       const list = filtered().sort(cmp);
       el("tbl").className = "tab-" + ACTIVE_TAB;
       updateHeaders();
@@ -312,6 +344,104 @@
       el("stats").innerHTML =
         `Exibindo <b>${shown}</b> · total <b>${total - errors - irrelevant}</b> · vistas <b>${viewed}</b> · inscritas <b>${applied}</b> · erros <b>${errors}</b> · irrelevantes <b>${irrelevant}</b>`;
     }
+
+    // ---- Métricas (agregação client-side sobre os jobs já carregados) ----
+    // Relevância é datada por quando a vaga entrou no banco (first_seen_at);
+    // inscrições e erros por quando você as marcou (status_updated_at).
+    const METRICS = [
+      { key: "relevance", label: "Relevância", color: "#4f9cf9" },
+      { key: "applied",   label: "Inscrições", color: "#3fb950" },
+      { key: "error",     label: "Erros",      color: "#f85149" },
+    ];
+    const pad2 = (n) => String(n).padStart(2, "0");
+
+    function periodKey(iso, gran) {
+      if (!iso) return null;
+      const d = new Date(iso);
+      if (isNaN(d)) return null;
+      const y = d.getFullYear(), m = d.getMonth(), day = d.getDate();
+      if (gran === "month") return `${y}-${pad2(m + 1)}`;
+      if (gran === "day") return `${y}-${pad2(m + 1)}-${pad2(day)}`;
+      const t = new Date(y, m, day);                 // week: segunda-feira local
+      t.setDate(t.getDate() - ((t.getDay() + 6) % 7));
+      return `${t.getFullYear()}-${pad2(t.getMonth() + 1)}-${pad2(t.getDate())}`;
+    }
+
+    function windowKeys(gran) {                       // últimos N períodos até hoje
+      const n = gran === "day" ? 30 : 12;
+      const now = new Date(), keys = [];
+      for (let i = n - 1; i >= 0; i--) {
+        const d = new Date(now);
+        if (gran === "day") d.setDate(d.getDate() - i);
+        else if (gran === "week") d.setDate(d.getDate() - i * 7);
+        else d.setMonth(d.getMonth() - i);
+        keys.push(periodKey(d.toISOString(), gran));
+      }
+      return [...new Set(keys)];
+    }
+
+    function keyLabel(key, gran) {                     // rótulo curto do eixo X
+      const [y, m, d] = key.split("-");
+      if (gran === "month") return `${m}/${y.slice(2)}`;
+      return `${d}/${m}`;
+    }
+
+    function aggregate(gran) {
+      const b = {};
+      const bump = (k, metric) => { if (k) (b[k] || (b[k] = { relevance: 0, applied: 0, error: 0 }))[metric]++; };
+      for (const j of JOBS) {
+        if (j.relevant) bump(periodKey(j.first_seen_at, gran), "relevance");
+        const when = j.status_updated_at || j.first_seen_at;
+        if (j.status === "applied") bump(periodKey(when, gran), "applied");
+        if (j.status === "error") bump(periodKey(when, gran), "error");
+      }
+      return b;
+    }
+
+    function renderMetrics() {
+      el("legend").innerHTML = METRICS.map((m) =>
+        `<span><i style="background:${m.color}"></i>${m.label}</span>`).join("");
+
+      const buckets = aggregate(GRAN);
+      const keys = windowKeys(GRAN);
+      const data = keys.map((k) => ({ k, ...(buckets[k] || { relevance: 0, applied: 0, error: 0 }) }));
+      const totals = METRICS.reduce((a, m) => (a[m.key] = data.reduce((s, d) => s + d[m.key], 0), a), {});
+      el("metricsStats").innerHTML = METRICS.map((m) =>
+        `${m.label} <b>${totals[m.key]}</b>`).join(" · ");
+
+      const hasData = METRICS.some((m) => totals[m.key] > 0);
+      el("metricsEmpty").hidden = hasData;
+      const svg = el("chart");
+      if (!hasData) { svg.innerHTML = ""; return; }
+
+      const maxVal = Math.max(1, ...data.flatMap((d) => METRICS.map((m) => d[m.key])));
+      const groupW = 60, barW = 15, top = 12, plotH = 250, base = top + plotH, W = keys.length * groupW + 30;
+      svg.setAttribute("viewBox", `0 0 ${W} ${base + 50}`);
+
+      let out = `<line x1="24" y1="${base}" x2="${W}" y2="${base}" stroke="#2c3743"/>`;
+      out += `<text x="20" y="${top + 4}" text-anchor="end">${maxVal}</text>`;
+      data.forEach((d, i) => {
+        const gx = 30 + i * groupW;
+        METRICS.forEach((m, mi) => {
+          const v = d[m.key];
+          const h = (v / maxVal) * plotH;
+          const x = gx + mi * (barW + 1);
+          const y = base - h;
+          out += `<rect class="bar" x="${x}" y="${y}" width="${barW}" height="${h}" fill="${m.color}"><title>${m.label}: ${v}</title></rect>`;
+          if (v > 0) out += `<text class="val" x="${x + barW / 2}" y="${y - 3}" text-anchor="middle">${v}</text>`;
+        });
+        out += `<text x="${gx + (barW * 3) / 2}" y="${base + 18}" text-anchor="middle">${keyLabel(d.k, GRAN)}</text>`;
+      });
+      svg.innerHTML = out;
+    }
+
+    el("granBtns").addEventListener("click", (ev) => {
+      const btn = ev.target.closest("button[data-g]");
+      if (!btn) return;
+      GRAN = btn.dataset.g;
+      el("granBtns").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b === btn));
+      renderMetrics();
+    });
 
     async function postStatus(link, body) {
       const r = await fetch("/api/status", {
@@ -422,7 +552,7 @@
     });
 
     // Tabs: "Vagas" (default), "Inscritas", "Erros".
-    const TABS = [["jobs", "tabJobs"], ["applied", "tabApplied"], ["errors", "tabErrors"]];
+    const TABS = [["jobs", "tabJobs"], ["applied", "tabApplied"], ["errors", "tabErrors"], ["metrics", "tabMetrics"]];
     function setTab(tab) {
       if (tab === ACTIVE_TAB) return;
       if (pendingLink()) {
