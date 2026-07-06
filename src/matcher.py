@@ -511,7 +511,7 @@ def analyze_match(job_info, candidate_profile):
 # ---------------------------------------------------------------------------
 
 # Synthetic CLT confidence for jobs kept by the default (no non-CLT signal).
-# Must stay above REPORT_MIN_CLT_SCORE (0.6) or default-CLT jobs would be hidden
+# Must stay above REPORT_MIN_CLT_SCORE (0.7) or default-CLT jobs would be hidden
 # from the report despite being kept in history.
 _ASSUMED_CLT_CONFIDENCE = 0.9
 

@@ -109,7 +109,7 @@ The ranked report is written to `vagas_filtradas.md` at the project root, and `v
 
 ## 🐳 Run with Docker (recommended)
 
-No local Python or virtualenv needed — just Docker. The image is a hardened, multi-stage Python 3.10 build that runs as a non-root user on a read-only root filesystem, and the container re-runs the pipeline **every 6 hours** on its own.
+No local Python or virtualenv needed — just Docker. The image is a hardened, multi-stage Python 3.10 build that runs as a non-root user on a read-only root filesystem. A single `web` dashboard service serves the UI, runs the pipeline on a recurring schedule (**every 6 hours** by default) and on demand from the **"Rodar agora"** button.
 
 ```bash
 # 1. Provide your search & profile (same as the native flow)
@@ -118,7 +118,7 @@ cp config/keywords.example.yaml config/keywords.yaml   # then edit it
 # 2. Create your compose file and add your API key(s)
 cp docker-compose.example.yml docker-compose.yml        # then edit the environment: block
 
-# 3. Build and start the scheduler (runs now, then every 6h)
+# 3. Build and start the dashboard (schedules runs + serves the UI at :8000)
 docker compose build
 docker compose up -d
 
@@ -127,8 +127,8 @@ docker compose logs -f
 docker compose down
 ```
 
-- **Scheduling** is handled by the container entrypoint via `RUN_INTERVAL_SECONDS` (default `21600` = 6h) and `RUN_ON_START` (default `true`). No host cron / Task Scheduler needed, and it survives reboots (`restart: unless-stopped`). A failed run never breaks the schedule.
-- To run **once** instead of on a schedule, set `RUN_INTERVAL_SECONDS: "0"` (or `RUN_INTERVAL_SECONDS=0 docker compose run --rm jobmatch`).
+- **Scheduling** is handled by the in-app scheduler in the dashboard (`webapp.py`) via `RUN_INTERVAL_SECONDS` (default `21600` = 6h) and `RUN_ON_START` (default `true`). No host cron / Task Scheduler needed, and it survives reboots (`restart: unless-stopped`). A failed run never breaks the schedule.
+- For **manual-only** (no automatic runs — trigger from the dashboard button), set `SCHEDULER_ENABLED: "false"` (or `RUN_INTERVAL_SECONDS: "0"`).
 - API keys and all tunables live in the `environment:` block of `docker-compose.yml` (git-ignored). `docker-compose.example.yml` is the versioned template.
 - `config/keywords.yaml` is mounted read-only; the report and history are written to `./data/` on the host (`data/vagas_filtradas.md`, `data/vagas_historico.json`) and persist across runs so already-seen jobs are skipped.
 - Hardening: `read_only` root fs, `cap_drop: ALL`, `no-new-privileges`, non-root user, and no build tools in the runtime image.
@@ -140,7 +140,7 @@ The Markdown report is regenerated every run, so it's not the place to track whi
 With Docker (the `web` service in the compose file is already wired up):
 
 ```bash
-docker compose up -d            # starts both the 6h scraper and the web UI
+docker compose up -d            # starts the dashboard (schedules runs + serves the UI)
 # open http://localhost:8000
 ```
 
@@ -153,6 +153,19 @@ python webapp.py                # open http://localhost:8000
 - Status + notes live in `vagas_historico.json` (same `./data` volume the scraper uses) — the web UI and the pipeline share one source of truth.
 - The scraper re-reads the history at save time and preserves your `status`/`notes`, so a run that happens while you're triaging never clobbers your marks.
 - Filters in the UI: search, *Só relevantes* (same threshold as the report), *Só novas*, *Ocultar inscritas*.
+
+### Run the pipeline from the dashboard
+
+The dashboard also **controls** the pipeline, not just the results. A single **"Rodar agora"** button:
+
+- **Triggers a run** in the background (spawns the pipeline as a subprocess, so a crash never takes the web app down).
+- **Guards concurrency** — while a run is in progress the button is disabled; a second trigger is rejected with "já em execução" (never two runs at once).
+- **Shows live progress** — a bar advances through the stages (scraping → matching → reporting) while it runs.
+- **Runs automatically** on a recurring interval, with a **countdown on the button** to the next automatic run. Triggering a manual run resets the countdown.
+
+The web app owns scheduling (see the Docker note below), and run/progress state lives in `run_state.json` — a small file **separate** from `vagas_historico.json`, safe to delete.
+
+> **Docker:** a single `web` service owns scheduling and runs the pipeline — there's no separate scraper container, so runs never overlap. See `docker-compose.example.yml`.
 
 ## ⚙️ Configuration reference (`config/keywords.yaml`)
 
@@ -171,8 +184,8 @@ Everything operational is configurable via environment variables — nothing is 
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `REPORT_MIN_CLT_SCORE` | `0.6` | Min CLT confidence (`score_clt`) for a job to appear in the report. `N/A` is always hidden. |
-| `REPORT_MIN_MATCH_SCORE` | `50` | Min profile match (`match_score`, 0–100) for a job to appear. |
+| `REPORT_MIN_CLT_SCORE` | `0.7` | Min CLT confidence (`score_clt`) for a job to appear in the report. `N/A` is always hidden. |
+| `REPORT_MIN_MATCH_SCORE` | `70` | Min profile match (`match_score`, 0–100) for a job to appear. |
 | `OPENROUTER_MODEL` / `OPENROUTER_MODELS` | built-in list | Pin one model, or override the whole comma-separated list. |
 | `GEMINI_MODEL` | `gemini-2.5-flash` | Gemini fallback model. |
 | `LLM_TEMPERATURE` / `OPENROUTER_MAX_TOKENS` / `LLM_REQUEST_TIMEOUT` | `0.1` / `2000` / `60` | LLM sampling, output budget, HTTP timeout. |
@@ -184,7 +197,9 @@ Everything operational is configurable via environment variables — nothing is 
 | `SCRAPER_MIN_REQUEST_DELAY` / `SCRAPER_MAX_REQUEST_DELAY` | `1.0` / `3.0` | Random pause range (s) between requests. |
 | `KEYWORDS_CONFIG_PATH` / `HISTORY_PATH` / `REPORT_OUTPUT_PATH` | `config/keywords.yaml` / `vagas_historico.json` / `vagas_filtradas.md` | File locations. |
 | `WEB_HOST` / `WEB_PORT` | `0.0.0.0` / `8000` | Bind host/port for the web UI (`webapp.py`). |
-| `RUN_INTERVAL_SECONDS` / `RUN_ON_START` | `21600` / `true` | Docker scheduler: seconds between runs (`0` = once), run on start. |
+| `RUN_INTERVAL_SECONDS` / `RUN_ON_START` | `21600` / `true` | Recurring-run interval in seconds (`0` = manual only) and whether the first run fires on start. Used by both the in-app scheduler (`webapp.py`) and the standalone Docker loop. |
+| `SCHEDULER_ENABLED` | `true` | Master switch for the in-app scheduler in `webapp.py`. `false` = manual runs only (no automatic schedule/countdown). |
+| `RUN_STATE_PATH` | `run_state.json` | Where the run controller persists run/progress state (separate from the history; safe to delete). Point under `./data` in Docker. |
 
 ## 📂 Project structure
 

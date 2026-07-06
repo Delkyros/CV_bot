@@ -25,7 +25,8 @@ from flask import Flask, jsonify, request, send_from_directory
 
 from src.logging_config import setup_logging
 from src.reporter import passes_relevance_filter
-from src.settings import env_int, env_str
+from src.run_controller import RunController
+from src.settings import env_bool, env_int, env_str
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,10 @@ USER_STATUS_FIELDS = ("status", "notes", "status_updated_at", "error_class")
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 
 app = Flask(__name__, static_folder=None)
+
+# Single-run pipeline controller (on-demand trigger + concurrency guard + status).
+# Instantiated once per process; boot reconciliation runs in __init__ (FR-013).
+controller = RunController()
 
 
 def _now_iso():
@@ -195,11 +200,46 @@ def api_status():
     )
 
 
+@app.post("/api/run")
+def api_run():
+    """Trigger a pipeline run in the background. 202 if started, 409 if a run is
+    already in progress (concurrency guard, FR-002)."""
+    try:
+        started = controller.start_run("manual")
+    except Exception:
+        logger.exception("Failed to start pipeline run")
+        return jsonify({"ok": False, "error": "failed_to_start"}), 500
+    if not started:
+        st = controller.status()
+        return jsonify({
+            "ok": False, "error": "already_running",
+            "status": st.get("status"),
+            "run_started_at": st.get("run_started_at"),
+            "progress": st.get("progress"),
+        }), 409
+    st = controller.status()
+    logger.info("Pipeline run started (manual).")
+    return jsonify({
+        "ok": True, "status": st.get("status"),
+        "trigger": st.get("trigger"),
+        "run_started_at": st.get("run_started_at"),
+    }), 202
+
+
+@app.get("/api/run/status")
+def api_run_status():
+    """Current run/controller state — polled by the front."""
+    return jsonify(controller.status())
+
+
 def main():
     setup_logging()
     load_dotenv()
     host = env_str("WEB_HOST", "0.0.0.0")
     port = env_int("WEB_PORT", 8000)
+    # App-owned recurring scheduler (FR-014). RUN_ON_START fires the first run
+    # immediately; otherwise it waits one interval.
+    controller.start_scheduler(run_on_boot=env_bool("RUN_ON_START", False))
     logger.info("JobMatch web UI on http://%s:%d (history: %s)", host, port, _history_path())
     app.run(host=host, port=port, threaded=True)
 

@@ -30,3 +30,7 @@ tests/
 requirements-dev.txt
 Dockerfile
 .dockerignore
+.specify
+.pytest_cache
+.claude
+examples
