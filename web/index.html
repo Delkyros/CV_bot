@@ -98,6 +98,17 @@
     }
     .toast.show { opacity: 1; }
     .toast.err { background: #f85149; color: #fff; }
+    .run-ctl { display: inline-flex; align-items: center; gap: 10px; margin-left: auto; }
+    .run-btn {
+      background: var(--accent); color: #042; border: 0; border-radius: 7px;
+      padding: 6px 14px; cursor: pointer; font: inherit; font-weight: 600;
+    }
+    .run-btn:disabled { background: var(--panel-2); color: var(--muted); cursor: default; }
+    .run-status { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+    .run-progress { display: inline-flex; align-items: center; gap: 8px; }
+    .run-bar { width: 140px; height: 8px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 99px; overflow: hidden; }
+    .run-bar-fill { display: block; height: 100%; width: 0%; background: var(--accent); transition: width .3s; }
+    .run-pct { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
   </style>
 </head>
 <body>
@@ -108,6 +119,14 @@
       <button class="tab" id="tabApplied" data-tab="applied">Inscritas <span class="tab-count" id="cApplied">0</span></button>
       <button class="tab" id="tabErrors" data-tab="errors">Erros <span class="tab-count" id="cErrors">0</span></button>
       <button class="tab" id="tabMetrics" data-tab="metrics">Métricas</button>
+      <span class="run-ctl">
+        <button id="runBtn" class="run-btn">▶ Rodar agora</button>
+        <span class="run-progress" id="runProgress" hidden>
+          <span class="run-bar"><span class="run-bar-fill" id="runBarFill"></span></span>
+          <span class="run-pct" id="runPct"></span>
+        </span>
+        <span class="run-status" id="runStatus"></span>
+      </span>
     </div>
     <div class="controls">
       <input type="search" id="q" placeholder="Buscar por título, empresa, local…" />
@@ -568,7 +587,88 @@
     ["q", "onlyRelevant", "onlyNew", "hideApplied", "showIrrelevant"].forEach((id) =>
       el(id).addEventListener("input", render));
 
+    // ---- Pipeline run control (trigger + concurrency guard + progress + schedule) ----
+    const OUTCOME_LABELS = { success: "✓ concluída", failed: "✕ falhou", interrupted: "⚠ interrompida" };
+    let RUN = { running: false, next_at: null, sched: false, last_outcome: null, offset: 0 };
+    let RUN_WAS_RUNNING = false;
+    let runPollTimer;
+
+    function fmtCountdown(sec) {
+      if (sec < 0) sec = 0;
+      const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+      const pad = (n) => String(n).padStart(2, "0");
+      return h > 0 ? `${h}h${pad(m)}m` : `${pad(m)}:${pad(s)}`;
+    }
+
+    function applyRunState(s) {
+      const running = s.status === "running";
+      RUN.running = running;
+      RUN.sched = !!s.scheduler_enabled;
+      RUN.next_at = s.next_run_at ? Date.parse(s.next_run_at) : null;
+      RUN.last_outcome = s.last_outcome || null;
+      // Offset the server clock so the countdown ignores client-clock skew.
+      if (s.server_time) RUN.offset = Date.now() - Date.parse(s.server_time);
+
+      el("runBtn").disabled = running;
+      el("runProgress").hidden = !running;
+      if (running) {
+        const p = s.progress || {};
+        el("runBarFill").style.width = (p.percent || 0) + "%";
+        el("runPct").textContent = `${p.stage || ""} ${p.percent || 0}%`;
+        el("runStatus").textContent = p.detail || "em execução…";
+      } else if (s.last_outcome) {
+        el("runStatus").textContent = "última: " + (OUTCOME_LABELS[s.last_outcome] || s.last_outcome);
+      } else {
+        el("runStatus").textContent = "";
+      }
+      renderRunButton();
+
+      // A run just finished → refresh the job list to show new results.
+      if (RUN_WAS_RUNNING && !running) {
+        toast("Execução concluída");
+        load();
+      }
+      RUN_WAS_RUNNING = running;
+      return running;
+    }
+
+    // Local 1s tick so the countdown on the button moves between polls.
+    function renderRunButton() {
+      if (RUN.running) { el("runBtn").textContent = "⏳ Rodando…"; return; }
+      if (RUN.sched && RUN.next_at) {
+        const remaining = Math.round((RUN.next_at - (Date.now() - RUN.offset)) / 1000);
+        el("runBtn").textContent = `▶ Rodar agora · auto em ${fmtCountdown(remaining)}`;
+      } else {
+        el("runBtn").textContent = "▶ Rodar agora";
+      }
+    }
+    setInterval(renderRunButton, 1000);
+
+    async function pollRun() {
+      let running = false;
+      try {
+        const r = await fetch("/api/run/status");
+        running = applyRunState(await r.json());
+      } catch (e) { /* keep last state; retry on next tick */ }
+      clearTimeout(runPollTimer);
+      runPollTimer = setTimeout(pollRun, running ? 2000 : 15000);
+    }
+
+    el("runBtn").addEventListener("click", async () => {
+      el("runBtn").disabled = true;
+      try {
+        const r = await fetch("/api/run", { method: "POST" });
+        if (r.status === 202) toast("Execução iniciada");
+        else if (r.status === 409) toast("Já em execução", true);
+        else toast("Falha ao iniciar", true);
+      } catch (e) {
+        toast("Falha ao iniciar", true);
+      }
+      pollRun();  // refresh immediately and resume fast polling
+    });
+
     load();
+    pollRun();
   </script>
 </body>
 </html>

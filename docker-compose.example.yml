@@ -5,115 +5,90 @@
 # docker-compose.yml is git-ignored (it holds your secrets); this example is
 # the versioned template.
 #
-# Build & run on a schedule (runs every 6h by default, in the background):
+# Single service: the `web` dashboard owns everything — serves the UI, runs the
+# pipeline (on the "Rodar agora" button AND on its recurring schedule) and shows
+# a countdown to the next automatic run. One process = one place a run can start,
+# so runs never overlap (the in-app guard rejects a trigger while busy).
 #     docker compose build
 #     docker compose up -d
-#     docker compose logs -f          # follow the run output
-#     docker compose down             # stop the scheduler
+#     open http://localhost:8000
 #
-# To run just once instead of on a schedule, set RUN_INTERVAL_SECONDS: "0"
-# below (or override per run):
-#     RUN_INTERVAL_SECONDS=0 docker compose run --rm jobmatch
-#
-# Your edited config/keywords.yaml is mounted read-only, and the generated
-# report + history land in ./data on the host (persisted across runs).
+# The environment: block lists EVERY variable the code reads, with its default,
+# as a reference of what can be tuned. Uncommented = active; commented = using
+# the code default (uncomment to override). See also .env.example.
 
 services:
-  jobmatch:
+  web:
     build:
       context: .
       dockerfile: Dockerfile
     image: jobmatch-ai:latest
-    container_name: jobmatch-ai     # distinct name in `docker ps` (the scraper/AI)
-    # Long-running scheduler: keep it up across crashes and host reboots.
+    container_name: jobmatch-web
+    entrypoint: ["python", "webapp.py"]
     restart: unless-stopped
 
     # --- Security hardening ---
     read_only: true                  # immutable root filesystem
     security_opt:
-      - no-new-privileges:true       # block privilege escalation
+      - no-new-privileges:true
     cap_drop:
-      - ALL                          # drop all Linux capabilities
+      - ALL
     tmpfs:                           # writable scratch (root fs is read-only)
       - /tmp
       - /home/appuser
 
-    # --- Configuration & secrets (EDIT THESE) ---
     environment:
-      # Required: set at least one provider key.
+      # ---- Providers (at least one key required) ----
       OPENROUTER_API_KEY: "your_openrouter_key_here"   # primary provider
       GEMINI_API_KEY: "your_gemini_key_here"           # fallback provider
 
-      # Schedule (read by the Docker entrypoint, not by main.py):
-      RUN_INTERVAL_SECONDS: "21600"  # run every 6 hours; "0" = run once and exit
-      RUN_ON_START: "true"           # run immediately on start, then every interval
+      # ---- Run control / scheduler (webapp.py + src/run_controller.py) ----
+      SCHEDULER_ENABLED: "true"       # default true — automatic recurring runs
+      RUN_INTERVAL_SECONDS: "21600"   # default 21600 (6h); "0" = manual only (button)
+      RUN_ON_START: "true"            # code default false; first run on start vs after one interval
+      RUN_STATE_PATH: "data/run_state.json"  # default run_state.json (→ ./data; root fs is read-only)
 
-      # Paths inside the container — point at the mounted volumes. Leave as-is.
-      KEYWORDS_CONFIG_PATH: "config/keywords.yaml"
-      HISTORY_PATH: "data/vagas_historico.json"
-      REPORT_OUTPUT_PATH: "data/vagas_filtradas.md"
+      # ---- File paths ----
+      KEYWORDS_CONFIG_PATH: "config/keywords.yaml"   # default config/keywords.yaml
+      HISTORY_PATH: "data/vagas_historico.json"      # default vagas_historico.json
+      REPORT_OUTPUT_PATH: "data/vagas_filtradas.md"  # default vagas_filtradas.md
 
-      # Local embedding-model cache (match fallback, src/local_match.py). Point it
-      # into the persisted ./data volume so the ~30MB model is downloaded once and
-      # survives restarts — the container root fs is read-only and $HOME is tmpfs.
-      HF_HOME: "/app/data/hf-cache"
+      # ---- Web UI ----
+      WEB_HOST: "0.0.0.0"             # default 0.0.0.0
+      WEB_PORT: "8000"                # default 8000
 
-      # --- Optional tunables (uncomment to override defaults; see .env.example) ---
-      # OPENROUTER_MODEL: ""
-      # OPENROUTER_MODELS: "openai/gpt-oss-120b:free,meta-llama/llama-3.3-70b-instruct:free"
+      # ---- Local match fallback (offline scoring when all LLM providers fail) ----
+      HF_HOME: "/app/data/hf-cache"   # model cache; persist in ./data (root fs read-only, $HOME tmpfs)
+      # LOCAL_MATCH_MODEL: "minishlab/potion-base-32M"
+      # LOCAL_MATCH_SIM_FLOOR: "0.30"     # cosine floor mapped to match score 0
+      # LOCAL_MATCH_SIM_CEIL: "0.70"      # cosine ceil mapped to match score 100
+
+      # ---- LLM tuning (optional; defaults shown) ----
+      # OPENROUTER_MODEL: ""                # pin ONE model (overrides the list below)
+      # OPENROUTER_MODELS: "openai/gpt-oss-120b:free,deepseek/deepseek-chat-v3-0324:free,meta-llama/llama-3.3-70b-instruct:free,qwen/qwen3-next-80b-a3b-instruct:free,nvidia/nemotron-3-super-120b-a12b:free,google/gemini-2.0-flash-exp:free"
+      # OPENROUTER_AUTO_FREE_MODELS: "true" # auto-append discovered :free models
       # GEMINI_MODEL: "gemini-2.5-flash"
       # LLM_TEMPERATURE: "0.1"
       # OPENROUTER_MAX_TOKENS: "2000"
-      # LLM_REQUEST_TIMEOUT: "60"
-      # LLM_MAX_PROVIDER_CYCLES: "2"
-      # LLM_QUOTA_RETRY_WAIT: "5"
-      # LOCAL_MATCH_MODEL: "minishlab/potion-base-32M"
-      # LOCAL_MATCH_SIM_FLOOR: "0.30"
-      # LOCAL_MATCH_SIM_CEIL: "0.70"
-      # REPORT_MIN_CLT_SCORE: "0.6"
-      # REPORT_MIN_MATCH_SCORE: "50"
+      # LLM_REQUEST_TIMEOUT: "60"           # seconds
+      # LLM_MAX_PROVIDER_CYCLES: "2"        # provider-chain retry cycles on quota/429
+      # LLM_QUOTA_RETRY_WAIT: "5"           # seconds between cycles
+
+      # ---- Report thresholds (which jobs surface in the report) ----
+      # REPORT_MIN_CLT_SCORE: "0.7"         # min CLT confidence 0–1
+      # REPORT_MIN_MATCH_SCORE: "70"        # min profile match 0–100
+
+      # ---- Scraper (LinkedIn Guest API politeness/limits) ----
       # SCRAPER_MAX_RETRIES: "5"
-      # SCRAPER_RETRY_WAIT: "5"
-      # SCRAPER_REQUEST_TIMEOUT: "15"
-      # SCRAPER_MAX_PAGES: "10"
-      # SCRAPER_MIN_REQUEST_DELAY: "1.0"
-      # SCRAPER_MAX_REQUEST_DELAY: "3.0"
-
-    # --- Host <-> container files ---
-    volumes:
-      - ./config:/app/config:ro      # your keywords.yaml (read-only)
-      - ./data:/app/data             # generated report + history (writable)
-
-  # Web UI to mark jobs as viewed/applied. Shares the same image and the ./data
-  # volume, so its changes land in the same vagas_historico.json the scraper
-  # reads/writes. Open http://localhost:8000 after `docker compose up -d`.
-  web:
-    # Reuse the image built by `jobmatch` (no second build -> no tag race).
-    image: jobmatch-ai:latest
-    container_name: jobmatch-web    # distinct name in `docker ps` (the web UI)
-    depends_on:
-      - jobmatch
-    # Override the scheduler entrypoint to run the Flask app instead.
-    entrypoint: ["python", "webapp.py"]
-    restart: unless-stopped
-
-    # --- Security hardening (same as the scraper) ---
-    read_only: true
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
-    tmpfs:
-      - /tmp
-      - /home/appuser
-
-    environment:
-      HISTORY_PATH: "data/vagas_historico.json"   # same file the scraper writes
-      WEB_HOST: "0.0.0.0"
-      WEB_PORT: "8000"
+      # SCRAPER_RETRY_WAIT: "5"             # seconds
+      # SCRAPER_REQUEST_TIMEOUT: "15"       # seconds
+      # SCRAPER_MAX_PAGES: "10"             # result pages per (term × filter)
+      # SCRAPER_MIN_REQUEST_DELAY: "1.0"    # random pause floor (s)
+      # SCRAPER_MAX_REQUEST_DELAY: "3.0"    # random pause ceil (s)
 
     ports:
       - "8000:8000"                  # browse at http://localhost:8000
 
     volumes:
-      - ./data:/app/data             # shared history (read + write status)
+      - ./config:/app/config:ro      # your keywords.yaml (read-only)
+      - ./data:/app/data             # report + history + run state (writable)

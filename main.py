@@ -13,6 +13,7 @@ from src.scraper import scrape_linkedin_jobs, normalize_text
 from src.text_signals import out_of_scope_title
 from src.matcher import analyze_match, has_provider, ContractClassifier
 from src.local_match import local_match_analysis
+from src.run_controller import emit_progress
 from src.reporter import generate_report, passes_relevance_filter, min_clt_score, min_match_score
 from src.logging_config import setup_logging
 from src.settings import env_str
@@ -264,8 +265,11 @@ def analyze_and_filter_jobs(collected_jobs, candidate_profile, has_llm_provider,
     analyzed_jobs = []
     total_jobs = len(collected_jobs)
 
+    step = max(1, total_jobs // 20)
     for idx, job in enumerate(collected_jobs, start=1):
         logger.info(f"Analyzing job {idx} of {total_jobs}: {job['job_title']} | Company: {job['company']}")
+        if idx == 1 or idx == total_jobs or idx % step == 0:
+            emit_progress("matching", done=idx, total=total_jobs, detail=f"analisando {idx}/{total_jobs}")
 
         # Deterministic title-based scope gate: the job TITLE is the most
         # reliable scope signal, so drop clearly out-of-track roles (BI/Qlik
@@ -389,6 +393,7 @@ def main():
     # 3. Run the scraper to collect LinkedIn jobs.
     # max_jobs_per_term (config: max_vagas_por_termo) caps how many jobs we pull
     # per search term to stay quick and avoid blocks; raise it in the YAML.
+    emit_progress("scraping", detail="coletando vagas no LinkedIn")
     collected_jobs = []
     collected_links = set()
 
@@ -431,8 +436,11 @@ def main():
     if removed:
         logger.info(f"Dedup: {removed} near-duplicate(s) removed. Unique jobs to analyze: {total_jobs}")
 
+    emit_progress("dedupe", detail=f"{total_jobs} vaga(s) única(s) para analisar")
+
     if total_jobs == 0:
         logger.info("No new job could be collected. Ending pipeline.")
+        emit_progress("done", detail="nenhuma vaga nova")
         sys.exit(0)
 
     # 4. Run the matcher to analyze each collected job (and drop out-of-scope ones)
@@ -448,6 +456,7 @@ def main():
 
     if not analyzed_jobs:
         logger.info("No in-scope job left after analysis. Ending pipeline.")
+        emit_progress("done", detail="nenhuma vaga no escopo")
         sys.exit(0)
 
     # Relevance split: jobs that are confidently CLT (score_clt >= 0.7, no "N/A")
@@ -465,9 +474,11 @@ def main():
         )
 
     # 5. Report shows only the relevant ones; the history keeps ALL (flagged).
+    emit_progress("reporting", detail="gerando relatório e salvando histórico")
     output_path = env_str("REPORT_OUTPUT_PATH", "vagas_filtradas.md")
     report_saved = generate_report(relevant_jobs, output_path=output_path)
     history_saved = save_job_history(history_path, job_history, analyzed_jobs)
+    emit_progress("done", detail="concluído")
 
     if report_saved and history_saved:
         logger.info("=" * 60)

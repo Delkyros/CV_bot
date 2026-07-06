@@ -19,6 +19,7 @@ config/keywords.yaml
 vagas_filtradas.md
 vagas_historico.json
 vagas_historico.backup-*.json
+run_state.json
 *.xlsx
 
 # Local embedding-model cache (downloaded on first use of the match fallback,
