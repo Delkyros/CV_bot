@@ -46,8 +46,8 @@ perfil_candidato:
   resumo_profissional: |
     Data Scientist / Machine Learning Engineer with hands-on experience building
     end-to-end AI solutions: LLM-based agents, RAG pipelines, vector search and
-    REST APIs deployed to the cloud. Strong software-engineering practices applied
-    to data products.
+    REST APIs deployed to the cloud, or On-Premisses. Strong software-engineering
+    practices applied to data products.
 
   competencias_tecnicas:
     ia_e_llms:
@@ -59,10 +59,15 @@ perfil_candidato:
       - "Python"
       - "SQL (PostgreSQL)"
       - "RESTful APIs"
-      - "Pandas, Scikit-learn, PyTorch, Langraph, LangSmith"
+      - "Pandas, Scikit-learn, PyTorch, Langraph, LangSmith, Flask, beautifulsoup, Plotly, opcua, asyncua, Fastapi, chonkie, qdrant, marker"
     engenharia_de_dados_e_cloud:
       - "ETL/ELT Pipelines"
       - "Docker"
+      - "Kubernetes"
+      - "Kafka"
+      - "Synapse"
+      - "Databriks"
+      - "Azure Open AI"
       - "Azure"
       - "CI/CD (GitHub Actions)"
 
