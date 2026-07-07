@@ -34,7 +34,11 @@ DEFAULT_OPENROUTER_MODELS = (
     "nvidia/nemotron-3-super-120b-a12b:free",
     "google/gemini-2.0-flash-exp:free",
 )
-PROVIDER_ORDER = ("openrouter", "gemini")
+# Gemini-only while we compare LLM vs local vector scores (score_gemini vs
+# score_vetor_desc / score_title in the history). OpenRouter's free pool proved
+# unreliable AND its scores were garbage (84% of user-rejected jobs got 100).
+# Re-add "openrouter" here to bring it back.
+PROVIDER_ORDER = ("gemini",)
 
 # Public catalog of OpenRouter models (no API key needed). Used to auto-discover
 # the currently-free models (pricing == 0) and append them to the fallback list,

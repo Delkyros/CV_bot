@@ -31,10 +31,9 @@ flowchart LR
     B --> C[scraper.py<br/>LinkedIn Guest API]
     C --> D{Contract classifier<br/>LLM · default-CLT}
     D -- non-CLT, high confidence --> X[discard]
-    D -- CLT / undefined --> E[matcher.py<br/>profile match 0–100]
-    E --> F[reporter.py<br/>ranked Markdown]
-    F --> G[/vagas_filtradas.md/]
+    D -- CLT / undefined --> E[matcher.py<br/>scope gate + profile match]
     E --> H
+    H --> W[webapp.py<br/>triage + Relatório tab]
 
     subgraph LLM["LLM provider chain (with fallback)"]
         P1[OpenRouter free models] --> P2[Google Gemini]
@@ -48,8 +47,8 @@ flowchart LR
 1. **Collect** — `scraper.py` queries LinkedIn's public Guest API per search term and filter, rotating User-Agents and retrying on `429`. Jobs already in the history are skipped *before* the description is downloaded, and location/work-model filtering happens on the card to save requests.
 2. **Classify contract** — for each new job, an LLM decides the employment type. Brazil's market defaults to CLT, so a job is **only discarded** when there is *explicit* evidence of a non-CLT regime above a confidence threshold (`MIN_DISCARD_CONFIDENCE = 0.6`).
 3. **Deduplicate** — near-duplicate reposts (same title + company, different IDs/cities) are collapsed to avoid wasting LLM calls.
-4. **Match** — `matcher.py` sends the job description + your profile to the LLM and gets back a structured `{ match_score, strengths, gaps, verdict }`.
-5. **Report & remember** — `reporter.py` writes a ranked Markdown table + detail sections; `vagas_historico.json` is updated with metadata and timestamps.
+4. **Match & scope-filter** — an embedding scope gate drops a job only when BOTH its title (vs your search terms) and description (vs your CV) are far off; survivors get a structured `{ match_score, strengths, gaps, verdict }` from Gemini. Each kept job stores three comparable scores: `score_gemini`, `score_vetor_desc`, `score_title`.
+5. **Remember** — `vagas_historico.json` is updated with the scores, analysis prose, metadata and timestamps. The web app's **Relatório** tab renders it (the old Markdown report was removed).
 
 ## 🛠️ Tech stack
 
@@ -59,7 +58,7 @@ flowchart LR
 | Scraping | `requests`, `beautifulsoup4` |
 | LLMs | OpenRouter (OpenAI-compatible API, free models) → Google Gemini (`google-genai`) |
 | Config | YAML (`pyyaml`), `.env` via `python-dotenv` |
-| Output | Markdown report + JSON history |
+| Output | JSON history + web app (triage + Relatório tab) |
 
 > **Design note:** v1 used a local **embeddings** model (`sentence-transformers`) to classify contract type by cosine similarity. It was dropped because the contract signal (1–2 sentences) was diluted across the full job description, leaving ~90% of jobs "ambiguous". The LLM classifier reads the description *as a human would* and applies the default-CLT rule, which is both more accurate and removes a heavy (~1 GB / PyTorch) dependency.
 
@@ -135,7 +134,7 @@ docker compose down
 
 ## ✅ Mark jobs as viewed / applied (web UI)
 
-The Markdown report is regenerated every run, so it's not the place to track which jobs you've already handled. Instead, a small web UI (`webapp.py`) reads the persistent `vagas_historico.json` and lets you mark each job **Novo / Visto / Inscrito** and add notes. Those are written straight back into the history JSON, so they **survive every new search run**.
+A small web UI (`webapp.py`) reads the persistent `vagas_historico.json` and lets you mark each job **Novo / Visto / Inscrito**, add notes, and compare the three scores per job in the **Relatório** tab. Marks are written straight back into the history JSON, so they **survive every new search run**.
 
 With Docker (the `web` service in the compose file is already wired up):
 
@@ -184,18 +183,19 @@ Everything operational is configurable via environment variables — nothing is 
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `REPORT_MIN_CLT_SCORE` | `0.7` | Min CLT confidence (`score_clt`) for a job to appear in the report. `N/A` is always hidden. |
-| `REPORT_MIN_MATCH_SCORE` | `70` | Min profile match (`match_score`, 0–100) for a job to appear. |
-| `OPENROUTER_MODEL` / `OPENROUTER_MODELS` | built-in list | Pin one model, or override the whole comma-separated list. |
+| `REPORT_MIN_CLT_SCORE` | `0.7` | Min CLT confidence (`score_clt`) for a job to be flagged `relevant` in the web UI. `N/A` is always not-relevant. |
+| `REPORT_MIN_MATCH_SCORE` | `70` | Min profile match (`match_score`, 0–100) for the `relevant` flag. |
+| `SCOPE_TITLE_MIN` / `SCOPE_DESC_MIN` | `0.40` / `0.40` | Embedding scope gate: a job is dropped only when BOTH its title (vs `termos_busca`) and its description (vs CV) cosine fall below these. Lower = keeps more. |
+| `OPENROUTER_MODEL` / `OPENROUTER_MODELS` | built-in list | Pin one model, or override the whole comma-separated list. Note: `PROVIDER_ORDER` is currently Gemini-only; OpenRouter is off. |
 | `GEMINI_MODEL` | `gemini-2.5-flash` | Gemini fallback model. |
 | `LLM_TEMPERATURE` / `OPENROUTER_MAX_TOKENS` / `LLM_REQUEST_TIMEOUT` | `0.1` / `2000` / `60` | LLM sampling, output budget, HTTP timeout. |
 | `LLM_MAX_PROVIDER_CYCLES` / `LLM_QUOTA_RETRY_WAIT` | `2` / `5` | Provider-chain retry cycles and wait between them (kept low to fail fast to the local fallback instead of grinding a saturated free pool). |
-| `LOCAL_MATCH_MODEL` | `minishlab/potion-base-32M` | model2vec model for the offline match score used when all LLM providers fail. |
-| `LOCAL_MATCH_SIM_FLOOR` / `LOCAL_MATCH_SIM_CEIL` | `0.30` / `0.70` | Cosine band mapped to the 0–100 local match score. |
+| `LOCAL_MATCH_MODEL` | `minishlab/potion-multilingual-128M` | model2vec model behind `score_vetor_desc`/`score_title`, the scope gate, and the LLM-failure fallback. Must be multilingual (profile PT, jobs PT+EN). |
+| `LOCAL_MATCH_SIM_FLOOR` / `LOCAL_MATCH_SIM_CEIL` | `0.30` / `0.70` | Cosine band mapped to the 0–100 fallback score (recalibrate for the multilingual model). |
 | `HF_HOME` | `~/.cache/huggingface` | Where the local model is cached; point at a persisted path under Docker. |
 | `SCRAPER_MAX_RETRIES` / `SCRAPER_RETRY_WAIT` / `SCRAPER_REQUEST_TIMEOUT` / `SCRAPER_MAX_PAGES` | `5` / `5` / `15` / `10` | Scraper retry, timeout and pagination limits. |
 | `SCRAPER_MIN_REQUEST_DELAY` / `SCRAPER_MAX_REQUEST_DELAY` | `1.0` / `3.0` | Random pause range (s) between requests. |
-| `KEYWORDS_CONFIG_PATH` / `HISTORY_PATH` / `REPORT_OUTPUT_PATH` | `config/keywords.yaml` / `vagas_historico.json` / `vagas_filtradas.md` | File locations. |
+| `KEYWORDS_CONFIG_PATH` / `HISTORY_PATH` | `config/keywords.yaml` / `vagas_historico.json` | File locations. |
 | `WEB_HOST` / `WEB_PORT` | `0.0.0.0` / `8000` | Bind host/port for the web UI (`webapp.py`). |
 | `RUN_INTERVAL_SECONDS` / `RUN_ON_START` | `21600` / `true` | Recurring-run interval in seconds (`0` = manual only) and whether the first run fires on start. Used by both the in-app scheduler (`webapp.py`) and the standalone Docker loop. |
 | `SCHEDULER_ENABLED` | `true` | Master switch for the in-app scheduler in `webapp.py`. `false` = manual runs only (no automatic schedule/countdown). |
@@ -211,7 +211,8 @@ CV_bot/
 │   ├── scraper.py              # LinkedIn Guest API collection + filtering
 │   ├── matcher.py              # LLM provider chain: match + contract classifier
 │   ├── text_signals.py         # Text normalization + non-CLT keyword signals
-│   ├── reporter.py             # Markdown report generation
+│   ├── reporter.py             # Relevance-filter thresholds (passes_relevance_filter)
+│   ├── local_match.py          # Vector scores (desc×CV, title×terms) + scope gate
 │   ├── settings.py             # Env-backed tunables (.env) with defaults
 │   └── logging_config.py       # Centralized logging setup
 ├── web/

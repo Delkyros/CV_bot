@@ -109,6 +109,17 @@
     .run-bar { width: 140px; height: 8px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 99px; overflow: hidden; }
     .run-bar-fill { display: block; height: 100%; width: 0%; background: var(--accent); transition: width .3s; }
     .run-pct { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+    /* Relatório tab: 3-scorer comparison + expandable analysis. */
+    th[data-rsort] { cursor: pointer; user-select: none; white-space: nowrap; }
+    th[data-rsort]:hover { color: var(--txt); }
+    #repTbl { min-width: 720px; }
+    tr.rep-row { cursor: pointer; }
+    tr.rep-row:hover { background: #1c2530; }
+    tr.rep-detail > td { background: var(--panel-2); }
+    .rep-detail h4 { margin: 8px 0 4px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    .rep-detail ul { margin: 0 0 8px; padding-left: 18px; }
+    .score-cell { font-variant-numeric: tabular-nums; font-weight: 700; }
+    .score-na { color: var(--muted); font-weight: 400; }
   </style>
 </head>
 <body>
@@ -118,6 +129,7 @@
       <button class="tab on" id="tabJobs" data-tab="jobs">Vagas <span class="tab-count" id="cJobs">0</span></button>
       <button class="tab" id="tabApplied" data-tab="applied">Inscritas <span class="tab-count" id="cApplied">0</span></button>
       <button class="tab" id="tabErrors" data-tab="errors">Erros <span class="tab-count" id="cErrors">0</span></button>
+      <button class="tab" id="tabReport" data-tab="report">Relatório</button>
       <button class="tab" id="tabMetrics" data-tab="metrics">Métricas</button>
       <span class="run-ctl">
         <button id="runBtn" class="run-btn">▶ Rodar agora</button>
@@ -169,6 +181,21 @@
     <div class="legend" id="legend"></div>
     <svg id="chart" role="img" aria-label="Gráfico de vagas por período"></svg>
     <div class="empty" id="metricsEmpty" hidden>Sem dados com data no período.</div>
+  </div>
+
+  <div class="wrap" id="reportWrap" hidden>
+    <table id="repTbl">
+      <thead>
+        <tr>
+          <th data-rsort="job_title">Vaga</th>
+          <th data-rsort="score_gemini">Gemini</th>
+          <th data-rsort="score_vetor_desc">Vetor·descrição</th>
+          <th data-rsort="score_title">Título</th>
+        </tr>
+      </thead>
+      <tbody id="repRows"></tbody>
+    </table>
+    <div class="empty" id="reportEmpty" hidden>Nenhuma vaga com score ainda — rode o pipeline.</div>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -301,11 +328,14 @@
 
     function render() {
       const metrics = ACTIVE_TAB === "metrics";
-      el("tableWrap").hidden = metrics;
+      const report = ACTIVE_TAB === "report";
+      el("tableWrap").hidden = metrics || report;
       el("metricsWrap").hidden = !metrics;
-      document.querySelector(".controls").hidden = metrics;      // job filters
+      el("reportWrap").hidden = !report;
+      document.querySelector(".controls").hidden = metrics;      // job filters (kept for report: search + só relevantes)
       el("metricsCtl").hidden = !metrics;                        // granularity picker
       if (metrics) { renderMetrics(); return; }
+      if (report) { renderReport(); return; }
 
       const list = filtered().sort(cmp);
       el("tbl").className = "tab-" + ACTIVE_TAB;
@@ -570,8 +600,90 @@
       render();
     });
 
-    // Tabs: "Vagas" (default), "Inscritas", "Erros".
-    const TABS = [["jobs", "tabJobs"], ["applied", "tabApplied"], ["errors", "tabErrors"], ["metrics", "tabMetrics"]];
+    // ---- Relatório: comparar os 3 scorers + expandir análise (Gemini) por vaga ----
+    let REP_SORT = { key: "score_vetor_desc", dir: "desc" };
+    let REP_OPEN = new Set();  // links com detalhe aberto
+
+    function reportList() {
+      const q = el("q").value.trim().toLowerCase();
+      const onlyRelevant = el("onlyRelevant").checked;
+      return JOBS.filter((j) => {
+        if (j.status === "error") return false;
+        if (onlyRelevant && !j.relevant) return false;
+        if (q && !(j.job_title + " " + j.company + " " + j.location).toLowerCase().includes(q)) return false;
+        return true;
+      });
+    }
+    const repVal = (j) => {
+      if (REP_SORT.key === "job_title") return String(j.job_title ?? "");
+      const n = parseFloat(j[REP_SORT.key]); return isNaN(n) ? -Infinity : n;
+    };
+    function repCmp(a, b) {
+      const x = repVal(a), y = repVal(b);
+      const r = typeof x === "number" ? x - y : x.localeCompare(y, "pt-BR", { sensitivity: "base" });
+      return REP_SORT.dir === "asc" ? r : -r;
+    }
+    // Gemini is 0–100; the vector scores are raw cosines 0–1 (2 decimals).
+    const fmtScore = (v, cosine) =>
+      (v === null || v === undefined || v === "") ? '<span class="score-na">—</span>'
+        : (cosine ? Number(v).toFixed(2) : esc(v));
+
+    function renderReport() {
+      const list = reportList().sort(repCmp);
+      el("reportEmpty").hidden = list.length > 0;
+      el("repTbl").querySelectorAll("th[data-rsort]").forEach((th) => {
+        const base = th.dataset.label || (th.dataset.label = th.textContent.trim());
+        const active = REP_SORT.key === th.dataset.rsort;
+        th.textContent = base + (active ? (REP_SORT.dir === "asc" ? " ▲" : " ▼") : "");
+        th.classList.toggle("sorted", active);
+      });
+      const rows = el("repRows");
+      rows.innerHTML = "";
+      for (const j of list) {
+        const open = REP_OPEN.has(j.link);
+        const tr = document.createElement("tr");
+        tr.className = "rep-row";
+        tr.dataset.link = j.link;
+        tr.innerHTML = `
+          <td>${open ? "▾ " : "▸ "}<a href="${esc(j.link)}" target="_blank" rel="noopener">${esc(j.job_title)}</a>
+            <div class="company">${esc(j.company)}</div></td>
+          <td class="score-cell">${fmtScore(j.score_gemini, false)}</td>
+          <td class="score-cell">${fmtScore(j.score_vetor_desc, true)}</td>
+          <td class="score-cell">${fmtScore(j.score_title, true)}</td>`;
+        rows.appendChild(tr);
+        if (open) {
+          const det = document.createElement("tr");
+          det.className = "rep-detail";
+          const li = (xs) => (xs && xs.length ? xs.map((s) => `<li>${esc(s)}</li>`).join("") : "<li>—</li>");
+          det.innerHTML = `<td colspan="4" class="rep-detail">
+            <h4>Pontos fortes</h4><ul>${li(j.strengths)}</ul>
+            <h4>Gaps</h4><ul>${li(j.gaps)}</ul>
+            <h4>Veredito</h4><div class="rep-verdict">${esc(j.verdict || "—")}</div></td>`;
+          rows.appendChild(det);
+        }
+      }
+      el("stats").innerHTML = `Relatório · <b>${list.length}</b> vaga(s) · Gemini 0–100, Vetor/Título cosseno 0–1`;
+    }
+
+    el("repTbl").querySelector("thead").addEventListener("click", (ev) => {
+      const th = ev.target.closest("th[data-rsort]");
+      if (!th) return;
+      const key = th.dataset.rsort;
+      if (REP_SORT.key === key) REP_SORT.dir = REP_SORT.dir === "asc" ? "desc" : "asc";
+      else { REP_SORT.key = key; REP_SORT.dir = key === "job_title" ? "asc" : "desc"; }
+      renderReport();
+    });
+    el("repRows").addEventListener("click", (ev) => {
+      if (ev.target.closest("a")) return;  // deixa o link abrir
+      const tr = ev.target.closest("tr.rep-row");
+      if (!tr) return;
+      const link = tr.dataset.link;
+      if (REP_OPEN.has(link)) REP_OPEN.delete(link); else REP_OPEN.add(link);
+      renderReport();
+    });
+
+    // Tabs: "Vagas" (default), "Inscritas", "Erros", "Relatório", "Métricas".
+    const TABS = [["jobs", "tabJobs"], ["applied", "tabApplied"], ["errors", "tabErrors"], ["report", "tabReport"], ["metrics", "tabMetrics"]];
     function setTab(tab) {
       if (tab === ACTIVE_TAB) return;
       if (pendingLink()) {

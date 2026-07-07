@@ -38,9 +38,11 @@ services:
       - /home/appuser
 
     environment:
-      # ---- Providers (at least one key required) ----
-      OPENROUTER_API_KEY: "your_openrouter_key_here"   # primary provider
-      GEMINI_API_KEY: "your_gemini_key_here"           # fallback provider
+      # ---- Providers ----
+      # PROVIDER_ORDER is currently Gemini-only (src/matcher.py), so GEMINI_API_KEY
+      # is the one that matters; OpenRouter is disabled (its scores were unreliable).
+      GEMINI_API_KEY: "your_gemini_key_here"           # active LLM provider
+      # OPENROUTER_API_KEY: "your_openrouter_key_here" # unused until re-enabled in PROVIDER_ORDER
 
       # ---- Run control / scheduler (webapp.py + src/run_controller.py) ----
       SCHEDULER_ENABLED: "true"       # default true — automatic recurring runs
@@ -51,17 +53,22 @@ services:
       # ---- File paths ----
       KEYWORDS_CONFIG_PATH: "config/keywords.yaml"   # default config/keywords.yaml
       HISTORY_PATH: "data/vagas_historico.json"      # default vagas_historico.json
-      REPORT_OUTPUT_PATH: "data/vagas_filtradas.md"  # default vagas_filtradas.md
 
       # ---- Web UI ----
       WEB_HOST: "0.0.0.0"             # default 0.0.0.0
       WEB_PORT: "8000"                # default 8000
 
-      # ---- Local match fallback (offline scoring when all LLM providers fail) ----
+      # ---- Local vector scoring (ALWAYS on: score_vetor_desc, score_title, the
+      #      scope gate; also the LLM-failure fallback). Model downloads on the
+      #      first run into HF_HOME on the ./data volume — needs network once. ----
       HF_HOME: "/app/data/hf-cache"   # model cache; persist in ./data (root fs read-only, $HOME tmpfs)
-      # LOCAL_MATCH_MODEL: "minishlab/potion-base-32M"
-      # LOCAL_MATCH_SIM_FLOOR: "0.30"     # cosine floor mapped to match score 0
-      # LOCAL_MATCH_SIM_CEIL: "0.70"      # cosine ceil mapped to match score 100
+      # LOCAL_MATCH_MODEL: "minishlab/potion-multilingual-128M"  # MUST be multilingual (profile PT, jobs PT+EN)
+      # LOCAL_MATCH_SIM_FLOOR: "0.30"     # cosine floor mapped to fallback score 0
+      # LOCAL_MATCH_SIM_CEIL: "0.70"      # cosine ceil mapped to fallback score 100
+
+      # ---- Embedding scope gate (drop only when BOTH title & desc are far off) ----
+      # SCOPE_TITLE_MIN: "0.40"           # title vs termos_busca (raw cosine)
+      # SCOPE_DESC_MIN: "0.40"            # description vs CV (raw cosine)
 
       # ---- LLM tuning (optional; defaults shown) ----
       # OPENROUTER_MODEL: ""                # pin ONE model (overrides the list below)
@@ -74,7 +81,7 @@ services:
       # LLM_MAX_PROVIDER_CYCLES: "2"        # provider-chain retry cycles on quota/429
       # LLM_QUOTA_RETRY_WAIT: "5"           # seconds between cycles
 
-      # ---- Report thresholds (which jobs surface in the report) ----
+      # ---- Relevance flag thresholds (the "só relevantes" filter in the web UI) ----
       # REPORT_MIN_CLT_SCORE: "0.7"         # min CLT confidence 0–1
       # REPORT_MIN_MATCH_SCORE: "70"        # min profile match 0–100
 
@@ -91,4 +98,4 @@ services:
 
     volumes:
       - ./config:/app/config:ro      # your keywords.yaml (read-only)
-      - ./data:/app/data             # report + history + run state (writable)
+      - ./data:/app/data             # history + hf-cache (model) + run state (writable)

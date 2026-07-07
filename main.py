@@ -12,11 +12,11 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 from src.scraper import scrape_linkedin_jobs, normalize_text
 from src.text_signals import out_of_scope_title
 from src.matcher import analyze_match, has_provider, ContractClassifier
-from src.local_match import local_match_analysis
+from src.local_match import local_match_analysis, description_similarity, title_scope_similarity
 from src.run_controller import emit_progress
-from src.reporter import generate_report, passes_relevance_filter, min_clt_score, min_match_score
+from src.reporter import passes_relevance_filter, min_clt_score, min_match_score
 from src.logging_config import setup_logging
-from src.settings import env_str
+from src.settings import env_str, env_float
 
 logger = logging.getLogger(__name__)
 
@@ -172,6 +172,13 @@ def save_job_history(history_path, history, analyzed_jobs):
             "contract_evidence": job.get("contract_evidence", "N/A"),
             "workplace_type": job.get("workplace_type", "N/A"),
             "match_score": job.get("match_score", 0),
+            "score_gemini": job.get("score_gemini"),
+            "score_vetor_desc": job.get("score_vetor_desc"),
+            "score_title": job.get("score_title"),
+            # Analysis prose for the web-app "Relatório" tab (was the .md report).
+            "strengths": job.get("strengths", []),
+            "gaps": job.get("gaps", []),
+            "verdict": job.get("verdict", ""),
             "first_seen_at": prior.get("first_seen_at", now),
             "last_processed_at": now,
         }
@@ -224,6 +231,24 @@ def _fallback_analysis(has_llm_provider, job, candidate_profile):
 # the UI persists; must match webapp.py.
 SCOPE_ERROR_CLASS = "Escopo incorreto"
 
+# Embedding scope gate: a job is dropped only when BOTH signals are weak — the
+# title is far from every role you search (score_title) AND the description is
+# far from your CV (score_vetor_desc). Default-in-scope: a good title rescues a
+# so-so description and vice-versa. Measured on the user's labeled history, the
+# title signal alone at 0.40 keeps 92% of applied jobs while dropping 79% of
+# 'Escopo incorreto' ones; the AND with the description makes it more permissive
+# (safer). Both raw cosines 0..1; tune via SCOPE_TITLE_MIN / SCOPE_DESC_MIN.
+DEFAULT_SCOPE_TITLE_MIN = 0.40
+DEFAULT_SCOPE_DESC_MIN = 0.40
+
+
+def scope_title_min():
+    return env_float("SCOPE_TITLE_MIN", DEFAULT_SCOPE_TITLE_MIN)
+
+
+def scope_desc_min():
+    return env_float("SCOPE_DESC_MIN", DEFAULT_SCOPE_DESC_MIN)
+
 
 def _scope_title_key(title):
     """Normalized title key for the learned scope blocklist: role portion only
@@ -251,7 +276,7 @@ def learned_scope_blocklist(history):
     return keys
 
 
-def analyze_and_filter_jobs(collected_jobs, candidate_profile, has_llm_provider, scope_blocklist=None):
+def analyze_and_filter_jobs(collected_jobs, candidate_profile, has_llm_provider, scope_blocklist=None, search_terms=None):
     """Run the match analysis on each collected job and DROP the ones whose core
     role does not match the candidate's area (scope filter), so they never reach
     the report or the history DB.
@@ -293,14 +318,29 @@ def analyze_and_filter_jobs(collected_jobs, candidate_profile, has_llm_provider,
             )
             continue
 
-        analysis_result = None
+        # Embedding scope gate: title vs the roles you search (score_title) and
+        # description vs your CV (score_vetor_desc). Drop only when BOTH are weak
+        # (default-in-scope: a good title rescues a so-so description and vice-
+        # versa). Runs BEFORE the LLM so off-scope jobs cost no Gemini call.
+        # Skipped when no search terms are given (e.g. unit tests) — scope is
+        # undecidable then, so keep.
+        title_sim = title_scope_similarity(job.get("job_title"), search_terms or [])
+        desc_sim = description_similarity(job, candidate_profile)
+        if search_terms and title_sim < scope_title_min() and desc_sim < scope_desc_min():
+            logger.info(
+                f"Discarded as out of scope (título~{title_sim:.2f} & desc~{desc_sim:.2f} "
+                f"< {scope_title_min():.2f}/{scope_desc_min():.2f}): "
+                f"{job['job_title']} | {job['company']}"
+            )
+            continue
+
+        llm_result = None
         if has_llm_provider:
             try:
-                analysis_result = analyze_match(job, candidate_profile)
+                llm_result = analyze_match(job, candidate_profile)
             except Exception:
                 logger.exception("LLM call failed for this job")
-        if not analysis_result:
-            analysis_result = _fallback_analysis(has_llm_provider, job, candidate_profile)
+        analysis_result = llm_result or _fallback_analysis(has_llm_provider, job, candidate_profile)
 
         # Scope filter: discard jobs whose central role is a different career
         # track than the candidate's (e.g. Android/QA/Excel/People Analytics).
@@ -313,8 +353,18 @@ def analyze_and_filter_jobs(collected_jobs, candidate_profile, has_llm_provider,
             continue
 
         analyzed_job = {**job, **analysis_result}
+        # Three scores side by side to compare whether the LLM is worth it:
+        #   score_gemini      — LLM match (None when Gemini didn't answer)
+        #   score_vetor_desc  — description × CV, raw cosine 0..1
+        #   score_title       — title × termos_busca, raw cosine 0..1 (scope signal)
+        analyzed_job["score_gemini"] = llm_result["match_score"] if llm_result else None
+        analyzed_job["score_vetor_desc"] = round(desc_sim, 3)
+        analyzed_job["score_title"] = round(title_sim, 3)
         analyzed_jobs.append(analyzed_job)
-        logger.info(f"Result: Score {analyzed_job['match_score']}/100")
+        logger.info(
+            f"Result: gemini={analyzed_job['score_gemini']} "
+            f"vetor_desc={analyzed_job['score_vetor_desc']} title={analyzed_job['score_title']}"
+        )
 
     return analyzed_jobs
 
@@ -448,7 +498,7 @@ def main():
     logger.info("STARTING MATCH ANALYSIS")
     logger.info("=" * 40)
 
-    analyzed_jobs = analyze_and_filter_jobs(collected_jobs, candidate_profile, has_llm_provider, scope_blocklist)
+    analyzed_jobs = analyze_and_filter_jobs(collected_jobs, candidate_profile, has_llm_provider, scope_blocklist, search_terms)
 
     out_of_scope = total_jobs - len(analyzed_jobs)
     if out_of_scope:
@@ -473,21 +523,20 @@ def main():
             "persisted as 'irrelevant', hidden from the new list."
         )
 
-    # 5. Report shows only the relevant ones; the history keeps ALL (flagged).
-    emit_progress("reporting", detail="gerando relatório e salvando histórico")
-    output_path = env_str("REPORT_OUTPUT_PATH", "vagas_filtradas.md")
-    report_saved = generate_report(relevant_jobs, output_path=output_path)
+    # 5. Persist history (the web-app "Relatório" tab reads it — the old .md
+    # report was dropped). The history keeps ALL in-scope jobs (sub-bar ones
+    # flagged 'irrelevant'); relevant_jobs above is only for the split logging.
+    emit_progress("reporting", detail="salvando histórico")
     history_saved = save_job_history(history_path, job_history, analyzed_jobs)
     emit_progress("done", detail="concluído")
 
-    if report_saved and history_saved:
+    if history_saved:
         logger.info("=" * 60)
         logger.info("PIPELINE COMPLETED SUCCESSFULLY!")
-        logger.info("The report 'vagas_filtradas.md' is available at the project root.")
         logger.info("The history 'vagas_historico.json' has been updated.")
         logger.info("=" * 60)
     else:
-        logger.error("Failed to generate the final report or update the history.")
+        logger.error("Failed to update the history.")
         sys.exit(1)
 
 if __name__ == "__main__":
