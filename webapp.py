@@ -98,6 +98,13 @@ def _job_view(link, entry):
         ),
         "score_clt": entry.get("score_clt", "N/A"),
         "match_score": entry.get("match_score", 0),
+        # Three-scorer comparison + analysis prose for the "Relatório" tab.
+        "score_gemini": entry.get("score_gemini"),
+        "score_vetor_desc": entry.get("score_vetor_desc"),
+        "score_title": entry.get("score_title"),
+        "strengths": entry.get("strengths", []),
+        "gaps": entry.get("gaps", []),
+        "verdict": entry.get("verdict", ""),
         # Fall back to the legacy pt-BR keys so pre-migration entries still date.
         "first_seen_at": entry.get("first_seen_at") or entry.get("primeira_vez_vista_em"),
         "last_processed_at": entry.get("last_processed_at") or entry.get("ultima_vez_processada_em"),

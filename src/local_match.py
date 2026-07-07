@@ -33,7 +33,11 @@ def _load():
     if _model is None:
         from chonkie import Model2VecEmbeddings, SentenceChunker
 
-        _model = Model2VecEmbeddings(env_str("LOCAL_MATCH_MODEL", "minishlab/potion-base-32M"))
+        # Multilingual: the profile is PT and jobs come in PT+EN. potion-base-32M
+        # (English) scored language, not relevance — PT boilerplate (RH, Arte) hit
+        # ~0.80 while EN data-science jobs sank to ~0.15. The multilingual model
+        # fixes that inversion (measured).
+        _model = Model2VecEmbeddings(env_str("LOCAL_MATCH_MODEL", "minishlab/potion-multilingual-128M"))
         _chunker = SentenceChunker(chunk_size=512)
     return _model, _chunker
 
@@ -54,31 +58,53 @@ def _scale(sim):
     return int(max(0, min(100, round(pct * 100))))
 
 
-def local_match_analysis(job_info, candidate_profile):
-    """Return the same dict shape as matcher.analyze_match, computed locally.
-
-    Score = MEAN chunk-vs-profile cosine similarity, scaled to 0-100. Mean (not
-    max): a long posting has many chunks, and taking the single best one lets any
-    stray chunk that happens to overlap the profile (generic "tecnologia/dados/
-    inovação" boilerplate) saturate the score — that made every job, cook and
-    salesperson included, land at 100. The mean reflects overall relevance and
-    keeps off-track postings well below the report bar. core_role_compatible is
-    always True: this only runs on infrastructure failure, and the deterministic
-    title gate already dropped off-track roles upstream — never discard here.
+def description_similarity(job_info, candidate_profile):
+    """Raw MEAN chunk-vs-profile cosine (0..1) between the profile and the job
+    text. Mean (not max): a long posting has many chunks, and the single best one
+    lets any stray chunk that overlaps generic "tecnologia/dados/inovação"
+    boilerplate saturate the score. This is the unscaled signal behind
+    local_match_analysis, exposed so the pipeline can persist score_vetor_desc.
     """
     model, chunker = _load()
     text = " ".join(
         str(job_info.get(k, "")) for k in ("job_title", "company", "full_description")
     ).strip()
-
     profile_vec = model.embed(candidate_profile)
     chunks = chunker.chunk(text) if text else []
     if chunks:
         sims = [float(model.similarity(profile_vec, model.embed(c.text))) for c in chunks]
-        best = sum(sims) / len(sims)
-    else:
-        best = float(model.similarity(profile_vec, model.embed(text or " ")))
+        return sum(sims) / len(sims)
+    return float(model.similarity(profile_vec, model.embed(text or " ")))
 
+
+def title_scope_similarity(title, search_terms):
+    """Max cosine (0..1) between the job title's role portion and any search term.
+
+    High = the title looks like a role you're hunting (termos_busca); low = the
+    title is a different career track. The scope signal behind score_title.
+    Drops the city/work-model suffix LinkedIn appends after '|' or a newline.
+    """
+    if not search_terms:
+        return 0.0
+    model, _ = _load()
+    head = (str(title or "").split("|")[0].splitlines() or [""])[0].strip()
+    if not head:
+        return 0.0
+    tv = model.embed(head)
+    # ponytail: re-embeds the ~20 terms per call; static model2vec embeds are
+    # cheap, so no cross-job term cache until profiling says it matters.
+    return max(float(model.similarity(tv, model.embed(t))) for t in search_terms)
+
+
+def local_match_analysis(job_info, candidate_profile):
+    """Return the same dict shape as matcher.analyze_match, computed locally.
+
+    Score = description_similarity scaled to 0-100. Keeps off-track postings well
+    below the report bar. core_role_compatible is always True: this only runs on
+    infrastructure failure, and the deterministic title gate already dropped
+    off-track roles upstream — never discard here.
+    """
+    best = description_similarity(job_info, candidate_profile)
     score = _scale(best)
     return {
         "match_score": score,

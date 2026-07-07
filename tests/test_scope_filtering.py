@@ -168,6 +168,46 @@ def test_out_of_scope_title_drops_before_llm(monkeypatch):
 # deterministic gate (main.learned_scope_blocklist / analyze_and_filter_jobs).
 # --------------------------------------------------------------------------- #
 
+# --------------------------------------------------------------------------- #
+# Embedding scope gate (title × termos_busca AND description × CV). Drops a job
+# only when BOTH signals are weak; a strong title OR a strong description keeps
+# it (default-in-scope). Sims are monkeypatched so the test is deterministic and
+# never loads the embedding model.
+# --------------------------------------------------------------------------- #
+
+def test_embedding_scope_gate_drops_only_when_both_signals_weak(monkeypatch):
+    monkeypatch.setattr(main, "analyze_match",
+                        lambda *a, **k: {"match_score": 80, "core_role_compatible": True})
+    # title_sim, desc_sim per title. Thresholds default to 0.40/0.40.
+    sims = {
+        "Fora de Escopo":       (0.20, 0.20),  # both weak  -> DROP
+        "Cientista de Dados":   (0.70, 0.65),  # strong both -> keep
+        "Título torto mas DS":  (0.25, 0.60),  # weak title, strong desc -> keep (rescue)
+        "Título bom desc fraca": (0.60, 0.20),  # strong title, weak desc -> keep (rescue)
+    }
+    monkeypatch.setattr(main, "title_scope_similarity", lambda t, terms: sims[t][0])
+    monkeypatch.setattr(main, "description_similarity", lambda job, prof: sims[job["job_title"]][1])
+    collected = [{"job_title": t, "company": "X", "job_link": f"l/{i}"}
+                 for i, t in enumerate(sims)]
+    analyzed = main.analyze_and_filter_jobs(
+        collected, "perfil", has_llm_provider=True, search_terms=["Data Scientist"])
+    kept = {j["job_title"] for j in analyzed}
+    assert "Fora de Escopo" not in kept
+    assert kept == {"Cientista de Dados", "Título torto mas DS", "Título bom desc fraca"}
+
+
+def test_embedding_scope_gate_skipped_without_search_terms(monkeypatch):
+    # No search terms -> scope undecidable -> keep even a both-weak job.
+    monkeypatch.setattr(main, "analyze_match",
+                        lambda *a, **k: {"match_score": 80, "core_role_compatible": True})
+    monkeypatch.setattr(main, "title_scope_similarity", lambda t, terms: 0.0)
+    monkeypatch.setattr(main, "description_similarity", lambda job, prof: 0.0)
+    analyzed = main.analyze_and_filter_jobs(
+        [{"job_title": "Qualquer Coisa", "company": "X", "job_link": "l/1"}],
+        "perfil", has_llm_provider=True)  # search_terms defaults to None
+    assert len(analyzed) == 1
+
+
 def test_learned_blocklist_derives_normalized_role_keys():
     history = {
         "l/1": {"job_title": "Designer Gráfico", "error_class": "Escopo incorreto"},

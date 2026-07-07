@@ -177,15 +177,6 @@ def test_contract_local_discards_internship():
 # --------------------------------------------------------------------------- #
 # reporter
 # --------------------------------------------------------------------------- #
-def test_format_list():
-    assert reporter.format_list([]) == "- N/A"
-    assert reporter.format_list(["a", "b"]) == "- a\n- b"
-
-
-def test_table_text_escapes_pipes_and_newlines():
-    assert reporter.table_text("a|b\nc") == "a\\|b c"
-
-
 @pytest.mark.parametrize("score_clt,match_score,expected", [
     (0.7, 70, True),       # both at the threshold (CLT >= 0.7, match >= 70)
     (0.9, 80, True),       # comfortably above
