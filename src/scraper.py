@@ -368,6 +368,7 @@ def scrape_linkedin_jobs(
     contract_type=None,
     workplace_type=None,
     excluded_links=None,
+    excluded_title_companies=None,
     contract_classifier=None,
     geo_id=None,
     time_filter=None,
@@ -392,6 +393,7 @@ def scrape_linkedin_jobs(
     pages = 0
     headers = get_headers()
     excluded_links = set(excluded_links or [])
+    excluded_title_companies = set(excluded_title_companies or [])
 
     # LinkedIn Guest search URL
     encoded_keyword = urllib.parse.quote(search_keyword)
@@ -467,6 +469,14 @@ def scrape_linkedin_jobs(
                     job_link = f"https://www.linkedin.com/jobs/view/{job_id}"
                     if job_link in excluded_links:
                         logger.info(f"Job already known (history), skipping: {title} | {company} ({job_id})")
+                        continue
+
+                    # Reposts: LinkedIn re-publishes the same ad under a new ID,
+                    # dodging the link check above. If the user already triaged a
+                    # job with this exact title+company, skip the repost before
+                    # spending a description download (and later an LLM call).
+                    if (normalize_text(title), normalize_text(company)) in excluded_title_companies:
+                        logger.info(f"Repost of an already-triaged job, skipping: {title} | {company} ({job_id})")
                         continue
 
                     # Filter model/location BEFORE downloading the description: the
