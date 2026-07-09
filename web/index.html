@@ -308,8 +308,9 @@
           return matchesQuery(j);
         }
         if (j.status === "error") return false;
-        // Sub-bar jobs (pipeline-flagged) stay out of the main list unless asked for.
-        if (j.status === "irrelevant" && !showIrrelevant) return false;
+        // Sub-bar jobs and superseded reposts (pipeline-flagged) stay out of
+        // the main list unless asked for.
+        if ((j.status === "irrelevant" || j.status === "duplicado") && !showIrrelevant) return false;
         if (onlyRelevant && !j.relevant) return false;
         if (onlyNew && j.status !== "new") return false;
         if (hideApplied && j.status === "applied") return false;

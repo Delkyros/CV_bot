@@ -145,6 +145,25 @@ def load_job_history(history_path):
 USER_STATUS_FIELDS = ("status", "notes", "status_updated_at", "error_class")
 
 
+def _title_company_key(title, company):
+    return (normalize_text(title or ""), normalize_text(company or ""))
+
+
+def _is_untriaged(entry):
+    return entry.get("status") in (None, "new")
+
+
+def triaged_title_company_keys(history):
+    """(title, company) keys of history entries the user already dealt with
+    (any status other than 'new'). Reposts of these — same ad, new LinkedIn
+    ID/link — are skipped at collection time so they never re-enter triage."""
+    return {
+        _title_company_key(entry.get("job_title"), entry.get("company"))
+        for entry in history.values()
+        if not _is_untriaged(entry)
+    }
+
+
 def save_job_history(history_path, history, analyzed_jobs):
     now = datetime.now().isoformat(timespec="seconds")
 
@@ -153,6 +172,17 @@ def save_job_history(history_path, history, analyzed_jobs):
     # Disk is authoritative for existing entries; fall back to the in-memory
     # copy only if the file could not be read.
     merged = load_job_history(history_path) or dict(history)
+
+    # Untriaged entries indexed by (title, company): a freshly scraped repost
+    # supersedes them — the new link is the active ad the user should triage,
+    # the stale one becomes status="duplicado" (kept in the history so its URL
+    # stays excluded from future scrapes). Entries with a user status are
+    # never touched; built from the disk reload above so a mark set mid-run wins.
+    untriaged_by_key = {}
+    for old_link, old_entry in merged.items():
+        if _is_untriaged(old_entry):
+            key = _title_company_key(old_entry.get("job_title"), old_entry.get("company"))
+            untriaged_by_key.setdefault(key, []).append(old_link)
 
     for job in analyzed_jobs:
         link = job.get("job_link")
@@ -194,6 +224,14 @@ def save_job_history(history_path, history, analyzed_jobs):
             entry["status"] = "irrelevant"
 
         merged[link] = entry
+
+        # Repost supersedes: older still-untriaged records of the same ad
+        # leave the triage queue as "duplicado".
+        key = _title_company_key(entry["job_title"], entry["company"])
+        for old_link in untriaged_by_key.get(key, ()):
+            if old_link != link:
+                merged[old_link]["status"] = "duplicado"
+                merged[old_link]["status_updated_at"] = now
 
     try:
         with open(history_path, "w", encoding="utf-8") as f:
@@ -434,6 +472,11 @@ def main():
     history_links = set(job_history.keys())
     logger.info(f"Known jobs loaded from history: {len(history_links)}")
 
+    # LinkedIn reposts the same ad under new IDs, so the link check alone lets
+    # already-triaged jobs back in. Skip reposts of triaged jobs at collection.
+    triaged_keys = triaged_title_company_keys(job_history)
+    logger.info(f"Triaged (title, company) pairs excluded from re-collection: {len(triaged_keys)}")
+
     # Auto-adjusting scope filter: titles you rejected as 'Escopo incorreto' in
     # the web UI become a deterministic blocklist for this run.
     scope_blocklist = learned_scope_blocklist(job_history)
@@ -460,6 +503,7 @@ def main():
                     contract_type=contract_type,
                     workplace_type=workplace_type,
                     excluded_links=history_links | collected_links,
+                    excluded_title_companies=triaged_keys,
                     contract_classifier=contract_classifier,
                     geo_id=filter_geo_id,
                     time_filter=posting_period,

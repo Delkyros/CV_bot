@@ -339,6 +339,38 @@ def test_save_job_history_never_overrides_user_status_with_irrelevant(tmp_path):
     assert saved["https://job/1"]["status"] == "applied"
 
 
+def test_save_job_history_repost_supersedes_untriaged_as_duplicado(tmp_path):
+
+    history_path = tmp_path / "hist.json"
+    # Same ad (title+company) already known under two older links: one still
+    # untriaged, one the user applied to.
+    history_path.write_text(json.dumps({
+        "https://job/old-new": {"job_title": "AI Engineer", "company": "CI&T"},
+        "https://job/old-applied": {"job_title": "AI Engineer", "company": "CI&T",
+                                    "status": "applied"},
+    }), encoding="utf-8")
+
+    analyzed = [{"job_link": "https://job/repost", "job_title": "AI Engineer",
+                 "company": "CI&T", "match_score": 85, "score_clt": 0.9}]
+    assert main.save_job_history(str(history_path), {}, analyzed) is True
+    saved = json.loads(history_path.read_text(encoding="utf-8"))
+
+    # The fresh repost is the record to triage; the stale untriaged copy left
+    # the queue as "duplicado"; the user-triaged copy is untouched.
+    assert saved["https://job/repost"].get("status") != "duplicado"
+    assert saved["https://job/old-new"]["status"] == "duplicado"
+    assert saved["https://job/old-applied"]["status"] == "applied"
+
+
+def test_triaged_title_company_keys_ignores_untriaged():
+    history = {
+        "https://job/1": {"job_title": "DS", "company": "A", "status": "applied"},
+        "https://job/2": {"job_title": "MLE", "company": "B", "status": "new"},
+        "https://job/3": {"job_title": "DE", "company": "C"},
+    }
+    assert main.triaged_title_company_keys(history) == {("ds", "a")}
+
+
 # --------------------------------------------------------------------------- #
 # webapp (Flask UI)
 # --------------------------------------------------------------------------- #
