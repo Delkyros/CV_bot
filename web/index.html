@@ -54,7 +54,6 @@
     th.sorted { color: var(--accent); }
     tbody tr:hover { background: #1c2530; }
     tr.applied { opacity: .62; }
-    tr.pending-error > td { background: #2a1213; box-shadow: inset 2px 0 0 var(--error); }
     td.score { font-variant-numeric: tabular-nums; font-weight: 700; }
     td.num { font-variant-numeric: tabular-nums; color: var(--muted); }
     a { color: var(--accent); text-decoration: none; }
@@ -71,11 +70,8 @@
     .status-btns button.on[data-s=viewed] { background: var(--viewed); color: #1a1205; }
     .status-btns button.on[data-s=applied] { background: var(--applied); color: #04210d; }
     .status-btns button.on[data-s=error] { background: var(--error); color: #fff; }
-    select.error-class {
-      display: block; margin-top: 6px; max-width: 170px;
-      background: var(--panel-2); border: 1px solid var(--error); color: var(--txt);
-      border-radius: 6px; padding: 4px 6px; font: inherit;
-    }
+    .status-btns button[data-ec] { color: #c98a8d; }
+    .status-btns button.on[data-ec] { color: #fff; }
     textarea.notes {
       width: 200px; max-width: 100%; min-height: 30px; resize: vertical;
       background: var(--panel-2); border: 1px solid var(--line); color: var(--txt);
@@ -201,7 +197,10 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    const STATUSES = [["new", "Novo"], ["viewed", "Visto"], ["applied", "Inscrito"], ["error", "Erro"]];
+    const STATUSES = [["new", "Novo"], ["viewed", "Visto"], ["applied", "Inscrito"]];
+    // One button per error class (single click marks + classifies). Short
+    // labels keep the row compact; the full class lives in the tooltip.
+    const ERROR_CLASS_SHORT = { "Localidade/Modelo incorreto": "Local", "Não é CLT": "Não CLT", "Escopo incorreto": "Escopo" };
     let JOBS = [];
     let ERROR_CLASSES = [];
     let LAST_RUN = null;
@@ -244,21 +243,6 @@
       return isNaN(d) ? iso : d.toLocaleDateString("pt-BR");
     };
 
-    // A job marked "error" without a classification yet must be classified
-    // before anything else can be touched. (Survives reloads — it's derived
-    // from the data, not a transient flag.)
-    const isPending = (j) => j.status === "error" && !j.error_class;
-    const pendingLink = () => (JOBS.find(isPending) || {}).link || null;
-
-    function errorClassSelect(j) {
-      if (j.status !== "error") return "";
-      const opts = ['<option value="">— classificação —</option>'].concat(
-        ERROR_CLASSES.map((c) =>
-          `<option value="${esc(c)}" ${j.error_class === c ? "selected" : ""}>${esc(c)}</option>`)
-      ).join("");
-      return `<select class="error-class" data-link="${esc(j.link)}">${opts}</select>`;
-    }
-
     let toastTimer;
     function toast(msg, isErr) {
       const t = el("toast");
@@ -293,9 +277,6 @@
         return (j.job_title + " " + j.company + " " + j.location).toLowerCase().includes(q);
       };
       return JOBS.filter((j) => {
-        // An error still awaiting classification stays pinned in view (past all
-        // filters, in both tabs) so it can't vanish before it's classified.
-        if (isPending(j)) return true;
         // Errors and applied jobs each live in their own tab.
         if (ACTIVE_TAB === "errors") {
           if (j.status !== "error") return false;
@@ -348,15 +329,16 @@
       for (const j of list) {
         const tr = document.createElement("tr");
         if (j.status === "applied") tr.className = "applied";
-        if (isPending(j)) tr.className = "pending-error";
 
         const btns = STATUSES.map(([s, lbl]) =>
           `<button data-s="${s}" class="${j.status === s ? "on" : ""}">${lbl}</button>`
-        ).join("");
+        ).concat(ERROR_CLASSES.map((c) =>
+          `<button data-s="error" data-ec="${esc(c)}" title="Erro: ${esc(c)}" class="${j.status === "error" && j.error_class === c ? "on" : ""}">${esc(ERROR_CLASS_SHORT[c] || c)}</button>`
+        )).join("");
         const clt = (j.score_clt === null || j.score_clt === undefined) ? "—" : j.score_clt;
 
         tr.innerHTML = `
-          <td><span class="status-btns" data-link="${esc(j.link)}">${btns}</span>${errorClassSelect(j)}</td>
+          <td><span class="status-btns" data-link="${esc(j.link)}">${btns}</span></td>
           <td class="score">${esc(j.match_score)}</td>
           <td class="num">${esc(clt)}</td>
           <td>
@@ -371,12 +353,6 @@
           <td><textarea class="notes" data-link="${esc(j.link)}" rows="1" placeholder="anotações…">${esc(j.notes)}</textarea></td>
         `;
         rows.appendChild(tr);
-      }
-      // Bring the pending classification into focus so the next action is obvious.
-      const pend = pendingLink();
-      if (pend) {
-        const sel = rows.querySelector(".error-class");
-        if (sel) sel.focus();
       }
       updateStats();
     }
@@ -508,63 +484,23 @@
       const btn = ev.target.closest(".status-btns button");
       if (!btn) return;
       const link = btn.parentElement.dataset.link;
-      // While an error awaits classification, lock every other row.
-      const pend = pendingLink();
-      if (pend && pend !== link) {
-        toast("Classifique o erro pendente primeiro", true);
-        return;
-      }
       const status = btn.dataset.s;
+      const errorClass = btn.dataset.ec || "";
       const job = JOBS.find((j) => j.link === link);
       const prev = job.status;
+      const prevClass = job.error_class;
       job.status = status;
       // Leaving "error" drops any stale classification (matches the backend).
-      if (status !== "error") job.error_class = "";
+      job.error_class = errorClass;
       render();
       try {
-        await postStatus(link, { status });
-        toast("Salvo: " + STATUSES.find((s) => s[0] === status)[1]);
+        await postStatus(link, errorClass ? { status, error_class: errorClass } : { status });
+        toast("Salvo: " + (errorClass ? `Erro (${errorClass})` : STATUSES.find((s) => s[0] === status)[1]));
       } catch (e) {
         job.status = prev;
+        job.error_class = prevClass;
         render();
         toast("Erro ao salvar", true);
-      }
-    });
-
-    // Error classification dropdown.
-    el("rows").addEventListener("change", async (ev) => {
-      const sel = ev.target.closest("select.error-class");
-      if (!sel) return;
-      const link = sel.dataset.link;
-      const job = JOBS.find((j) => j.link === link);
-      const prev = job.error_class;
-      const val = sel.value;
-      if (!val) {
-        // A classification is mandatory; don't let it be cleared back to none.
-        toast("Escolha uma classificação", true);
-        sel.value = prev || "";
-        return;
-      }
-      job.error_class = val;
-      try {
-        await postStatus(link, { error_class: val });
-        toast("Classificação salva: " + val);
-        render();  // resolved → filters apply again (e.g. leaves "só novas")
-      } catch (e) {
-        job.error_class = prev;
-        sel.value = prev || "";
-        toast("Erro ao salvar classificação", true);
-      }
-    });
-
-    // While an error awaits classification, don't let other rows' fields take focus.
-    el("rows").addEventListener("focusin", (ev) => {
-      const pend = pendingLink();
-      if (!pend) return;
-      const owner = ev.target.closest("textarea.notes, select.error-class");
-      if (owner && owner.dataset.link !== pend) {
-        toast("Classifique o erro pendente primeiro", true);
-        owner.blur();
       }
     });
 
@@ -687,10 +623,6 @@
     const TABS = [["jobs", "tabJobs"], ["applied", "tabApplied"], ["errors", "tabErrors"], ["report", "tabReport"], ["metrics", "tabMetrics"]];
     function setTab(tab) {
       if (tab === ACTIVE_TAB) return;
-      if (pendingLink()) {
-        toast("Classifique o erro pendente primeiro", true);
-        return;
-      }
       ACTIVE_TAB = tab;
       TABS.forEach(([t, id]) => el(id).classList.toggle("on", t === tab));
       render();
