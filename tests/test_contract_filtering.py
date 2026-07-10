@@ -99,62 +99,6 @@ def test_clt_kept_when_no_signal():
     assert result["accepted"] is True
 
 
-# --------------------------------------------------------------------------- #
-# OpenRouter free-model auto-discovery
-# --------------------------------------------------------------------------- #
-class _FakeResp:
-    status_code = 200
-
-    def __init__(self, data):
-        self._data = data
-
-    def json(self):
-        return {"data": self._data}
-
-
-def test_fetch_free_models_keeps_only_zero_priced(monkeypatch):
-    text_arch = {"output_modalities": ["text"]}
-    payload = [
-        {"id": "vendor/free-a:free", "pricing": {"prompt": "0", "completion": "0"}, "architecture": text_arch},
-        {"id": "vendor/paid", "pricing": {"prompt": "0.001", "completion": "0.002"}, "architecture": text_arch},
-        {"id": "vendor/free-b", "pricing": {"prompt": 0, "completion": 0}},  # no arch -> kept
-        {"id": "vendor/no-pricing"},
-        # Free but emits audio too -> must be excluded.
-        {"id": "vendor/audio:free", "pricing": {"prompt": "0", "completion": "0"},
-         "architecture": {"output_modalities": ["text", "audio"]}},
-    ]
-    monkeypatch.setattr(matcher.requests, "get", lambda *a, **k: _FakeResp(payload))
-    monkeypatch.setattr(matcher, "_free_models_cache", None)  # reset cache
-
-    free = matcher._fetch_free_openrouter_models()
-    assert "vendor/free-a:free" in free
-    assert "vendor/free-b" in free
-    assert "vendor/paid" not in free
-    assert "vendor/no-pricing" not in free
-    assert "vendor/audio:free" not in free  # multi-modal output filtered out
-
-
-def test_openrouter_models_appends_discovered_free(monkeypatch):
-    monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
-    monkeypatch.delenv("OPENROUTER_MODELS", raising=False)
-    monkeypatch.setenv("OPENROUTER_AUTO_FREE_MODELS", "true")
-    monkeypatch.setattr(matcher, "_free_models_cache", ["vendor/extra:free", matcher.DEFAULT_OPENROUTER_MODELS[0]])
-
-    models = matcher._openrouter_models()
-    assert "vendor/extra:free" in models           # discovered one appended
-    assert models.count(matcher.DEFAULT_OPENROUTER_MODELS[0]) == 1  # deduped
-
-
-def test_openrouter_auto_free_can_be_disabled(monkeypatch):
-    monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
-    monkeypatch.delenv("OPENROUTER_MODELS", raising=False)
-    monkeypatch.setenv("OPENROUTER_AUTO_FREE_MODELS", "false")
-    monkeypatch.setattr(matcher, "_free_models_cache", ["vendor/extra:free"])
-
-    models = matcher._openrouter_models()
-    assert "vendor/extra:free" not in models
-
-
 def test_title_company_coverage_does_not_regress():
     """Pin how many flagged jobs we catch from title+company alone.
 

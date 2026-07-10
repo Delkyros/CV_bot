@@ -6,6 +6,7 @@ import urllib.parse
 import requests
 from bs4 import BeautifulSoup
 
+from src.matcher import classify_contract
 from src.text_signals import normalize_text
 from src.settings import env_float, env_int
 
@@ -117,7 +118,7 @@ def request_with_retry(url, headers=None, timeout=None, max_retries=None, retry_
     return last_response
 
 
-def workplace_matches(location_text, description_text, workplace_type, search_location):
+def workplace_matches(location_text, workplace_type):
     """
     Confirm the accepted workplace models: remote in Brazil or hybrid in Sao
     Jose-SC or Florianopolis-SC.
@@ -369,7 +370,6 @@ def scrape_linkedin_jobs(
     workplace_type=None,
     excluded_links=None,
     excluded_title_companies=None,
-    contract_classifier=None,
     geo_id=None,
     time_filter=None,
     max_pages=None,
@@ -483,7 +483,7 @@ def scrape_linkedin_jobs(
                     # location already comes in the card, so we avoid requests (and
                     # the risk of 429) downloading descriptions of jobs that will be
                     # discarded.
-                    if not workplace_matches(loc, "", workplace_type, location):
+                    if not workplace_matches(loc, workplace_type):
                         logger.info(f"Job outside the target model/location, skipping: {title} | {company} | {loc}")
                         continue
 
@@ -514,9 +514,7 @@ def scrape_linkedin_jobs(
                         "contract_evidence": "Contract classifier not configured.",
                     }
                     if normalize_text(contract_type) == "clt":
-                        if not contract_classifier:
-                            raise RuntimeError("CLT contract classifier was not initialized.")
-                        contract_inference = contract_classifier.classify(description, title=title, company=company)
+                        contract_inference = classify_contract(description, title=title, company=company)
 
                     job_info = {
                         "job_title": title,
@@ -528,7 +526,6 @@ def scrape_linkedin_jobs(
                         "score_clt": contract_inference.get("score_clt", "N/A"),
                         "score_non_clt": contract_inference.get("score_non_clt", "N/A"),
                         "contract_margin": contract_inference.get("contract_margin", "N/A"),
-                        "contract_inference": contract_inference.get("contract_evidence", "N/A"),
                         "contract_evidence": contract_inference.get("contract_evidence", "N/A"),
                         "job_link": job_link,
                         "full_description": description

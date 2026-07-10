@@ -19,6 +19,7 @@ config/keywords.yaml
 vagas_filtradas.md
 vagas_historico.json
 vagas_historico.backup-*.json
+data/stale-root-*
 run_state.json
 *.xlsx
 

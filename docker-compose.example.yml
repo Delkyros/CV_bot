@@ -39,10 +39,7 @@ services:
 
     environment:
       # ---- Providers ----
-      # PROVIDER_ORDER is currently Gemini-only (src/matcher.py), so GEMINI_API_KEY
-      # is the one that matters; OpenRouter is disabled (its scores were unreliable).
-      GEMINI_API_KEY: "your_gemini_key_here"           # active LLM provider
-      # OPENROUTER_API_KEY: "your_openrouter_key_here" # unused until re-enabled in PROVIDER_ORDER
+      GEMINI_API_KEY: "your_gemini_key_here"  # the only LLM provider (src/matcher.py)
 
       # ---- Run control / scheduler (webapp.py + src/run_controller.py) ----
       SCHEDULER_ENABLED: "true"       # default true — automatic recurring runs
@@ -63,22 +60,18 @@ services:
       #      first run into HF_HOME on the ./data volume — needs network once. ----
       HF_HOME: "/app/data/hf-cache"   # model cache; persist in ./data (root fs read-only, $HOME tmpfs)
       # LOCAL_MATCH_MODEL: "minishlab/potion-multilingual-128M"  # MUST be multilingual (profile PT, jobs PT+EN)
-      # LOCAL_MATCH_SIM_FLOOR: "0.30"     # cosine floor mapped to fallback score 0
-      # LOCAL_MATCH_SIM_CEIL: "0.70"      # cosine ceil mapped to fallback score 100
+      # LOCAL_MATCH_SIM_FLOOR: "0.35"     # cosine floor mapped to fallback score 0
+      # LOCAL_MATCH_SIM_CEIL: "0.50"      # cosine ceil mapped to fallback score 100
 
       # ---- Embedding scope gate (drop only when BOTH title & desc are far off) ----
       # SCOPE_TITLE_MIN: "0.40"           # title vs termos_busca (raw cosine)
       # SCOPE_DESC_MIN: "0.40"            # description vs CV (raw cosine)
 
       # ---- LLM tuning (optional; defaults shown) ----
-      # OPENROUTER_MODEL: ""                # pin ONE model (overrides the list below)
-      # OPENROUTER_MODELS: "openai/gpt-oss-120b:free,deepseek/deepseek-chat-v3-0324:free,meta-llama/llama-3.3-70b-instruct:free,qwen/qwen3-next-80b-a3b-instruct:free,nvidia/nemotron-3-super-120b-a12b:free,google/gemini-2.0-flash-exp:free"
-      # OPENROUTER_AUTO_FREE_MODELS: "true" # auto-append discovered :free models
       # GEMINI_MODEL: "gemini-2.5-flash"
       # LLM_TEMPERATURE: "0.1"
-      # OPENROUTER_MAX_TOKENS: "2000"
       # LLM_REQUEST_TIMEOUT: "60"           # seconds
-      # LLM_MAX_PROVIDER_CYCLES: "2"        # provider-chain retry cycles on quota/429
+      # LLM_MAX_PROVIDER_CYCLES: "2"        # Gemini retry attempts on quota/429
       # LLM_QUOTA_RETRY_WAIT: "5"           # seconds between cycles
 
       # ---- Relevance flag thresholds (the "só relevantes" filter in the web UI) ----

@@ -1,8 +1,4 @@
-import logging
-
 from src.settings import env_float
-
-logger = logging.getLogger(__name__)
 
 # Final-report relevance thresholds (defaults; overridable via the environment).
 # A job only reaches the Markdown if it is both confidently CLT and aligned with

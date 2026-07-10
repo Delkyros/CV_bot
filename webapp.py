@@ -34,8 +34,6 @@ VALID_STATUSES = ("new", "viewed", "applied", "error")
 # Classification options shown when a job is marked as "error". Kept in
 # Portuguese on purpose (user-facing labels, persisted verbatim in the history).
 ERROR_CLASSES = ("Localidade/Modelo incorreto", "Não é CLT", "Escopo incorreto")
-# User-owned fields the pipeline must never overwrite (see main.save_job_history).
-USER_STATUS_FIELDS = ("status", "notes", "status_updated_at", "error_class")
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 
@@ -105,9 +103,8 @@ def _job_view(link, entry):
         "strengths": entry.get("strengths", []),
         "gaps": entry.get("gaps", []),
         "verdict": entry.get("verdict", ""),
-        # Fall back to the legacy pt-BR keys so pre-migration entries still date.
-        "first_seen_at": entry.get("first_seen_at") or entry.get("primeira_vez_vista_em"),
-        "last_processed_at": entry.get("last_processed_at") or entry.get("ultima_vez_processada_em"),
+        "first_seen_at": entry.get("first_seen_at"),
+        "last_processed_at": entry.get("last_processed_at"),
         "status_updated_at": entry.get("status_updated_at"),
         "status": entry.get("status", "new"),
         "error_class": entry.get("error_class", ""),

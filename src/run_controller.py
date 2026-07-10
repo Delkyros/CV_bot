@@ -29,13 +29,9 @@ from src.settings import env_bool, env_int, env_str
 
 logger = logging.getLogger(__name__)
 
-# Lifecycle keys owned by the controller. The pipeline (US2) will own only the
-# "progress" key; keeping the writers key-disjoint avoids a lock on the file
-# (single-writer-per-key + atomic replace). See contracts/run-state.md.
-_LIFECYCLE_KEYS = (
-    "status", "pid", "trigger", "run_started_at", "run_finished_at",
-    "last_outcome", "last_error", "exit_code",
-)
+# The controller owns the lifecycle keys (status/pid/trigger/…); the pipeline
+# owns only "progress". Key-disjoint writers + atomic replace = no file lock.
+# See contracts/run-state.md.
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -138,6 +134,7 @@ class RunController:
         self._scheduler_tick = scheduler_tick
         self._lock = threading.Lock()
         self._proc = None
+        self._adopted_pid = None  # live orphan run adopted on boot (pid only, no Popen)
         self._monitor = None
         self._scheduler = None
         self.reconcile_on_boot()
@@ -191,17 +188,21 @@ class RunController:
     # ---- lifecycle ----
 
     def reconcile_on_boot(self):
-        """A fresh process owns no run. If the state file says 'running', the run
-        can't be ours, so mark it interrupted and return to idle — never leave the
-        trigger permanently blocked (FR-013).
-
-        ponytail: reset any 'running' on boot rather than trying to adopt an orphan
-        subprocess. Ceiling: a genuinely-orphaned run could be double-started (rare);
-        being stuck 'running' forever is worse. Upgrade path: verify pid + re-attach
-        if this ever matters.
-        """
+        """A fresh process owns no run. If the state file says 'running':
+        pid still alive → adopt the orphan (keep 'running', watch the pid until
+        it exits) so a webapp restart mid-run never double-starts the pipeline;
+        pid dead/absent → the run died with the previous process, so mark it
+        interrupted and return to idle — never leave the trigger permanently
+        blocked (FR-013)."""
         data = self._read_file()
         if data.get("status") == "running":
+            pid = data.get("pid")
+            if _pid_alive(pid):
+                logger.warning("Found a live orphan pipeline run (pid %s) on boot; adopting it.", pid)
+                self._adopted_pid = pid
+                self._monitor = threading.Thread(target=self._watch_pid, args=(pid,), daemon=True)
+                self._monitor.start()
+                return
             logger.warning("Found a stale 'running' run state on boot; marking interrupted.")
             self._write_lifecycle(
                 status="idle", pid=None, run_finished_at=_now_iso(),
@@ -213,13 +214,15 @@ class RunController:
 
     def is_running(self):
         with self._lock:
-            return self._proc is not None and self._proc.poll() is None
+            return self._adopted_pid is not None or (
+                self._proc is not None and self._proc.poll() is None
+            )
 
     def start_run(self, trigger="manual"):
         """Spawn a pipeline run. Returns True if started, False if one is already
         in progress (concurrency guard, FR-002)."""
         with self._lock:
-            if self._proc is not None and self._proc.poll() is None:
+            if self._adopted_pid is not None or (self._proc is not None and self._proc.poll() is None):
                 return False
             # Tell the subprocess where to write progress, sharing our state file.
             env = dict(os.environ)
@@ -255,6 +258,23 @@ class RunController:
             )
             self._monitor.start()
             return True
+
+    def _watch_pid(self, pid):
+        """Watch an adopted orphan run (pid only, no Popen handle) until it exits.
+        Its exit code is unknowable from outside, so infer the outcome from the
+        pipeline's own progress: reaching stage 'done' means it completed."""
+        while _pid_alive(pid):
+            time.sleep(2.0)
+        with self._lock:
+            stage = (self._read_file().get("progress") or {}).get("stage")
+            outcome = "success" if stage == "done" else "failed"
+            self._write_lifecycle(
+                status="finished", pid=None, run_finished_at=_now_iso(),
+                last_outcome=outcome, exit_code=None,
+                last_error=None if outcome == "success" else "adopted run ended before reporting done",
+            )
+            self._adopted_pid = None
+        logger.info("Adopted pipeline run (pid %s) finished (outcome %s).", pid, outcome)
 
     def _watch(self, proc):
         """Wait for the subprocess (outside the lock) then record the outcome."""

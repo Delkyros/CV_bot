@@ -3,8 +3,7 @@
 Contract type (CLT vs PJ/freelancer/internship) is decided entirely here, with
 no LLM: `strong_non_clt_evidence` and `internship_evidence` are high-precision
 non-CLT signals that override the "assume CLT" default (see
-src/matcher.py::classify_contract). `explicit_negative_evidence` is a broader,
-lower-precision set kept for auditing/inspection.
+src/matcher.py::classify_contract).
 """
 
 import re
@@ -53,13 +52,6 @@ _STRONG_PATTERNS = [
     ),
 ]
 
-# Lower-precision cues used ONLY as an LLM hint (never to override on their own):
-# "budget" is too common in legitimate CLT data roles to be decisive.
-_HINT_ONLY_PATTERNS = [
-    ("Internship/temporary", r"estagio|temporario"),
-    ("Budget/billing", r"\bbudget\b|faturamento"),
-]
-
 
 # Internship is a reliable non-CLT marker on its own (an internship is never a
 # CLT employment bond). High-precision: "estagi" stem (estágio/estagiário) and
@@ -99,20 +91,6 @@ def strong_non_clt_evidence(text, company=None):
     Returns the matched human-readable labels (empty list when none apply).
     """
     labels = _match_labels(normalize_text(text), _STRONG_PATTERNS)
-    platform = contractor_platform(company)
-    if platform:
-        labels.append(f"Contractor platform: {platform}")
-    return labels
-
-
-def explicit_negative_evidence(text, company=None):
-    """All non-CLT signal labels found (strong + hint-only + contractor platform).
-
-    Used as a support hint for the LLM contract classifier — never as the primary
-    decision mechanism (that is strong_non_clt_evidence + the LLM).
-    """
-    normalized = normalize_text(text)
-    labels = _match_labels(normalized, _STRONG_PATTERNS) + _match_labels(normalized, _HINT_ONLY_PATTERNS)
     platform = contractor_platform(company)
     if platform:
         labels.append(f"Contractor platform: {platform}")

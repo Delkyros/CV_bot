@@ -102,11 +102,11 @@ config keys.
 
 ### VI. Never-Crash Resilience
 
-The LLM match MUST degrade gracefully. `_complete_with_providers()` cycles the
-provider chain (`PROVIDER_ORDER = openrouter → gemini`) on quota/`429`, and when every
-provider fails or none is configured, `_fallback_analysis` MUST score the job locally
-via embedding proximity (`src/local_match.py`). A run MUST NEVER crash, and a job MUST
-NEVER be discarded because of an infrastructure failure.
+The LLM match MUST degrade gracefully. `_gemini_complete()` retries Gemini (the only
+provider) on quota/`429`, and when it fails or no key is configured,
+`_fallback_analysis` MUST score the job locally via embedding proximity
+(`src/local_match.py`). A run MUST NEVER crash, and a job MUST NEVER be discarded
+because of an infrastructure failure.
 
 Rationale: Free LLM pools are flaky; infra failure is not a signal about a job's fit.
 The offline embedding fallback keeps runs complete and decisions job-driven.
