@@ -88,7 +88,7 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Edit `.env` and set at least one provider key (`OPENROUTER_API_KEY` is the primary, `GEMINI_API_KEY` the fallback).
+Edit `.env` and set `GEMINI_API_KEY` (the only LLM provider; without it the pipeline still runs, scoring locally by embeddings).
 
 ### 3. Configure your search & profile
 
@@ -104,7 +104,7 @@ Edit `config/keywords.yaml` with your target roles, location filters and your pr
 python main.py
 ```
 
-The ranked report is written to `vagas_filtradas.md` at the project root, and `vagas_historico.json` is updated so the next run skips everything already seen.
+Results are persisted to `vagas_historico.json` (browse them in the web UI, including the Relatório tab), and the next run skips everything already seen.
 
 ## 🐳 Run with Docker (recommended)
 
@@ -129,7 +129,7 @@ docker compose down
 - **Scheduling** is handled by the in-app scheduler in the dashboard (`webapp.py`) via `RUN_INTERVAL_SECONDS` (default `21600` = 6h) and `RUN_ON_START` (default `true`). No host cron / Task Scheduler needed, and it survives reboots (`restart: unless-stopped`). A failed run never breaks the schedule.
 - For **manual-only** (no automatic runs — trigger from the dashboard button), set `SCHEDULER_ENABLED: "false"` (or `RUN_INTERVAL_SECONDS: "0"`).
 - API keys and all tunables live in the `environment:` block of `docker-compose.yml` (git-ignored). `docker-compose.example.yml` is the versioned template.
-- `config/keywords.yaml` is mounted read-only; the report and history are written to `./data/` on the host (`data/vagas_filtradas.md`, `data/vagas_historico.json`) and persist across runs so already-seen jobs are skipped.
+- `config/keywords.yaml` is mounted read-only; the history is written to `./data/` on the host (`data/vagas_historico.json`) and persists across runs so already-seen jobs are skipped.
 - Hardening: `read_only` root fs, `cap_drop: ALL`, `no-new-privileges`, non-root user, and no build tools in the runtime image.
 
 ## ✅ Mark jobs as viewed / applied (web UI)
@@ -186,12 +186,11 @@ Everything operational is configurable via environment variables — nothing is 
 | `REPORT_MIN_CLT_SCORE` | `0.7` | Min CLT confidence (`score_clt`) for a job to be flagged `relevant` in the web UI. `N/A` is always not-relevant. |
 | `REPORT_MIN_MATCH_SCORE` | `70` | Min profile match (`match_score`, 0–100) for the `relevant` flag. |
 | `SCOPE_TITLE_MIN` / `SCOPE_DESC_MIN` | `0.40` / `0.40` | Embedding scope gate: a job is dropped only when BOTH its title (vs `termos_busca`) and its description (vs CV) cosine fall below these. Lower = keeps more. |
-| `OPENROUTER_MODEL` / `OPENROUTER_MODELS` | built-in list | Pin one model, or override the whole comma-separated list. Note: `PROVIDER_ORDER` is currently Gemini-only; OpenRouter is off. |
-| `GEMINI_MODEL` | `gemini-2.5-flash` | Gemini fallback model. |
-| `LLM_TEMPERATURE` / `OPENROUTER_MAX_TOKENS` / `LLM_REQUEST_TIMEOUT` | `0.1` / `2000` / `60` | LLM sampling, output budget, HTTP timeout. |
-| `LLM_MAX_PROVIDER_CYCLES` / `LLM_QUOTA_RETRY_WAIT` | `2` / `5` | Provider-chain retry cycles and wait between them (kept low to fail fast to the local fallback instead of grinding a saturated free pool). |
+| `GEMINI_MODEL` | `gemini-2.5-flash` | Gemini model (the only LLM provider). |
+| `LLM_TEMPERATURE` / `LLM_REQUEST_TIMEOUT` | `0.1` / `60` | LLM sampling and HTTP timeout. |
+| `LLM_MAX_PROVIDER_CYCLES` / `LLM_QUOTA_RETRY_WAIT` | `2` / `5` | Gemini retry attempts and wait between them (kept low to fail fast to the local fallback). |
 | `LOCAL_MATCH_MODEL` | `minishlab/potion-multilingual-128M` | model2vec model behind `score_vetor_desc`/`score_title`, the scope gate, and the LLM-failure fallback. Must be multilingual (profile PT, jobs PT+EN). |
-| `LOCAL_MATCH_SIM_FLOOR` / `LOCAL_MATCH_SIM_CEIL` | `0.30` / `0.70` | Cosine band mapped to the 0–100 fallback score (recalibrate for the multilingual model). |
+| `LOCAL_MATCH_SIM_FLOOR` / `LOCAL_MATCH_SIM_CEIL` | `0.35` / `0.50` | Cosine band mapped to the 0–100 fallback score. Measured on the labeled history (jul/2026); recalibrate if the model or profile changes. |
 | `HF_HOME` | `~/.cache/huggingface` | Where the local model is cached; point at a persisted path under Docker. |
 | `SCRAPER_MAX_RETRIES` / `SCRAPER_RETRY_WAIT` / `SCRAPER_REQUEST_TIMEOUT` / `SCRAPER_MAX_PAGES` | `5` / `5` / `15` / `10` | Scraper retry, timeout and pagination limits. |
 | `SCRAPER_MIN_REQUEST_DELAY` / `SCRAPER_MAX_REQUEST_DELAY` | `1.0` / `3.0` | Random pause range (s) between requests. |
@@ -209,21 +208,19 @@ CV_bot/
 │   └── keywords.example.yaml   # Template config (copy to keywords.yaml)
 ├── src/
 │   ├── scraper.py              # LinkedIn Guest API collection + filtering
-│   ├── matcher.py              # LLM provider chain: match + contract classifier
+│   ├── matcher.py              # Gemini match analysis + local contract classifier
 │   ├── text_signals.py         # Text normalization + non-CLT keyword signals
 │   ├── reporter.py             # Relevance-filter thresholds (passes_relevance_filter)
 │   ├── local_match.py          # Vector scores (desc×CV, title×terms) + scope gate
 │   ├── settings.py             # Env-backed tunables (.env) with defaults
+│   ├── run_controller.py       # In-app run trigger + scheduler (run_state.json)
 │   └── logging_config.py       # Centralized logging setup
 ├── web/
 │   └── index.html              # Web UI for marking jobs viewed/applied
-├── docs/specs.md               # Original technical spec (pt-BR)
-├── examples/                   # Sample output
 ├── main.py                     # End-to-end orchestrator
 ├── webapp.py                   # Flask web UI (reads/writes status in history)
-├── docker-entrypoint.sh        # Scheduler loop (runs main.py every 6h)
 ├── Dockerfile                  # Hardened multi-stage image
-├── docker-compose.example.yml  # Template stack (scraper + web)
+├── docker-compose.example.yml  # Template stack (single web service)
 ├── requirements.txt
 ├── .env.example
 └── LICENSE

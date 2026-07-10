@@ -17,8 +17,8 @@ def test_normalize_text_strips_accents_and_lowercases():
     assert text_signals.normalize_text(None) == ""
 
 
-def test_explicit_negative_evidence_detects_pj_signals():
-    signals = text_signals.explicit_negative_evidence(
+def test_strong_non_clt_evidence_detects_pj_signals():
+    signals = text_signals.strong_non_clt_evidence(
         "Contrato PJ, necessário CNPJ ativo e emissão de nota fiscal."
     )
     assert "PJ/legal entity" in signals
@@ -26,8 +26,8 @@ def test_explicit_negative_evidence_detects_pj_signals():
     assert "Invoice" in signals
 
 
-def test_explicit_negative_evidence_empty_for_clt():
-    assert text_signals.explicit_negative_evidence("Vaga efetiva com carteira assinada.") == []
+def test_strong_non_clt_evidence_empty_for_clt():
+    assert text_signals.strong_non_clt_evidence("Vaga efetiva com carteira assinada.") == []
 
 
 # --------------------------------------------------------------------------- #
@@ -55,38 +55,38 @@ def test_linkedin_workplace_filter(model, expected):
 
 
 def test_workplace_matches_remote_rejects_foreign():
-    assert scraper.workplace_matches("Campinas, SP", "", "remoto", "Brasil") is True
-    assert scraper.workplace_matches("United States", "", "remoto", "Brasil") is False
+    assert scraper.workplace_matches("Campinas, SP", "remoto") is True
+    assert scraper.workplace_matches("United States", "remoto") is False
 
 
 def test_workplace_matches_hybrid_only_sc_cities():
-    assert scraper.workplace_matches("Florianópolis, SC", "", "hibrido", "x") is True
-    assert scraper.workplace_matches("São Paulo, SP", "", "hibrido", "x") is False
+    assert scraper.workplace_matches("Florianópolis, SC", "hibrido") is True
+    assert scraper.workplace_matches("São Paulo, SP", "hibrido") is False
 
 
 def test_workplace_matches_hybrid_accepts_sao_jose_sc():
-    assert scraper.workplace_matches("São José, Santa Catarina, Brasil", "", "hibrido", "x") is True
-    assert scraper.workplace_matches("São José, SC", "", "hibrido", "x") is True
+    assert scraper.workplace_matches("São José, Santa Catarina, Brasil", "hibrido") is True
+    assert scraper.workplace_matches("São José, SC", "hibrido") is True
 
 
 def test_workplace_matches_hybrid_rejects_sao_jose_sp_homonyms():
     # São José dos Campos / do Rio Preto are in São Paulo, not Santa Catarina.
-    assert scraper.workplace_matches("São José dos Campos, São Paulo, Brasil", "", "hibrido", "x") is False
-    assert scraper.workplace_matches("São José do Rio Preto, SP", "", "hibrido", "x") is False
+    assert scraper.workplace_matches("São José dos Campos, São Paulo, Brasil", "hibrido") is False
+    assert scraper.workplace_matches("São José do Rio Preto, SP", "hibrido") is False
 
 
 def test_workplace_matches_hybrid_rejects_bare_sao_jose_without_sc():
     # Ambiguous "São José" with no Santa Catarina marker must not pass.
-    assert scraper.workplace_matches("São José", "", "hibrido", "x") is False
+    assert scraper.workplace_matches("São José", "hibrido") is False
 
 
 def test_workplace_matches_hybrid_rejects_other_sc_cities():
     # Only São José-SC / Florianópolis-SC are wanted, NOT the whole state.
-    assert scraper.workplace_matches("Criciúma, SC", "", "hibrido", "x") is False
-    assert scraper.workplace_matches("Joinville, SC", "", "hibrido", "x") is False
-    assert scraper.workplace_matches("Mafra, SC", "", "hibrido", "x") is False
+    assert scraper.workplace_matches("Criciúma, SC", "hibrido") is False
+    assert scraper.workplace_matches("Joinville, SC", "hibrido") is False
+    assert scraper.workplace_matches("Mafra, SC", "hibrido") is False
     # A bare state with no target city is too vague -> reject.
-    assert scraper.workplace_matches("Santa Catarina, Brasil", "", "hibrido", "x") is False
+    assert scraper.workplace_matches("Santa Catarina, Brasil", "hibrido") is False
 
 
 def test_description_conflicts_with_remote_flags_explicit_hybrid_onsite():
@@ -121,7 +121,7 @@ def test_job_is_closed_detects_banner_and_phrases():
 
 
 def test_workplace_matches_no_filter():
-    assert scraper.workplace_matches("anywhere", "", None, "x") is True
+    assert scraper.workplace_matches("anywhere", None) is True
 
 
 @pytest.mark.parametrize("url,expected", [
@@ -136,11 +136,6 @@ def test_extract_job_id(url, expected):
 # --------------------------------------------------------------------------- #
 # matcher
 # --------------------------------------------------------------------------- #
-def test_extract_json_object_ignores_braces_in_strings():
-    text = 'noise {"a": "has } brace", "b": {"c": 1}} trailing'
-    assert matcher._extract_json_object(text) == '{"a": "has } brace", "b": {"c": 1}}'
-
-
 def test_parse_result_clamps_and_normalizes():
     raw = '{"match_score": 150, "strengths": ["x"], "gaps": [], "verdict": "ok"}'
     result = matcher._parse_result(raw)
@@ -210,31 +205,12 @@ def test_env_int_default_and_invalid(monkeypatch):
     assert settings.env_int("X_INT", 5) == 9
 
 
-def test_env_list_splits_and_defaults(monkeypatch):
-    monkeypatch.delenv("X_LIST", raising=False)
-    assert settings.env_list("X_LIST", ["a", "b"]) == ["a", "b"]
-    monkeypatch.setenv("X_LIST", " one , two ,, three ")
-    assert settings.env_list("X_LIST", []) == ["one", "two", "three"]
-
-
 def test_report_thresholds_read_from_env(monkeypatch):
     monkeypatch.setenv("REPORT_MIN_CLT_SCORE", "0.9")
     monkeypatch.setenv("REPORT_MIN_MATCH_SCORE", "70")
     # A job that passes the defaults (0.6/50) must now fail the stricter env values.
     job = {"score_clt": 0.8, "match_score": 60}
     assert reporter.passes_relevance_filter(job) is False
-
-
-def test_openrouter_models_env_overrides(monkeypatch):
-    # Disable auto-discovery so this isolates the env-override resolution
-    # (and stays network-free).
-    monkeypatch.setenv("OPENROUTER_AUTO_FREE_MODELS", "false")
-    monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
-    monkeypatch.setenv("OPENROUTER_MODELS", "model-a:free, model-b:free")
-    assert matcher._openrouter_models() == ["model-a:free", "model-b:free"]
-    # A single pinned model takes priority over the list.
-    monkeypatch.setenv("OPENROUTER_MODEL", "solo:free")
-    assert matcher._openrouter_models() == ["solo:free"]
 
 
 # --------------------------------------------------------------------------- #

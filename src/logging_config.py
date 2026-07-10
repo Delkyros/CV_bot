@@ -2,10 +2,10 @@ import logging
 import sys
 
 
-def setup_logging(level=logging.INFO, log_file=None):
+def setup_logging(level=logging.INFO):
     """
-    Configure the pipeline logging: a console handler (stdout) and, optionally, a
-    file. Idempotent — repeated calls do not duplicate handlers.
+    Configure the pipeline logging on stdout. Idempotent — repeated calls do not
+    duplicate handlers.
 
     Each module should get its logger with `logging.getLogger(__name__)`; handler
     configuration is centralized here and triggered once at the entry point
@@ -27,11 +27,6 @@ def setup_logging(level=logging.INFO, log_file=None):
     console = logging.StreamHandler(sys.stdout)
     console.setFormatter(formatter)
     root.addHandler(console)
-
-    if log_file:
-        file_handler = logging.FileHandler(log_file, encoding="utf-8")
-        file_handler.setFormatter(formatter)
-        root.addHandler(file_handler)
 
     setup_logging._configured = True
     return root

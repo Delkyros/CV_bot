@@ -57,16 +57,11 @@ WORKDIR /app
 COPY --chown=appuser:appgroup main.py webapp.py ./
 COPY --chown=appuser:appgroup src/ ./src/
 COPY --chown=appuser:appgroup web/ ./web/
-COPY --chown=appuser:appgroup docker-entrypoint.sh ./
 
-# Normalize line endings (in case of a CRLF checkout on Windows) and make the
-# scheduler entrypoint executable.
-RUN sed -i 's/\r$//' /app/docker-entrypoint.sh \
- && chmod +x /app/docker-entrypoint.sh \
- && mkdir -p /app/data && chown appuser:appgroup /app/data
+RUN mkdir -p /app/data && chown appuser:appgroup /app/data
 
 USER appuser
 
-# Scheduler entrypoint: runs `python main.py` every RUN_INTERVAL_SECONDS
-# (default 6h). Set RUN_INTERVAL_SECONDS=0 to run once and exit.
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
+# The web app owns everything: serves the UI and runs/schedules the pipeline
+# (src/run_controller.py; RUN_INTERVAL_SECONDS / SCHEDULER_ENABLED / RUN_ON_START).
+CMD ["python", "webapp.py"]

@@ -12,6 +12,7 @@ an honest "estimated locally" note instead.
 """
 import logging
 import os
+from functools import lru_cache
 
 # HF hub tries to symlink into its cache; on stock Windows that raises
 # WinError 1314 (no symlink privilege). Force copy mode before anything imports
@@ -45,13 +46,15 @@ def _load():
 def _scale(sim):
     """Map a raw cosine similarity to a 0-100 score.
 
-    ponytail: linear map with a floor/ceil calibration knob — unrelated job vs
-    profile lands ~0.30, a strong match ~0.70 with this model (measured), but
-    that band shifts with the profile/model, so leave it tunable rather than
-    hardcoding sim*100 (which would bunch everything in the 30-70 range).
+    Linear map over the LOCAL_MATCH_SIM_FLOOR..CEIL band — a calibration knob:
+    the band shifts with the embedding model and the profile, so it stays
+    tunable. Defaults measured on the labeled history (2026-07,
+    potion-multilingual-128M): applied jobs median ~0.49 (p25 0.46), sub-bar
+    ones median ~0.41 (p90 0.45), so the 0.35..0.50 band puts the report bar
+    (score 70) at cosine ~0.455 — right at the empirical crossover.
     """
-    floor = env_float("LOCAL_MATCH_SIM_FLOOR", 0.30)
-    ceil = env_float("LOCAL_MATCH_SIM_CEIL", 0.70)
+    floor = env_float("LOCAL_MATCH_SIM_FLOOR", 0.35)
+    ceil = env_float("LOCAL_MATCH_SIM_CEIL", 0.50)
     if ceil <= floor:
         return int(max(0, min(100, round(sim * 100))))
     pct = (sim - floor) / (ceil - floor)
@@ -77,6 +80,14 @@ def description_similarity(job_info, candidate_profile):
     return float(model.similarity(profile_vec, model.embed(text or " ")))
 
 
+@lru_cache(maxsize=1024)
+def _term_vec(term):
+    """Embed a search term once per process — the same ~20 terms repeat for
+    every job in a run."""
+    model, _ = _load()
+    return model.embed(term)
+
+
 def title_scope_similarity(title, search_terms):
     """Max cosine (0..1) between the job title's role portion and any search term.
 
@@ -91,9 +102,7 @@ def title_scope_similarity(title, search_terms):
     if not head:
         return 0.0
     tv = model.embed(head)
-    # ponytail: re-embeds the ~20 terms per call; static model2vec embeds are
-    # cheap, so no cross-job term cache until profiling says it matters.
-    return max(float(model.similarity(tv, model.embed(t))) for t in search_terms)
+    return max(float(model.similarity(tv, _term_vec(t))) for t in search_terms)
 
 
 def local_match_analysis(job_info, candidate_profile):
@@ -125,7 +134,7 @@ def demo():
     """Self-check: a matching job must outscore an unrelated one, and the
     scaler must clamp to [0, 100]."""
     assert _scale(0.05) == 0 and _scale(0.95) == 100, "scaler must clamp to [0,100]"
-    assert _scale(0.50) == 50, "midpoint of [0.30,0.70] band must map to 50"
+    assert _scale(0.425) == 50, "midpoint of [0.35,0.50] band must map to 50"
 
     profile = "Cientista de dados sênior: machine learning, Python, SQL, LLMs, MLOps."
     good = local_match_analysis(

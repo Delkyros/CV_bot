@@ -213,12 +213,11 @@ def test_learned_blocklist_derives_normalized_role_keys():
         "l/1": {"job_title": "Designer Gráfico", "error_class": "Escopo incorreto"},
         # City/work-model suffix must be stripped so a repost matches.
         "l/2": {"job_title": "Gerente de Loja | Florianópolis\nFull-time", "error_class": "Escopo incorreto"},
-        "l/3": {"titulo_vaga": "Analista Financeiro", "error_class": "Escopo incorreto"},  # legacy pt-BR key
-        "l/4": {"job_title": "Cientista de Dados", "error_class": "Não é CLT"},  # other class -> ignored
-        "l/5": {"job_title": "Data Scientist"},  # unmarked -> ignored
+        "l/3": {"job_title": "Cientista de Dados", "error_class": "Não é CLT"},  # other class -> ignored
+        "l/4": {"job_title": "Data Scientist"},  # unmarked -> ignored
     }
     bl = main.learned_scope_blocklist(history)
-    assert bl == {"designer grafico", "gerente de loja", "analista financeiro"}
+    assert bl == {"designer grafico", "gerente de loja"}
 
 
 def test_learned_blocklist_drops_reposts_before_llm(monkeypatch):

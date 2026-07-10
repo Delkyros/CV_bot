@@ -6,12 +6,9 @@ from datetime import datetime
 import yaml
 from dotenv import load_dotenv
 
-# Ensure the src/ package files can be imported correctly
-sys.path.append(os.path.abspath(os.path.dirname(__file__)))
-
 from src.scraper import scrape_linkedin_jobs, normalize_text
 from src.text_signals import out_of_scope_title
-from src.matcher import analyze_match, has_provider, ContractClassifier
+from src.matcher import analyze_match, has_provider
 from src.local_match import local_match_analysis, description_similarity, title_scope_similarity
 from src.run_controller import emit_progress
 from src.reporter import passes_relevance_filter, min_clt_score, min_match_score
@@ -308,7 +305,7 @@ def learned_scope_blocklist(history):
     keys = set()
     for entry in history.values():
         if isinstance(entry, dict) and entry.get("error_class") == SCOPE_ERROR_CLASS:
-            key = _scope_title_key(entry.get("job_title") or entry.get("titulo_vaga"))
+            key = _scope_title_key(entry.get("job_title"))
             if key:
                 keys.add(key)
     return keys
@@ -416,10 +413,10 @@ def main():
     # 1. Load environment variables (.env)
     load_dotenv()
 
-    # Check available LLM providers (OpenRouter primary, Gemini fallback).
+    # Check the LLM provider (Gemini; see src/matcher.py).
     has_llm_provider = has_provider()
     if not has_llm_provider:
-        logger.warning("No LLM provider configured (OPENROUTER_API_KEY/GEMINI_API_KEY) in the .env file.")
+        logger.warning("No LLM provider configured (GEMINI_API_KEY) in the .env file.")
         logger.warning("The script will continue with the job search, but the match step will use a default (simulated) score.")
 
     # 2. Load settings from the YAML file
@@ -459,9 +456,7 @@ def main():
     logger.info(f"Search filters: {search_filters}")
     logger.info(f"Candidate profile loaded ({len(candidate_profile)} characters).")
 
-    contract_classifier = None
     if str(contract_type).strip().lower() == "clt":
-        contract_classifier = ContractClassifier()
         logger.info(
             "Local contract classification enabled (default-CLT: discards only on "
             "explicit non-CLT signals — contractor/PJ/USD-hourly or internship)."
@@ -504,7 +499,6 @@ def main():
                     workplace_type=workplace_type,
                     excluded_links=history_links | collected_links,
                     excluded_title_companies=triaged_keys,
-                    contract_classifier=contract_classifier,
                     geo_id=filter_geo_id,
                     time_filter=posting_period,
                 )

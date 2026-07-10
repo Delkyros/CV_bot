@@ -65,14 +65,3 @@ def env_bool(name, default):
         return False
     logger.warning("Invalid bool for %s=%r; using default %s.", name, raw, default)
     return default
-
-
-def env_list(name, default):
-    """Return a comma-separated env var as a list of stripped items.
-
-    `default` (any iterable) is returned as a list when the var is unset/empty.
-    """
-    raw = os.getenv(name)
-    if raw is None or not raw.strip():
-        return list(default)
-    return [item.strip() for item in raw.split(",") if item.strip()]

@@ -94,6 +94,30 @@ def test_boot_reconciliation_resets_stale_running(tmp_path):
     assert ctrl.is_running() is False
 
 
+def test_boot_reconciliation_adopts_live_orphan(tmp_path):
+    # Simulate a webapp restart mid-run: the state file says 'running' and the
+    # pid is still alive. The new controller must adopt it (no double-start)
+    # and, once it exits without reaching stage 'done', record a failure.
+    import subprocess
+    orphan = subprocess.Popen(CMD_SLOW_OK)
+    state_file = tmp_path / "run_state.json"
+    state_file.write_text(json.dumps({
+        "status": "running", "pid": orphan.pid, "trigger": "manual",
+        "run_started_at": "2026-07-10T10:00:00",
+        "progress": {"stage": "matching", "percent": 70},
+    }), encoding="utf-8")
+
+    ctrl = RunController(cmd=CMD_QUICK_OK, state_path=str(state_file))
+    assert ctrl.is_running() is True
+    assert ctrl.start_run("manual") is False           # adopted run holds the lock
+    assert _wait(lambda: ctrl.status().get("status") == "finished", timeout=15.0)
+    st = ctrl.status()
+    assert st["last_outcome"] == "failed"              # never reached 'done'
+    assert ctrl.is_running() is False
+    assert ctrl.start_run("manual") is True            # trigger usable again
+    assert _wait(lambda: not ctrl.is_running())
+
+
 def test_status_projection_includes_server_time(tmp_path):
     ctrl = _ctrl(tmp_path, CMD_QUICK_OK)
     assert "server_time" in ctrl.status()
