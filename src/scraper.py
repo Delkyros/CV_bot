@@ -120,8 +120,9 @@ def request_with_retry(url, headers=None, timeout=None, max_retries=None, retry_
 
 def workplace_matches(location_text, workplace_type):
     """
-    Confirm the accepted workplace models: remote in Brazil or hybrid in Sao
-    Jose-SC or Florianopolis-SC.
+    Confirm the accepted workplace models: remote in Brazil or hybrid in the
+    Grande Florianopolis hub cities (Florianopolis, Sao Jose-SC, Palhoca,
+    Biguacu).
 
     The workplace type (remote/hybrid) is already filtered by the f_WT parameter
     in the LinkedIn search URL, so here we only validate the job's actual
@@ -149,13 +150,15 @@ def workplace_matches(location_text, workplace_type):
         return not any(token in location_norm for token in foreign)
 
     if normalized_workplace in ("hibrido", "hybrid"):
-        # Keep ONLY hybrid jobs in Sao Jose-SC or Florianopolis-SC -- NOT the
-        # whole state of Santa Catarina. (Other SC cities like Criciuma,
+        # Keep ONLY hybrid jobs in the Grande Florianopolis hub cities -- NOT
+        # the whole state of Santa Catarina. (Other SC cities like Criciuma,
         # Joinville and Mafra used to slip through because the check accepted any
         # "santa catarina"/"sc" location.)
-        # Florianopolis/Floripa are unambiguously in Santa Catarina.
-        if "florianopolis" in location_norm or "floripa" in location_norm:
-            return True
+        # Florianopolis/Floripa, Palhoca and Biguacu are unambiguous city names
+        # (no homonyms outside Santa Catarina).
+        for city in ("florianopolis", "floripa", "palhoca", "biguacu"):
+            if city in location_norm:
+                return True
         if "sao jose" in location_norm:
             # Reject the Sao Paulo homonyms ("Sao Jose dos Campos", "Sao Jose do
             # Rio Preto") that share the same prefix.
@@ -165,7 +168,7 @@ def workplace_matches(location_text, workplace_type):
             # homonyms (in other states) don't pass.
             return "santa catarina" in location_norm or bool(re.search(r"\bsc\b", location_norm))
         # Any other location (including other SC cities, or a bare "Santa
-        # Catarina" with no city) is not one of our two hybrid hubs -> reject.
+        # Catarina" with no city) is not one of our hybrid hubs -> reject.
         return False
 
     return True
