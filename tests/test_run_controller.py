@@ -110,6 +110,11 @@ def test_boot_reconciliation_adopts_live_orphan(tmp_path):
     ctrl = RunController(cmd=CMD_QUICK_OK, state_path=str(state_file))
     assert ctrl.is_running() is True
     assert ctrl.start_run("manual") is False           # adopted run holds the lock
+    # Reap the orphan once it exits: on POSIX an unwaited child of THIS process
+    # becomes a zombie, which os.kill(pid, 0) (_pid_alive) still sees as alive,
+    # so the watcher would never observe the exit. A real orphan is reparented
+    # to init and reaped there — the zombie is a test-only artifact.
+    orphan.wait(timeout=10)
     assert _wait(lambda: ctrl.status().get("status") == "finished", timeout=15.0)
     st = ctrl.status()
     assert st["last_outcome"] == "failed"              # never reached 'done'
