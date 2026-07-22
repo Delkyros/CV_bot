@@ -13,7 +13,8 @@ from src.local_match import local_match_analysis, description_similarity, title_
 from src.run_controller import emit_progress
 from src.reporter import passes_relevance_filter, min_clt_score, min_match_score
 from src.logging_config import setup_logging
-from src.settings import env_str, env_float
+from src.settings import env_str, env_float, env_int, env_bool
+from src.match_labels import label_of
 
 logger = logging.getLogger(__name__)
 
@@ -311,7 +312,69 @@ def learned_scope_blocklist(history):
     return keys
 
 
-def analyze_and_filter_jobs(collected_jobs, candidate_profile, has_llm_provider, scope_blocklist=None, search_terms=None):
+# ---------------------------------------------------------------------------
+# Few-shot from the user's own decisions (spec 002, User Story 2). Built ONCE
+# per run from the history the user already triaged, injected into the LLM match
+# prompt so match_score aligns with their taste. Best-effort: any failure or
+# too-few labels returns None → the exemplar-free prompt (Principle VI). It never
+# changes a drop/keep decision — only the LLM score.
+# ---------------------------------------------------------------------------
+
+def _recent(entries, n):
+    """The n most-recent entries by first_seen_at."""
+    return sorted(entries, key=lambda e: e.get("first_seen_at", ""), reverse=True)[:n]
+
+
+def _exemplar_line(entry):
+    """One bullet from stored fields (no raw description is kept in history)."""
+    title = entry.get("job_title", "N/A")
+    company = entry.get("company", "N/A")
+    why = entry.get("verdict") or (entry.get("gaps") or [""])[0] or ""
+    why = " ".join(str(why).split())  # collapse whitespace
+    if len(why) > 160:
+        why = why[:157] + "…"
+    tail = f" — {why}" if why else ""
+    return f"- {title} @ {company}{tail}"
+
+
+def build_fewshot_block(history):
+    """Render the accept/reject exemplar block, or None to fall back to the
+    exemplar-free prompt (disabled, too few labels, or any error)."""
+    if not env_bool("FEWSHOT_ENABLED", True):
+        return None
+    try:
+        pos = [e for e in history.values() if label_of(e) == "pos"]
+        neg = [e for e in history.values() if label_of(e) == "neg"]
+        if len(pos) + len(neg) < env_int("FEWSHOT_MIN_LABELS", 10):
+            logger.info("Few-shot: not enough labeled jobs yet; using exemplar-free prompt.")
+            return None
+        max_ex = env_int("FEWSHOT_MAX_EXEMPLARS", 3)
+        budget = env_int("FEWSHOT_CHAR_BUDGET", 1500)
+        lines = [
+            "The candidate has personally reviewed similar postings. Use these as calibration "
+            "for their taste (do NOT copy scores; judge THIS posting on its merits):",
+            "Examples the candidate CHOSE TO APPLY to:",
+        ]
+        lines += [_exemplar_line(e) for e in _recent(pos, max_ex)]
+        lines.append("Examples the candidate REJECTED as out of scope / irrelevant:")
+        lines += [_exemplar_line(e) for e in _recent(neg, max_ex)]
+        # Truncate to the char budget line-by-line so the block never blows up.
+        block, used = [], 0
+        for line in lines:
+            if used + len(line) + 1 > budget:
+                break
+            block.append(line)
+            used += len(line) + 1
+        if len(block) <= 3:  # header(s) only, no actual exemplars survived
+            return None
+        logger.info(f"Few-shot: injecting {len(block) - 3} exemplar(s) into the match prompt.")
+        return "\n".join(block)
+    except Exception:
+        logger.exception("Few-shot exemplar selection failed; using exemplar-free prompt.")
+        return None
+
+
+def analyze_and_filter_jobs(collected_jobs, candidate_profile, has_llm_provider, scope_blocklist=None, search_terms=None, exemplars=None):
     """Run the match analysis on each collected job and DROP the ones whose core
     role does not match the candidate's area (scope filter), so they never reach
     the report or the history DB.
@@ -372,7 +435,7 @@ def analyze_and_filter_jobs(collected_jobs, candidate_profile, has_llm_provider,
         llm_result = None
         if has_llm_provider:
             try:
-                llm_result = analyze_match(job, candidate_profile)
+                llm_result = analyze_match(job, candidate_profile, exemplars)
             except Exception:
                 logger.exception("LLM call failed for this job")
         analysis_result = llm_result or _fallback_analysis(has_llm_provider, job, candidate_profile)
@@ -478,6 +541,9 @@ def main():
     if scope_blocklist:
         logger.info(f"Learned scope blocklist: {len(scope_blocklist)} title(s) from your 'Escopo incorreto' marks.")
 
+    # Few-shot exemplars from your own accept/reject marks (once per run).
+    fewshot_exemplars = build_fewshot_block(job_history)
+
     # 3. Run the scraper to collect LinkedIn jobs.
     # max_jobs_per_term (config: max_vagas_por_termo) caps how many jobs we pull
     # per search term to stay quick and avoid blocks; raise it in the YAML.
@@ -536,7 +602,7 @@ def main():
     logger.info("STARTING MATCH ANALYSIS")
     logger.info("=" * 40)
 
-    analyzed_jobs = analyze_and_filter_jobs(collected_jobs, candidate_profile, has_llm_provider, scope_blocklist, search_terms)
+    analyzed_jobs = analyze_and_filter_jobs(collected_jobs, candidate_profile, has_llm_provider, scope_blocklist, search_terms, fewshot_exemplars)
 
     out_of_scope = total_jobs - len(analyzed_jobs)
     if out_of_scope:

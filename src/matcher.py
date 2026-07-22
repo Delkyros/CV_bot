@@ -88,8 +88,14 @@ def _is_retryable_quota_error(exc):
     return any(keyword in text for keyword in _QUOTA_KEYWORDS)
 
 
-def _build_prompt(job_info, candidate_profile):
-    return f"""
+def _build_prompt(job_info, candidate_profile, exemplars=None):
+    """Build the match prompt. `exemplars`, when a non-empty string, is a
+    pre-rendered block of the candidate's own past accept/reject decisions
+    (prepared by main.py) inserted before the analysis instructions to calibrate
+    the LLM to the user's taste. When falsy the prompt is byte-identical to the
+    exemplar-free version (verified by tests) — few-shot never changes the
+    response contract or any drop/keep decision."""
+    prompt = f"""
 You are a senior Technology Recruiting and Selection specialist (Tech Recruiter).
 Your mission is to critically and realistically analyze whether a candidate is a good fit for a given job posting.
 The job description and candidate profile may be written in Portuguese; analyze them as-is.
@@ -125,6 +131,13 @@ Desired response structure:
   "verdict": "<Verdict text>"
 }}
 """
+    if exemplars:
+        # Insert the exemplar block right before the analysis instructions. The
+        # replace is a no-op when `exemplars` is falsy, keeping the prompt
+        # byte-identical to the pre-feature version.
+        marker = "\n---\n\nAnalysis Instructions:"
+        prompt = prompt.replace(marker, f"\n{exemplars}{marker}", 1)
+    return prompt
 
 
 def _call_gemini(prompt):
@@ -245,13 +258,15 @@ def _gemini_complete(prompt, parse_fn, task="analysis", max_cycles=None, retry_w
     return None
 
 
-def analyze_match(job_info, candidate_profile):
+def analyze_match(job_info, candidate_profile, exemplars=None):
     """
     Compare a job against the candidate profile using Gemini.
+    `exemplars` (optional) is a pre-rendered block of the user's own accept/reject
+    decisions injected into the prompt to align match_score with their taste.
     Returns the dict {match_score, strengths, gaps, verdict} or None (so that main
     uses the local fallback analysis).
     """
-    prompt = _build_prompt(job_info, candidate_profile)
+    prompt = _build_prompt(job_info, candidate_profile, exemplars)
     return _gemini_complete(prompt, _parse_result, "Match analysis")
 
 

@@ -1,0 +1,5 @@
+# Offline / analysis-only dependencies. NOT used by the runtime pipeline
+# (main.py) or the web UI (webapp.py) — only by train_meta_model.py.
+# Install just for the meta-model step:  pip install -r requirements-analysis.txt
+-r requirements.txt
+scikit-learn>=1.3
