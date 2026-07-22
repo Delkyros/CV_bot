@@ -23,6 +23,14 @@ data/stale-root-*
 run_state.json
 *.xlsx
 
+# Match-quality loop artifacts (spec 002) — derived from personal history,
+# regenerable by eval_scores.py / train_meta_model.py; never commit.
+data/golden_set.json
+data/eval_report.md
+data/meta_model.joblib
+data/meta_model_report.json
+*.joblib
+
 # Local embedding-model cache (downloaded on first use of the match fallback,
 # src/local_match.py) — regenerable, never commit the ~30MB model binaries.
 hf-cache/

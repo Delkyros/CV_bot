@@ -44,7 +44,7 @@ IN_SCOPE_ROLES = ["Machine Learning Engineer", "Cientista de Dados Sênior"]
 NOT_TITLE_GATED = ["Excel Expert", "Analista de Processos II", "Kotlin Engineer"]
 
 
-def _fake_analyze_match(job, _profile):
+def _fake_analyze_match(job, _profile, exemplars=None):
     """Simulate the LLM: out-of-scope roles get core_role_compatible=False."""
     incompatible = job["job_title"] in OUT_OF_SCOPE_ROLES
     return {

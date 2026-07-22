@@ -199,6 +199,12 @@ Everything operational is configurable via environment variables — nothing is 
 | `RUN_INTERVAL_SECONDS` / `RUN_ON_START` | `21600` / `true` | Recurring-run interval in seconds (`0` = manual only) and whether the first run fires on start. Used by both the in-app scheduler (`webapp.py`) and the standalone Docker loop. |
 | `SCHEDULER_ENABLED` | `true` | Master switch for the in-app scheduler in `webapp.py`. `false` = manual runs only (no automatic schedule/countdown). |
 | `RUN_STATE_PATH` | `run_state.json` | Where the run controller persists run/progress state (separate from the history; safe to delete). Point under `./data` in Docker. |
+| `FEWSHOT_ENABLED` | `true` | Inject your own accept/reject examples into the LLM match prompt. `false` = exact pre-feature prompt. |
+| `FEWSHOT_MIN_LABELS` / `FEWSHOT_MAX_EXEMPLARS` / `FEWSHOT_CHAR_BUDGET` | `10` / `3` / `1500` | Few-shot: min labeled jobs before exemplars are used, max exemplars per class (accept/reject), and total char budget for the block. |
+| `EVAL_MIN_LABELS` / `TEMPORAL_SPLIT_FRAC` | `20` / `0.7` | `eval_scores.py`: min labels before a metric is reported (else "insufficient"), and the oldest fraction used as the temporal train split. |
+| `GOLDEN_SET_SIZE` / `GOLDEN_SET_PATH` | `50` / `data/golden_set.json` | `eval_scores.py` frozen regression gate: how many most-recent labeled jobs to snapshot, and where. |
+| `EVAL_REPORT_PATH` | `data/eval_report.md` | Where `eval_scores.py` writes its report. |
+| `META_MODEL_PATH` / `META_MODEL_REPORT_PATH` | `data/meta_model.joblib` / `data/meta_model_report.json` | Where `train_meta_model.py` saves the model and its coefficients/metrics report. |
 
 ## 📂 Project structure
 

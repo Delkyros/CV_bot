@@ -1,0 +1,31 @@
+# Spec Kit extension hooks.
+#
+# Registers commands that the speckit-* skills run at lifecycle points. Each skill
+# reads the keys below at its before_/after_ stage, converts the dotted `command`
+# to a slash command (speckit.clarify -> /speckit-clarify), and — when
+# optional: false — auto-executes it and waits before continuing.
+#
+# NOTE: structure matches what the speckit-* skills parse (hooks.<stage>[].command
+# / optional / enabled / description / prompt). It is NOT verified against an
+# official Spec Kit schema; if a stage stops firing, check this file first.
+# A malformed file is skipped SILENTLY by the skills (no error).
+#
+# To pause a hook without deleting it: set `enabled: false` on that entry.
+# To make a hook merely *offered* (not auto-run): set `optional: true`.
+
+hooks:
+  # After a spec is written, resolve ambiguities before planning.
+  after_specify:
+    - command: speckit.clarify
+      optional: false
+      enabled: true
+      description: Auto-run clarification on the just-written spec before planning.
+      prompt: Detect and resolve ambiguities in the new spec before /speckit-plan.
+
+  # After tasks are generated (all three artifacts exist), cross-check them.
+  after_tasks:
+    - command: speckit.analyze
+      optional: false
+      enabled: true
+      description: Auto-run spec/plan/tasks consistency analysis after tasks generation.
+      prompt: Cross-check spec, plan, and tasks for gaps/conflicts before /speckit-implement.

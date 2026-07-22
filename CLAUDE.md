@@ -25,6 +25,10 @@ The virtualenv lives in `.venv/` and is the interpreter used for everything. On 
 # Import smoke test (fast sanity check after refactors)
 .venv/Scripts/python.exe -c "import main; from src import scraper, matcher, reporter, settings; print('imports OK')"
 
+# Offline match-quality loop (spec 002) — run by hand, read-only over the history
+.venv/Scripts/python.exe eval_scores.py            # score-vs-your-decisions report + golden-set gate
+.venv/Scripts/python.exe train_meta_model.py       # fuse the 3 scores → P(apply) (needs requirements-analysis.txt)
+
 # Docker (runs pipeline on a schedule + serves the web UI)
 docker compose build && docker compose up -d
 ```
