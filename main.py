@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import json
 import logging
@@ -312,6 +313,35 @@ def learned_scope_blocklist(history):
     return keys
 
 
+def build_scope_patterns(config):
+    """Compile the title-scope SEED from config['escopo_fora_de_alvo'] into a list
+    of (motivo, compiled_regex) pairs for out_of_scope_title().
+
+    This is the config-driven half of the scope blocklist (the learned marks from
+    learned_scope_blocklist are the other half — the two are unioned at the two
+    gates in analyze_and_filter_jobs). An entry with an uncompilable `padrao` is
+    skipped with a warning so one bad regex never aborts the run (Principle VI);
+    a missing/empty key yields no seed patterns (the learned gate + embedding + LLM
+    still filter — default-in-scope, Principle II).
+    """
+    entries = config.get("escopo_fora_de_alvo") or []
+    patterns = []
+    seen = set()  # dedupe identical padroes within the seed
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        motivo = entry.get("motivo") or "escopo fora de alvo"
+        padrao = entry.get("padrao")
+        if not padrao or padrao in seen:
+            continue
+        try:
+            patterns.append((motivo, re.compile(padrao)))
+            seen.add(padrao)
+        except re.error as exc:
+            logger.warning("Skipping invalid escopo_fora_de_alvo padrao %r (%s): %s", padrao, motivo, exc)
+    return patterns
+
+
 # ---------------------------------------------------------------------------
 # Few-shot from the user's own decisions (spec 002, User Story 2). Built ONCE
 # per run from the history the user already triaged, injected into the LLM match
@@ -374,17 +404,20 @@ def build_fewshot_block(history):
         return None
 
 
-def analyze_and_filter_jobs(collected_jobs, candidate_profile, has_llm_provider, scope_blocklist=None, search_terms=None, exemplars=None):
+def analyze_and_filter_jobs(collected_jobs, candidate_profile, has_llm_provider, scope_blocklist=None, search_terms=None, exemplars=None, scope_patterns=None):
     """Run the match analysis on each collected job and DROP the ones whose core
     role does not match the candidate's area (scope filter), so they never reach
     the report or the history DB.
 
     `scope_blocklist` is the learned set of normalized titles (learned_scope_blocklist)
     the user already rejected as out-of-scope — dropped deterministically here.
+    `scope_patterns` is the config-driven title SEED (build_scope_patterns); the two
+    together are the deduplicated union of the deterministic title scope filter.
 
     Returns the list of in-scope analyzed jobs (job data merged with the analysis).
     """
     scope_blocklist = scope_blocklist or set()
+    scope_patterns = scope_patterns or []
     analyzed_jobs = []
     total_jobs = len(collected_jobs)
 
@@ -399,7 +432,7 @@ def analyze_and_filter_jobs(collected_jobs, candidate_profile, has_llm_provider,
         # dev, market intelligence/research, systems analyst, generic Node/
         # graduate dev) BEFORE spending an LLM call. Ambiguous titles fall
         # through to the LLM's core_role_compatible judgment below.
-        out_reason = out_of_scope_title(job.get("job_title"))
+        out_reason = out_of_scope_title(job.get("job_title"), scope_patterns)
         if out_reason:
             logger.info(
                 "Discarded as out of scope by title "
@@ -541,6 +574,11 @@ def main():
     if scope_blocklist:
         logger.info(f"Learned scope blocklist: {len(scope_blocklist)} title(s) from your 'Escopo incorreto' marks.")
 
+    # Config-driven title scope SEED (escopo_fora_de_alvo), unioned with the
+    # learned blocklist above at the two deterministic gates in the matcher.
+    scope_patterns = build_scope_patterns(config)
+    logger.info(f"Title scope seed patterns loaded: {len(scope_patterns)}.")
+
     # Few-shot exemplars from your own accept/reject marks (once per run).
     fewshot_exemplars = build_fewshot_block(job_history)
 
@@ -602,7 +640,7 @@ def main():
     logger.info("STARTING MATCH ANALYSIS")
     logger.info("=" * 40)
 
-    analyzed_jobs = analyze_and_filter_jobs(collected_jobs, candidate_profile, has_llm_provider, scope_blocklist, search_terms, fewshot_exemplars)
+    analyzed_jobs = analyze_and_filter_jobs(collected_jobs, candidate_profile, has_llm_provider, scope_blocklist, search_terms, fewshot_exemplars, scope_patterns)
 
     out_of_scope = total_jobs - len(analyzed_jobs)
     if out_of_scope:

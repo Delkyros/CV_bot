@@ -70,14 +70,19 @@ def test_workplace_matches_hybrid_accepts_sao_jose_sc():
 
 
 def test_workplace_matches_hybrid_rejects_sao_jose_sp_homonyms():
-    # São José dos Campos / do Rio Preto are in São Paulo, not Santa Catarina.
+    # "São José dos Campos" / "do Rio Preto" (São Paulo) are DISTINCT city names,
+    # not the hub "São José" — the whole-component match rejects them without any
+    # city-specific homonym hardcode.
     assert scraper.workplace_matches("São José dos Campos, São Paulo, Brasil", "hibrido") is False
     assert scraper.workplace_matches("São José do Rio Preto, SP", "hibrido") is False
 
 
-def test_workplace_matches_hybrid_rejects_bare_sao_jose_without_sc():
-    # Ambiguous "São José" with no Santa Catarina marker must not pass.
-    assert scraper.workplace_matches("São José", "hibrido") is False
+def test_workplace_matches_hybrid_matches_city_as_whole_component():
+    # A bare "São José" is an exact match for the configured hub city, so it now
+    # passes (the whole-component match replaced the old SC-marker special-case).
+    assert scraper.workplace_matches("São José", "hibrido") is True
+    # But a longer name that merely starts with a hub city is a different city.
+    assert scraper.workplace_matches("São José dos Pinhais, PR", "hibrido") is False
 
 
 def test_workplace_matches_hybrid_accepts_palhoca_and_biguacu():
@@ -92,6 +97,24 @@ def test_workplace_matches_hybrid_rejects_other_sc_cities():
     assert scraper.workplace_matches("Mafra, SC", "hibrido") is False
     # A bare state with no target city is too vague -> reject.
     assert scraper.workplace_matches("Santa Catarina, Brasil", "hibrido") is False
+
+
+def test_workplace_matches_hybrid_cities_configurable_via_env(monkeypatch):
+    # A user in another region overrides the hub cities; Florianópolis is no
+    # longer a hub, the configured city is.
+    monkeypatch.setenv("SCRAPER_HYBRID_HUB_CITIES", "são paulo, guarulhos")
+    assert scraper.workplace_matches("São Paulo, SP", "hibrido") is True
+    assert scraper.workplace_matches("Guarulhos, São Paulo", "hibrido") is True
+    assert scraper.workplace_matches("Florianópolis, SC", "hibrido") is False
+
+
+def test_workplace_matches_remote_rejected_countries_configurable_via_env(monkeypatch):
+    # Overriding the blocklist changes which remote locations pass: the US is no
+    # longer rejected, Portugal now is.
+    monkeypatch.setenv("SCRAPER_REMOTE_REJECTED_COUNTRIES", "portugal")
+    assert scraper.workplace_matches("United States", "remoto") is True
+    assert scraper.workplace_matches("Lisboa, Portugal", "remoto") is False
+    assert scraper.workplace_matches("Campinas, SP", "remoto") is True
 
 
 def test_description_conflicts_with_remote_flags_explicit_hybrid_onsite():

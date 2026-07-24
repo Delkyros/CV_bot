@@ -65,3 +65,35 @@ def env_bool(name, default):
         return False
     logger.warning("Invalid bool for %s=%r; using default %s.", name, raw, default)
     return default
+
+
+def env_list(name, default):
+    """Return the env var as a list, split on commas, or `default`.
+
+    Each item is stripped and blank items are dropped, so ``"a, b ,,c"`` yields
+    ``["a", "b", "c"]``. Unset/empty → `default` silently; a non-empty value that
+    parses to nothing (e.g. ``",,"``) → `default` with a warning (mirrors the
+    other helpers' malformed-value contract).
+    """
+    raw = os.getenv(name)
+    if raw is None or not raw.strip():
+        return default
+    items = [part.strip() for part in raw.split(",")]
+    items = [part for part in items if part]
+    if not items:
+        logger.warning("Invalid list for %s=%r; using default %s.", name, raw, default)
+        return default
+    return items
+
+
+if __name__ == "__main__":
+    # ponytail: assert-based self-check, no test framework.
+    os.environ.pop("_CVBOT_SELFCHECK", None)
+    assert env_list("_CVBOT_SELFCHECK", ["d"]) == ["d"], "unset → default"
+    os.environ["_CVBOT_SELFCHECK"] = ""
+    assert env_list("_CVBOT_SELFCHECK", ["d"]) == ["d"], "blank → default"
+    os.environ["_CVBOT_SELFCHECK"] = "a, b ,,c"
+    assert env_list("_CVBOT_SELFCHECK", ["d"]) == ["a", "b", "c"], "split/strip/drop-blank"
+    os.environ["_CVBOT_SELFCHECK"] = ",,"
+    assert env_list("_CVBOT_SELFCHECK", ["d"]) == ["d"], "malformed-only → default"
+    print("settings self-check OK")

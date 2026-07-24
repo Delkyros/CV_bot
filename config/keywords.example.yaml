@@ -38,6 +38,14 @@ filtros_busca:
   - modelo_trabalho: "hibrido"
     localizacao: "São Paulo, São Paulo, Brasil"
     geo_id: "104746682"   # São Paulo city geoId (example)
+#
+# For HYBRID jobs, the geo_id above only biases LinkedIn's results — the actual
+# location gate is the env var SCRAPER_HYBRID_HUB_CITIES (see the README Tunables
+# table). Its default is the Grande Florianópolis hubs; for another region put
+# YOUR hub cities in .env, e.g.:
+#   SCRAPER_HYBRID_HUB_CITIES=são paulo,guarulhos,osasco
+# Remote jobs are kept unless the location names a rejected country
+# (SCRAPER_REMOTE_REJECTED_COUNTRIES). Output language: LLM_OUTPUT_LANGUAGE=English.
 
 # Your professional profile. Used by the LLM to score the match against each job.
 perfil_candidato:
@@ -75,3 +83,59 @@ perfil_candidato:
     - "Clear communication and cross-functional collaboration."
     - "Turning complex business requirements into reliable software."
     - "Fast problem understanding."
+
+# Deterministic title scope blocklist (SEED). Each entry has a human-readable
+# `motivo` (shown in logs / the web UI) and a `padrao` (regex matched against the
+# accent-stripped, lowercased job TITLE). A title matching any padrao is dropped
+# BEFORE any LLM call. At runtime this seed is unioned with the titles you flag
+# "Escopo incorreto" in the web app (the learn-from-marks blocklist).
+#
+# This default set is tuned for a senior Data Scientist / ML-AI Engineer. It is a
+# REPLACEABLE DEFAULT: for another profession, edit these entries so they drop the
+# tracks that are off-target for YOU (and never your target roles). Empty list =
+# no seed drops (the app then relies on the learned blocklist + embedding gate + LLM).
+#
+# Example for a DIFFERENT profession (e.g. a Backend Developer, who would instead
+# want to drop data-science / analyst / non-technical titles):
+#   escopo_fora_de_alvo:
+#     - motivo: 'ciência de dados / ML (não é backend)'
+#       padrao: '\bcientista de dados\b|\bdata scientist\b|machine learning'
+#     - motivo: 'função não-técnica'
+#       padrao: '\bvendedor(?:a)?\b|\bmotorist[ao]\b|\benfermeir[oa]\b'
+escopo_fora_de_alvo:
+  - motivo: 'desenvolvedor de BI/Qlik/Power BI'
+    padrao: '\bqlik\b|power\s*bi|\bbi\b[^.,|]*\b(developer|desenvolvedor)\b|\b(developer|desenvolvedor)\b[^.,|]*\bbi\b'
+  - motivo: 'inteligencia de mercado/pesquisa'
+    padrao: 'intelig\w* de mercado|market intelligence|pesquisa de mercado|market research'
+  - motivo: 'analista de sistemas'
+    padrao: '\banalista de sistemas?\b'
+  - motivo: 'dev generico Jr/Node/Graduate'
+    padrao: '\bnode\.?js\b|\bnodejs\b|\bgraduate\b|\btrainees?\b'
+  - motivo: 'função não-técnica (alimentação/atendimento)'
+    padrao: '\bcozinheir[oa]\b|\bchef\b|auxiliar de cozinha|\bgarcom\b|\bgarconete\b|\bbarista\b|\bbartender\b|\batendente\b|recepcionist[ao]|\bcamareir[oa]\b|\bcopeir[oa]\b'
+  - motivo: 'função não-técnica (vendas/varejo)'
+    padrao: '\bvendedor(?:a)?\b|representante comercial|consultor(?:a)? de vendas|consultor(?:a)? comercial|promotor(?:a)? de vendas|executiv[oa] de vendas|operador(?:a)? de caixa|\bbalconist[ao]\b|\bestoquist[ao]\b|\brepositor(?:a)?\b'
+  - motivo: 'função não-técnica (logística/operação/ofícios)'
+    padrao: '\bmotorist[ao]\b|\bentregador(?:a)?\b|\bmotoboy\b|\beletricist[ao]\b|\bmecanic[oa]\b|\bsoldador\b|\bpedreir[oa]\b|\bpintor\b|\bencanador\b|auxiliar de producao|operador(?:a)? de empilhadeira|\bvigilante\b|\bporteir[oa]\b|\bzelador\b'
+  - motivo: 'função não-técnica (saúde/administrativo)'
+    padrao: '\benfermeir[oa]\b|tecnico de enfermagem|\bmedic[oa]\b|\bdentista\b|\bfisioterapeuta\b|\bnutricionista\b|\bfarmaceutic[oa]\b|auxiliar administrativ[oa]|assistente administrativ[oa]|\btelemarketing\b|\bsecretari[ao]\b|\bcostureir[oa]\b'
+  - motivo: 'desenvolvedor de software/backend/mobile'
+    padrao: '\bback[\s-]?end\b|\bfront[\s-]?end\b|\bfull[\s-]?stack\b|\bmobile\b|\bandroid\b|\bios\b|\bflutter\b|react native|\bdelphi\b|\bcamunda\b|\bdynamics\b|\blaravel\b|\bvue\.?js\b|\bphp\b|\bjava\b|\brpa\b|\bprogramador\b|desenvolvedor de software|software developer|desenvolvedor de sistemas|desenvolvimento de sistemas|analista de desenvolvimento'
+  - motivo: 'data analyst/analytics (não é ciência de dados)'
+    padrao: 'analista de dados\b|\bdata analyst\b|web analytics'
+  - motivo: 'RH/recrutamento'
+    padrao: 'business partner|\bhr\b|recursos humanos|atracao e selecao|recrutamento|people analytics'
+  - motivo: 'vendas/comercial/marketing'
+    padrao: '\bcomercial\b|de vendas\b|vendas externas|pre[\s-]?vendas|customer success|grandes contas|executiv[oa] de|gerente de vendas|supervisor de vendas|\bmarketing\b|merchandising|\bbanker\b|incorporacao imobiliaria|imobiliari'
+  - motivo: 'QA/testes'
+    padrao: '\bqa\b|quality assurance|analista de teste'
+  - motivo: 'finanças/controladoria/fraude'
+    padrao: 'controladoria|prevencao a fraude|\bauditoria\b|financeir[ao] de ti'
+  - motivo: 'logística/operações'
+    padrao: '\bwms\b|transportes|logistica|gestao de estoque'
+  - motivo: 'suporte/CRM/franquias'
+    padrao: 'suporte a franquias|\bfranquias\b|salesforce|\bcrm\b'
+  - motivo: 'TI/pesquisa/planejamento genérico'
+    padrao: 'analista de ti\b|\bpesquisador\b|analista de planejamento\b'
+  - motivo: 'segurança da informação'
+    padrao: 'seguranca da informacao|information security'

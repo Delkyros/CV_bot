@@ -194,6 +194,9 @@ Everything operational is configurable via environment variables — nothing is 
 | `HF_HOME` | `~/.cache/huggingface` | Where the local model is cached; point at a persisted path under Docker. |
 | `SCRAPER_MAX_RETRIES` / `SCRAPER_RETRY_WAIT` / `SCRAPER_REQUEST_TIMEOUT` / `SCRAPER_MAX_PAGES` | `5` / `5` / `15` / `10` | Scraper retry, timeout and pagination limits. |
 | `SCRAPER_MIN_REQUEST_DELAY` / `SCRAPER_MAX_REQUEST_DELAY` | `1.0` / `3.0` | Random pause range (s) between requests. |
+| `SCRAPER_HYBRID_HUB_CITIES` | `florianopolis,floripa,palhoca,biguacu,sao jose` | Comma-separated city substrings accepted for **hybrid** jobs (accent-insensitive). Default = the Grande Florianópolis hubs (with the São José-SC homonym guard). Set your own city list for another region, e.g. `são paulo,guarulhos`. |
+| `SCRAPER_REMOTE_REJECTED_COUNTRIES` | `estados unidos,united states,canada,espanha,spain,portugal,india,mexico,argentina,reino unido,republica dominicana,alemanha,franca` | Comma-separated country substrings **rejected** for **remote** jobs. The geoId already restricts the region; this is the leaked-foreign-posting guard. |
+| `LLM_OUTPUT_LANGUAGE` | `Portuguese` | Language the LLM writes `strengths`/`gaps`/`verdict` in. Does not change `match_score` or the JSON contract. |
 | `KEYWORDS_CONFIG_PATH` / `HISTORY_PATH` | `config/keywords.yaml` / `vagas_historico.json` | File locations. |
 | `WEB_HOST` / `WEB_PORT` | `0.0.0.0` / `8000` | Bind host/port for the web UI (`webapp.py`). |
 | `RUN_INTERVAL_SECONDS` / `RUN_ON_START` | `21600` / `true` | Recurring-run interval in seconds (`0` = manual only) and whether the first run fires on start. Used by both the in-app scheduler (`webapp.py`) and the standalone Docker loop. |
@@ -205,6 +208,12 @@ Everything operational is configurable via environment variables — nothing is 
 | `GOLDEN_SET_SIZE` / `GOLDEN_SET_PATH` | `50` / `data/golden_set.json` | `eval_scores.py` frozen regression gate: how many most-recent labeled jobs to snapshot, and where. |
 | `EVAL_REPORT_PATH` | `data/eval_report.md` | Where `eval_scores.py` writes its report. |
 | `META_MODEL_PATH` / `META_MODEL_REPORT_PATH` | `data/meta_model.joblib` / `data/meta_model_report.json` | Where `train_meta_model.py` saves the model and its coefficients/metrics report. |
+
+> **Profile scope (config, not `.env`):** the deterministic title scope blocklist lives in
+> `config/keywords.yaml` under `escopo_fora_de_alvo` — a list of `{motivo, padrao}` (reason →
+> regex) matched against the job title. The default (in `keywords.example.yaml`) is tuned for a
+> DS/ML candidate; edit it for your profession, or set it to `[]` to disable the seed. At runtime
+> it is unioned with the titles you flag "Escopo incorreto" in the web UI.
 
 ## 📂 Project structure
 
