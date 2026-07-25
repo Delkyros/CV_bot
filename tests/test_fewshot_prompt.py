@@ -118,3 +118,21 @@ def test_fewshot_does_not_change_drop_keep(monkeypatch):
 
     assert kept(None) == kept("SENTINEL-BLOCK")  # identical drop/keep set
     assert received["exemplars"] == "SENTINEL-BLOCK"  # arg really threaded through
+
+
+# --- Output language is configurable, default Portuguese (US3) ----------------
+
+def test_prompt_output_language_default_portuguese(monkeypatch):
+    monkeypatch.delenv("LLM_OUTPUT_LANGUAGE", raising=False)
+    prompt = matcher._build_prompt(JOB, PROFILE)
+    # Anchor on the output-language sentence, not the input-language note.
+    assert "verdict in Portuguese" in prompt
+
+
+def test_prompt_output_language_override(monkeypatch):
+    monkeypatch.setenv("LLM_OUTPUT_LANGUAGE", "English")
+    prompt = matcher._build_prompt(JOB, PROFILE)
+    assert "verdict in English" in prompt
+    assert "verdict in Portuguese" not in prompt
+    # The response contract and score field are unchanged by the language knob.
+    assert '"match_score"' in prompt and '"core_role_compatible"' in prompt

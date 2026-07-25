@@ -7,11 +7,20 @@ and the LLM `core_role_compatible` judgment wired through
 main.analyze_and_filter_jobs.
 """
 
+import os
+
 import pytest
+import yaml
 
 import main
 from src import matcher
 from src.text_signals import out_of_scope_title
+
+# The versioned default title-scope seed (config/keywords.example.yaml), compiled
+# the same way the pipeline does at runtime (main.build_scope_patterns).
+_EXAMPLE_CONFIG = os.path.join(os.path.dirname(__file__), "..", "config", "keywords.example.yaml")
+with open(_EXAMPLE_CONFIG, "r", encoding="utf-8") as _f:
+    DEFAULT_SCOPE_PATTERNS = main.build_scope_patterns(yaml.safe_load(_f) or {})
 
 
 # --------------------------------------------------------------------------- #
@@ -127,7 +136,7 @@ def test_scope_filter_keeps_job_when_llm_call_raises(monkeypatch):
     "Analista de Segurança da Informação Sr", "Programa de Trainees 2026",
 ])
 def test_out_of_scope_title_flags_off_track_roles(title):
-    assert out_of_scope_title(title) is not None
+    assert out_of_scope_title(title, DEFAULT_SCOPE_PATTERNS) is not None
 
 
 @pytest.mark.parametrize("title", [
@@ -147,7 +156,38 @@ def test_out_of_scope_title_flags_off_track_roles(title):
     "Especialista em Ciências de Dados",
 ])
 def test_out_of_scope_title_keeps_in_or_adjacent_roles(title):
-    assert out_of_scope_title(title) is None
+    assert out_of_scope_title(title, DEFAULT_SCOPE_PATTERNS) is None
+
+
+def test_out_of_scope_title_empty_seed_keeps_everything():
+    # An empty/other-profession seed must let a previously-dropped title through
+    # (the generalization: no profile-specific hard-drop when the seed is empty).
+    assert out_of_scope_title("Analista de Dados", []) is None
+    assert out_of_scope_title("Backend Engineer", []) is None
+
+
+def test_build_scope_patterns_skips_invalid_regex():
+    # One uncompilable padrao is skipped (logged); valid entries still load and drop.
+    patterns = main.build_scope_patterns({"escopo_fora_de_alvo": [
+        {"motivo": "bad", "padrao": "["},          # invalid regex -> skipped
+        {"motivo": "vendas", "padrao": r"\bvendedor\b"},
+        {"motivo": "dup", "padrao": r"\bvendedor\b"},  # duplicate padrao -> deduped
+    ]})
+    assert len(patterns) == 1
+    assert out_of_scope_title("Vendedor", patterns) == "vendas"
+
+
+def test_seed_and_learned_union_drops_once(monkeypatch):
+    # A title matched by BOTH the seed and the learned blocklist is dropped exactly
+    # once (seed gate short-circuits), never reaching the LLM (dedupe, SC-007).
+    def _boom(*a, **k):
+        raise AssertionError("analyze_match must not run for a union-blocked job")
+    monkeypatch.setattr(main, "analyze_match", _boom)
+    collected = [{"job_title": "Vendedor", "company": "X", "job_link": "l/1"}]
+    analyzed = main.analyze_and_filter_jobs(
+        collected, "perfil", has_llm_provider=True,
+        scope_blocklist={"vendedor"}, scope_patterns=DEFAULT_SCOPE_PATTERNS)
+    assert analyzed == []
 
 
 def test_out_of_scope_title_drops_before_llm(monkeypatch):
@@ -159,7 +199,8 @@ def test_out_of_scope_title_drops_before_llm(monkeypatch):
         {"job_title": "Desenvolvedor Qlik", "company": "X", "job_link": "l/1"},
         {"job_title": "Analista de Inteligência de Mercado", "company": "X", "job_link": "l/2"},
     ]
-    analyzed = main.analyze_and_filter_jobs(collected, "perfil", has_llm_provider=True)
+    analyzed = main.analyze_and_filter_jobs(
+        collected, "perfil", has_llm_provider=True, scope_patterns=DEFAULT_SCOPE_PATTERNS)
     assert analyzed == []
 
 

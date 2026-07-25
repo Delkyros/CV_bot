@@ -95,6 +95,7 @@ def _build_prompt(job_info, candidate_profile, exemplars=None):
     the LLM to the user's taste. When falsy the prompt is byte-identical to the
     exemplar-free version (verified by tests) — few-shot never changes the
     response contract or any drop/keep decision."""
+    output_language = env_str("LLM_OUTPUT_LANGUAGE", "Portuguese")
     prompt = f"""
 You are a senior Technology Recruiting and Selection specialist (Tech Recruiter).
 Your mission is to critically and realistically analyze whether a candidate is a good fit for a given job posting.
@@ -115,11 +116,11 @@ Candidate Professional Profile:
 Analysis Instructions:
 1. Compare the job's technical requirements, experience level and competencies with the candidate's profile.
 2. Determine a realistic match score from 0 to 100 (be realistic and critical; do not give 100 unless every requirement matches perfectly).
-3. Decide whether the job's CORE ROLE is in the candidate's primary professional area as described in the profile. Anchor this decision on the JOB TITLE / central function, NOT on incidental tech-stack overlap in the description (a posting mentioning Python or SQL does not make a non-DS role compatible). Set "core_role_compatible" to false when the central function is clearly a different career track than the candidate's — for example: mobile/Android/iOS, embedded/firmware, dedicated QA/testing, front-end-only, Excel/data-entry, HR/People Analytics, business-process analysis, research in an unrelated domain, BI/dashboard development (e.g. Qlik, Power BI), market intelligence / market research, systems analysis ("analista de sistemas"), or generic/junior software development (e.g. Node.js/back-end/full-stack developer, graduate/trainee programmer) that is not data science / machine learning. If the role is in or adjacent to the candidate's area (data science, machine learning, AI, data engineering), or you are unsure, set it to true.
+3. Decide whether the job's CORE ROLE is in the candidate's primary professional area as described in the profile above. Anchor this decision on the JOB TITLE / central function, NOT on incidental tech-stack overlap in the description (a posting merely mentioning a tool or skill the candidate happens to know does not make an off-track role compatible). Set "core_role_compatible" to false when the central function is clearly a different career track than the candidate's primary area as described in the profile. If the role is in or adjacent to that area, or you are unsure, set it to true.
 4. List up to 4 candidate strengths that directly match the job requirements.
 5. List the "gaps", i.e. the job's required or desired requirements that the candidate lacks or did not mention in their profile.
 6. Write a friendly, honest and direct verdict (at most 3 sentences) advising what to focus on or whether it is worth applying.
-Write the strengths, gaps and verdict in Portuguese (the candidate's language).
+Write the strengths, gaps and verdict in {output_language}.
 
 You MUST respond strictly in the JSON format below, with no explanatory blocks or markdown outside the JSON.
 Desired response structure:

@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 
 from src.matcher import classify_contract
 from src.text_signals import normalize_text
-from src.settings import env_float, env_int
+from src.settings import env_float, env_int, env_list
 
 logger = logging.getLogger(__name__)
 
@@ -118,11 +118,36 @@ def request_with_retry(url, headers=None, timeout=None, max_retries=None, retry_
     return last_response
 
 
+# Defaults preserve the original behavior for the current user (Grande
+# Florianopolis hybrid hubs; foreign countries rejected for remote). Both are
+# env-overridable so any user/region works — see SCRAPER_HYBRID_HUB_CITIES and
+# SCRAPER_REMOTE_REJECTED_COUNTRIES in the README Tunables table.
+# "sao jose" is included but gets the homonym guard in workplace_matches (it
+# exists in several states; only the Santa Catarina one is a hub).
+DEFAULT_HYBRID_HUB_CITIES = ["florianopolis", "floripa", "palhoca", "biguacu", "sao jose"]
+DEFAULT_REMOTE_REJECTED_COUNTRIES = [
+    "estados unidos", "united states", "canada", "espanha", "spain",
+    "portugal", "india", "mexico", "argentina", "reino unido",
+    "republica dominicana", "alemanha", "franca",
+]
+
+
+def _hybrid_hub_cities():
+    return [normalize_text(c) for c in env_list("SCRAPER_HYBRID_HUB_CITIES", DEFAULT_HYBRID_HUB_CITIES)]
+
+
+def _remote_rejected_countries():
+    return [normalize_text(c) for c in env_list("SCRAPER_REMOTE_REJECTED_COUNTRIES", DEFAULT_REMOTE_REJECTED_COUNTRIES)]
+
+
 def workplace_matches(location_text, workplace_type):
     """
-    Confirm the accepted workplace models: remote in Brazil or hybrid in the
-    Grande Florianopolis hub cities (Florianopolis, Sao Jose-SC, Palhoca,
-    Biguacu).
+    Confirm the accepted workplace models: remote (rejecting the configured
+    foreign countries) or hybrid in the configured hub cities.
+
+    The hub-city list and the remote-rejected-country list come from env
+    (SCRAPER_HYBRID_HUB_CITIES / SCRAPER_REMOTE_REJECTED_COUNTRIES); the defaults
+    reproduce the original Grande Florianopolis / Brazil behavior.
 
     The workplace type (remote/hybrid) is already filtered by the f_WT parameter
     in the LinkedIn search URL, so here we only validate the job's actual
@@ -138,38 +163,22 @@ def workplace_matches(location_text, workplace_type):
     location_norm = normalize_text(location_text)
 
     if normalized_workplace == "remoto":
-        # The country is already guaranteed by the geoId in the search URL
-        # (Brazil). Here we only reject jobs whose location explicitly mentions
-        # another country, without requiring the word "brasil" (cities like
-        # "Campinas, SP" do not contain it).
-        foreign = [
-            "estados unidos", "united states", "canada", "espanha", "spain",
-            "portugal", "india", "mexico", "argentina", "reino unido",
-            "republica dominicana", "alemanha", "franca",
-        ]
-        return not any(token in location_norm for token in foreign)
+        # The country is already guaranteed by the geoId in the search URL. Here
+        # we only reject jobs whose location explicitly mentions a rejected
+        # country, without requiring a positive country match (cities like
+        # "Campinas, SP" carry no country token).
+        return not any(token in location_norm for token in _remote_rejected_countries())
 
     if normalized_workplace in ("hibrido", "hybrid"):
-        # Keep ONLY hybrid jobs in the Grande Florianopolis hub cities -- NOT
-        # the whole state of Santa Catarina. (Other SC cities like Criciuma,
-        # Joinville and Mafra used to slip through because the check accepted any
-        # "santa catarina"/"sc" location.)
-        # Florianopolis/Floripa, Palhoca and Biguacu are unambiguous city names
-        # (no homonyms outside Santa Catarina).
-        for city in ("florianopolis", "floripa", "palhoca", "biguacu"):
-            if city in location_norm:
-                return True
-        if "sao jose" in location_norm:
-            # Reject the Sao Paulo homonyms ("Sao Jose dos Campos", "Sao Jose do
-            # Rio Preto") that share the same prefix.
-            if "dos campos" in location_norm or "do rio preto" in location_norm:
-                return False
-            # Require an explicit Santa Catarina marker so other "Sao Jose"
-            # homonyms (in other states) don't pass.
-            return "santa catarina" in location_norm or bool(re.search(r"\bsc\b", location_norm))
-        # Any other location (including other SC cities, or a bare "Santa
-        # Catarina" with no city) is not one of our hybrid hubs -> reject.
-        return False
+        # Keep hybrid jobs whose CITY is one of the configured hubs -- NOT a whole
+        # state. Match on the comma-delimited location components (City, State,
+        # Country) so a hub is matched as a WHOLE city name: "sao jose" matches
+        # "São José, SC" but NOT the longer homonyms "São José dos Campos" /
+        # "São José do Rio Preto", which are distinct components. No city is
+        # special-cased. (Default Grande Florianopolis set rejects other SC cities.)
+        cities = set(_hybrid_hub_cities())
+        segments = [seg.strip() for seg in location_norm.split(",")]
+        return any(seg in cities for seg in segments)
 
     return True
 
