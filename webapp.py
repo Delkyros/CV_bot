@@ -100,6 +100,8 @@ def _job_view(link, entry):
         "score_gemini": entry.get("score_gemini"),
         "score_vetor_desc": entry.get("score_vetor_desc"),
         "score_title": entry.get("score_title"),
+        # Work-model leak diagnostics (src/scraper.remote_location_shape).
+        "location_shape": entry.get("location_shape"),
         "strengths": entry.get("strengths", []),
         "gaps": entry.get("gaps", []),
         "verdict": entry.get("verdict", ""),

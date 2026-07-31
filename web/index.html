@@ -116,6 +116,10 @@
     .rep-detail ul { margin: 0 0 8px; padding-left: 18px; }
     .score-cell { font-variant-numeric: tabular-nums; font-weight: 700; }
     .score-na { color: var(--muted); font-weight: 400; }
+    .shape { font-weight: 600; font-size: 12px; cursor: help; }
+    .shape-city_state { color: #b3261e; }
+    .shape-city_country, .shape-metro { color: #8a6100; }
+    .shape-country { color: #1a6b34; }
   </style>
 </head>
 <body>
@@ -187,6 +191,7 @@
           <th data-rsort="score_gemini">Gemini</th>
           <th data-rsort="score_vetor_desc">Vetor·descrição</th>
           <th data-rsort="score_title">Título</th>
+          <th data-rsort="location_shape">Local·risco</th>
         </tr>
       </thead>
       <tbody id="repRows"></tbody>
@@ -551,8 +556,29 @@
         return true;
       });
     }
+    // Risk that a job the remote search returned is not actually remote, inferred
+    // from its location format. `rate` is a SNAPSHOT (jul/2026) of the error rate
+    // measured on the history, kept to 1 significant figure because it drifts as the
+    // history grows — it orders the sort and colours the tooltip; only the level is
+    // meant to be read precisely. A hint for the eye, not a filter: most "alto" jobs
+    // are still fine. Provenance: specs/004-workplace-model-accuracy/research.md.
+    const SHAPE_LABEL = {
+      city_state:   { rate: 13, level: 'alto',  what: 'formato de vaga híbrida/presencial (ex. "São Paulo, SP")' },
+      city_country: { rate: 7,  level: 'médio', what: 'cidade + país (ex. "São Paulo, Brasil")' },
+      metro:        { rate: 6,  level: 'médio', what: 'região metropolitana (ex. "São Paulo e Região")' },
+      country:      { rate: 1,  level: 'baixo', what: 'país inteiro (ex. "Brasil") — formato de vaga remota' },
+    };
+    const fmtShape = (s) => {
+      const it = SHAPE_LABEL[s];
+      if (!it) return '<span class="score-na">—</span>';
+      const tip = `~${it.rate}% erradas (jul/2026) · ${it.what}`;
+      return `<span class="shape shape-${esc(s)}" title="${esc(tip)}">${esc(it.level)}</span>`;
+    };
     const repVal = (j) => {
       if (REP_SORT.key === "job_title") return String(j.job_title ?? "");
+      // By measured risk, not alphabetically: the enum would sort
+      // city_country < city_state < country < metro, which means nothing.
+      if (REP_SORT.key === "location_shape") return SHAPE_LABEL[j.location_shape]?.rate ?? -Infinity;
       const n = parseFloat(j[REP_SORT.key]); return isNaN(n) ? -Infinity : n;
     };
     function repCmp(a, b) {
@@ -586,20 +612,21 @@
             <div class="company">${esc(j.company)}</div></td>
           <td class="score-cell">${fmtScore(j.score_gemini, false)}</td>
           <td class="score-cell">${fmtScore(j.score_vetor_desc, true)}</td>
-          <td class="score-cell">${fmtScore(j.score_title, true)}</td>`;
+          <td class="score-cell">${fmtScore(j.score_title, true)}</td>
+          <td class="score-cell">${fmtShape(j.location_shape)}</td>`;
         rows.appendChild(tr);
         if (open) {
           const det = document.createElement("tr");
           det.className = "rep-detail";
           const li = (xs) => (xs && xs.length ? xs.map((s) => `<li>${esc(s)}</li>`).join("") : "<li>—</li>");
-          det.innerHTML = `<td colspan="4" class="rep-detail">
+          det.innerHTML = `<td colspan="5" class="rep-detail">
             <h4>Pontos fortes</h4><ul>${li(j.strengths)}</ul>
             <h4>Gaps</h4><ul>${li(j.gaps)}</ul>
             <h4>Veredito</h4><div class="rep-verdict">${esc(j.verdict || "—")}</div></td>`;
           rows.appendChild(det);
         }
       }
-      el("stats").innerHTML = `Relatório · <b>${list.length}</b> vaga(s) · Gemini 0–100, Vetor/Título cosseno 0–1`;
+      el("stats").innerHTML = `Relatório · <b>${list.length}</b> vaga(s) · Gemini 0–100, Vetor/Título cosseno 0–1 · Local·risco = chance de a vaga "remota" não ser remota`;
     }
 
     el("repTbl").querySelector("thead").addEventListener("click", (ev) => {
