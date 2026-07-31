@@ -9,9 +9,10 @@ description: "Task list for 004-workplace-model-accuracy"
 
 **Prerequisites**: [plan.md](./plan.md), [spec.md](./spec.md), [research.md](./research.md), [data-model.md](./data-model.md)
 
-**Tests**: Included. 13 tests added to `tests/test_pipeline.py` (237 → **250**). Per repo
-policy tests are not executed without the maintainer's go-ahead; here the maintainer
-explicitly asked for the proof run, so they were run — all green.
+**Tests**: Included. 13 tests added to `tests/test_pipeline.py`, then 21 redundant parametrized
+cases removed in the ponytail pass (237 → 250 → **229**). Per repo policy tests are not
+executed without the maintainer's go-ahead; here the maintainer explicitly asked for the proof
+run, so they were run — all green.
 
 **Status**: **All tasks complete.** This list was reconstructed from the shipped code after
 the fact (the feature started as an analysis request), so it records the order the work
@@ -84,12 +85,12 @@ No scaffolding — this feature edits existing modules only. Nothing to do.
       (`src/scraper.py`), gated on `normalize_text(workplace_type) == "remoto"`, placed
       **after** `workplace_matches` and **before** `fetch_job_description` so a drop costs no
       request. (FR-001, FR-002, FR-003)
-- [X] **T012** [US1] Test `test_title_gate_catches_real_mislabeled_remote_jobs` — 16 titles
-      **verbatim from the history**, all flagged by the user. Parametrized so each failure
-      names the real ad. (SC-001)
-- [X] **T013** [US1] Test `test_title_gate_keeps_genuinely_remote_jobs` — 12-title control:
-      real remote ads the user applied to, plus `Site Reliability Engineer` (the `on-site`
-      pattern must not match `Site`) and `Remoto ou Híbrido` (veto). (SC-001)
+- [X] **T012** [US1] Test `test_title_gate_catches_mislabeled_remote_jobs` — titles **verbatim
+      from the history**, all flagged by the user, one per distinct decision path. Parametrized
+      so each failure names the real ad. (SC-001)
+- [X] **T013** [US1] Test `test_title_gate_keeps_genuinely_remote_jobs` — control set: a real
+      remote ad (no model signal at all), `Site Reliability Engineer` (the `on-site` pattern
+      must not match `Site`) and `Remoto ou Híbrido` (the veto path). (SC-001)
 - [X] **T014** [US1] Test `test_remote_search_drops_hybrid_titled_cards_before_downloading` —
       drives `scrape_linkedin_jobs` with fake cards in the real Guest-API shape and asserts
       `fetched == ["333"]`. **This is the one that matters**: the helper already existed and
@@ -222,7 +223,7 @@ rather than presented as a win.
 ## Phase 9: Validation & documentation
 
 - [X] **T042** Full suite: **250 passed** (was 237). Existing filter tests green, satisfying
-      feature 003's FR-006. (SC-008)
+      feature 003's FR-006. Later trimmed to **229** by T046. (SC-008)
 - [X] **T043** Validate the shipped code against the **real** history, not fixtures:
       `learned_location_blocklist` → 16 companies, 30/203, 0 collateral;
       `remote_location_shape` → 1.4% / 6.0% / 6.8% / 13.5% at n = 1645 / 319 / 148 / 1236.
@@ -231,6 +232,46 @@ rather than presented as a win.
       `yaml.safe_load` on both config files; `import main, webapp` smoke test.
 - [X] **T045** [P] Write `spec.md`, `research.md`, `data-model.md`, then this `plan.md` and
       `tasks.md` from the shipped code.
+
+---
+
+## Phase 10: Ponytail pass (post-PR)
+
+Requested after PR #14 opened ("limpar e melhorar… to achando q tem coisa demais nos testes").
+Behaviour-preserving throughout: re-validated against the real history afterwards, with
+16/219 and 30/203/0-collateral unchanged.
+
+- [X] **T046** Cut the title fixtures from **28 parametrized cases to 7**. Justified by
+      measurement, not taste: instrumenting `remote_conflict_evidence` over the fixtures showed
+      the 16 "mislabeled" cases exercise **3** distinct pattern combinations (14 of them are the
+      identical assertion) and the 12 "genuine remote" cases exercise **2** — 11 of which return
+      `False` for the trivial reason that no on-site pattern matched at all, testing nothing
+      about the gate. Kept one case per path plus the `Site Reliability Engineer` over-match
+      guard. The offender list stays in `spec.md`/`research.md`: provenance is data, and data
+      belongs in the spec, not archived as duplicate assertions. **237 → 250 → 229.**
+- [X] **T047** Hoist `is_remote_search` out of the card loop in `scrape_linkedin_jobs`.
+      `normalize_text(workplace_type) == "remoto"` was being recomputed **three times per card**
+      from a value that is a function parameter and never changes.
+- [X] **T048** Single-source the four measured rates in `web/index.html`: `SHAPE_RANK` restated
+      the same numbers as `SHAPE_LABEL` 30 lines apart, so a re-measurement would have drifted
+      them. `SHAPE_LABEL[s].rate` now drives both the tooltip and the sort. Also moved the
+      definition above its first use instead of relying on TDZ.
+- [X] **T049** Label the UI rates as a **snapshot**. Re-validating after the cleanup showed they
+      had already moved (13.5 → 13.2%, 6.8 → 6.6%) because the scheduler had scraped more jobs.
+      Rounded to 1 significant figure and tagged "jul/2026" — the *level* is what should be read,
+      and pretending to a decimal that silently rots is worse than admitting the range.
+- [X] **T050** Trim comments that restated `research.md`: `conflicts_with_remote`'s docstring
+      (18 lines for a 2-line function), the rate table above `remote_location_shape` (a 4th copy
+      of the same numbers), and the two overlapping work-model gate comments. Each now states
+      what a reader of *that code* needs and points to the spec for the evidence.
+- [X] **T051** Update the stale figures this pass created in `spec.md` (SC-008), `plan.md` and
+      `tasks.md` — the docs written in T045 claimed 250 tests and a 12-title control set.
+
+**Not done deliberately**: `test_conflicts_with_remote_is_conservative` (pre-existing) now
+overlaps the new title tests on 3 of its 4 asserts, but its empty-string case is unique and it
+predates this feature — deleting someone else's coverage was out of scope for a cleanup pass.
+`city_country` and `metro` were left as separate enum values despite both rendering "médio":
+merging is irreversible and destroys a distinction the meta-model may want.
 
 ---
 

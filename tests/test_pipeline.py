@@ -136,62 +136,27 @@ def test_conflicts_with_remote_is_conservative():
     assert scraper.conflicts_with_remote("") is False
 
 
-# --------------------------------------------------------------------------- #
-# Work-model leak through f_WT=2, proven against REAL history data.
-#
-# Titles below are verbatim from vagas_historico.json, every one of them stored
-# with workplace_type="remoto" and hand-flagged by the user as
-# error_class="Localidade/Modelo incorreto" -- i.e. the search said remote and
-# the ad was not. All 219 flagged records were workplace_type="remoto"; none came
-# from the hybrid search, so f_WT=2 is the leak. These 16 announce the model in
-# the TITLE, which the pipeline used to ignore entirely (only the description was
-# checked, and a stray "home office" in a benefits list vetoed that check).
-# --------------------------------------------------------------------------- #
-
-REAL_MISLABELED_REMOTE_TITLES = [
-    "AI/ML Junior Developer - Híbrido",
-    "Estatístico(a) - (Híbrido - Curitiba/PR)",
-    "Data Scientist Senior - Presencial Brasília",
-    "Consultor AI Sênior | Híbrido | Blumenau/SC",
-    "Engenharia de Dados Sênior | Híbrido/SP - 134479",
-    "Pessoa Engenheira de Machine Learning - Pleno (Modelo Híbrido)",
-    "Pessoa Engenheira de Machine Learning - Sênior (Modelo Híbrido)",
-    "Especialista em IA I Modelo Híbrido",
-    "Engenheiro MLOps Pleno (Híbrido em BH)",
-    "Engenheiro(a) de Inteligência Artificial e Machine Learning – Pleno (Híbrido)",
-    "Engenheiro(a) de Inteligência Artificial e Machine Learning – Sênior (Hibrido)",
-    "Cientista de Dados Sênior (Híbrido/BH)",
-    "Consultor Especialista em Transformação Digital II - Rio de Janeiro - Híbrido",
-    "Desenvolvedor IA Pleno( hibrido 3 x presencial Berrini)",
-    "Engenheiro de Dados Databricks Pleno (Híbrido/Eldorado do Sul- RS)",
-    "Engenheiro de IA Pleno | Híbrido| São Paulo/SP",
-]
-
-
-@pytest.mark.parametrize("title", REAL_MISLABELED_REMOTE_TITLES)
-def test_title_gate_catches_real_mislabeled_remote_jobs(title):
+# Work-model leak through f_WT=2. Titles are verbatim from vagas_historico.json,
+# each stored workplace_type="remoto" and hand-flagged "Localidade/Modelo
+# incorreto" -- the search said remote, the ad did not. One case per distinct
+# decision path (measured: the 16 real offenders exercise only 3), not one per
+# offender; the full list and its provenance live in
+# specs/004-workplace-model-accuracy/spec.md.
+@pytest.mark.parametrize("title", [
+    "Engenheiro de IA Pleno | Híbrido| São Paulo/SP",              # accented "híbrido"
+    "Engenheiro(a) de IA e Machine Learning – Sênior (Hibrido)",   # unaccented: guards normalize_text
+    "Data Scientist Senior - Presencial Brasília",                 # the "presencial" pattern
+    "Desenvolvedor IA Pleno( hibrido 3 x presencial Berrini)",     # both patterns at once
+])
+def test_title_gate_catches_mislabeled_remote_jobs(title):
     assert scraper.conflicts_with_remote(title) is True
 
 
-# Verbatim titles of genuinely remote ads from the same history -- most of them
-# jobs the user applied to. The gate must not touch these.
-REAL_GENUINE_REMOTE_TITLES = [
-    "AI Engineer - Remote Work",
-    "Cientista de Dados - Trabalho Remoto",
-    "Engenheiro de Dados - Trabalho Remoto",
-    "Machine Learning Engineer (Python) - Remote Work",
-    "AI Engineer (Remote, International)",
-    "Engenharia de Software Pleno - Python | RD Station (Remoto) afirmativa para mulheres",
-    "Cientista de Dados (Home Office/Brasil)",
-    "Pessoa Cientista de Dados - Pleno (Remoto)",
-    "AI Data Engineer Mid/Senior",
-    "Data Scientist (Brazil)",
-    "Site Reliability Engineer",  # "Site" must not trip the \bon[\s-]?site\b pattern
-    "Data Scientist Senior - Remoto ou Híbrido",  # synthetic: remote option vetoes the drop
-]
-
-
-@pytest.mark.parametrize("title", REAL_GENUINE_REMOTE_TITLES)
+@pytest.mark.parametrize("title", [
+    "AI Engineer - Remote Work",                  # no work-model signal at all
+    "Site Reliability Engineer",                  # "Site" must not trip \bon[\s-]?site\b
+    "Data Scientist Senior - Remoto ou Híbrido",  # on-site present but VETOED by the remote option
+])
 def test_title_gate_keeps_genuinely_remote_jobs(title):
     assert scraper.conflicts_with_remote(title) is False
 

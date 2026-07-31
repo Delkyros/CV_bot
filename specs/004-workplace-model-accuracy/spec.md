@@ -249,7 +249,7 @@ a kept job records the veto.
 ### Measurable Outcomes
 
 - **SC-001**: The title gate catches **16 of the 219** historical location errors, with
-  **0** false positives on a 12-title control set of genuinely remote ads.
+  **0** false positives on a control set of genuinely remote ads.
 - **SC-002**: The title gate additionally fires on 19 records the user did not flag; 17 were
   already `irrelevant`/out-of-scope, and **2 were engaged with** (1 applied, 1 viewed). This
   cost is accepted and recorded, not hidden.
@@ -266,8 +266,11 @@ a kept job records the veto.
   (3/6 vs 3/6).
 - **SC-007**: Every remote-search job persists a non-null `location_shape` and a populated
   `workplace_evidence`, making the description guard measurable on the next triage round.
-- **SC-008**: The full suite passes (**250 tests**), including the pre-existing filter tests
-  feature 003's FR-006 requires to stay green.
+- **SC-008**: The full suite passes (**229 tests**), including the pre-existing filter tests
+  feature 003's FR-006 requires to stay green. The suite peaked at 250 and was trimmed to 229
+  once the title fixtures were *measured* to cover only 5 distinct decision paths across 28
+  cases — fewer tests, identical coverage, and the behaviour re-validated against the real
+  history afterwards (16/219 and 30/203 unchanged).
 - **SC-009**: **49 of the 203** residual errors are provably unreachable from the anonymous
   surface (location `Brasil`, silent title, no tag). Documented as the accepted manual
   residual, not a defect.

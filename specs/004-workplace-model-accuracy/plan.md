@@ -46,9 +46,12 @@ second, drifting copy.
 (`location_shape`, `workplace_evidence`); `config/keywords.yaml` gains a per-filter
 `distancia` key; `.env` gains `LOCATION_BLOCKLIST_MIN_ERRORS`.
 
-**Testing**: pytest — `tests/test_pipeline.py` only. 250 tests total after this feature
-(was 237). The fixtures for the title gate are **verbatim real titles** from the user's
-history, so the tests assert against observed failures rather than invented strings.
+**Testing**: pytest — `tests/test_pipeline.py` only. 229 tests total after this feature
+(was 237). The count went **down** on the final pass: 28 parametrized title fixtures were
+replaced with 7 after measuring that the 28 exercised only **5 distinct decision paths**. The
+remaining fixtures are still **verbatim real titles** from the user's history, so the tests
+assert against observed failures rather than invented strings; the full offender list lives in
+`spec.md` / `research.md`, which is where data belongs — not archived as duplicate assertions.
 
 **Target Platform**: Local Windows / Docker Linux — unchanged.
 
@@ -127,7 +130,7 @@ web/index.html                 # CHANGED  "Local·risco" column, SHAPE_LABEL/SHA
 config/keywords.yaml           # CHANGED  distancia: 25 on the four hybrid filters (git-ignored)
 config/keywords.example.yaml   # CHANGED  documented `distancia` on the example hybrid filter
 README.md                      # CHANGED  Tunables row for LOCATION_BLOCKLIST_MIN_ERRORS
-tests/test_pipeline.py         # CHANGED  +13 tests (237 → 250)
+tests/test_pipeline.py         # CHANGED  +13 tests, then -21 redundant cases (237 → 250 → 229)
 ```
 
 ## Key design decisions (as built)
