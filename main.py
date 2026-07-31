@@ -3,6 +3,7 @@ import re
 import sys
 import json
 import logging
+import collections
 from datetime import datetime
 import yaml
 from dotenv import load_dotenv
@@ -200,6 +201,11 @@ def save_job_history(history_path, history, analyzed_jobs):
             "contract_margin": job.get("contract_margin", "N/A"),
             "contract_evidence": job.get("contract_evidence", "N/A"),
             "workplace_type": job.get("workplace_type", "N/A"),
+            # Work-model diagnostics (src/scraper.py): `location_shape` is the
+            # ranking signal for the f_WT remote leak, `workplace_evidence` records
+            # whether an on-site signal was present but vetoed by a remote word.
+            "location_shape": job.get("location_shape"),
+            "workplace_evidence": job.get("workplace_evidence"),
             "match_score": job.get("match_score", 0),
             "score_gemini": job.get("score_gemini"),
             "score_vetor_desc": job.get("score_vetor_desc"),
@@ -267,6 +273,50 @@ def _fallback_analysis(has_llm_provider, job, candidate_profile):
 # out-of-scope. Kept verbatim so the learned blocklist below reads the same string
 # the UI persists; must match webapp.py.
 SCOPE_ERROR_CLASS = "Escopo incorreto"
+LOCATION_ERROR_CLASS = "Localidade/Modelo incorreto"
+
+# Statuses that mean the user found the job worth their time. A company with any of
+# these is never blocklisted, however many location errors it also produced.
+ENGAGED_STATUSES = ("viewed", "applied")
+
+# Minimum "Localidade/Modelo incorreto" marks before a company is blocked. 2 is
+# deliberate, not tunable-by-taste: measured over the history, 80% of the companies
+# behind those errors produced exactly ONE, so a threshold of 1 cannot generalize
+# (the error IS the first sighting) while adding 112 companies of blast radius.
+DEFAULT_LOCATION_BLOCKLIST_MIN_ERRORS = 2
+
+
+def location_blocklist_min_errors():
+    return env_int("LOCATION_BLOCKLIST_MIN_ERRORS", DEFAULT_LOCATION_BLOCKLIST_MIN_ERRORS)
+
+
+def learned_location_blocklist(history):
+    """Normalized company names to skip on sight: companies you flagged
+    "Localidade/Modelo incorreto" at least LOCATION_BLOCKLIST_MIN_ERRORS times and
+    NEVER viewed or applied to.
+
+    The narrowness is the point. LinkedIn's f_WT=2 filter intermittently returns
+    non-remote ads and exposes no per-job work-model field to catch them with
+    (verified: neither the search card, the jobPosting criteria list, nor the public
+    job page carries it), so the only remaining signals are historical. Measured on
+    the user's own marks this blocks 16 companies and catches 30 of the 203 residual
+    errors with ZERO collateral on jobs they engaged with. The engagement veto is
+    what buys the zero -- without it the same rule costs 142 good jobs.
+    """
+    errors = collections.Counter()
+    engaged = set()
+    for entry in history.values():
+        if not isinstance(entry, dict):
+            continue
+        company = normalize_text(entry.get("company") or "")
+        if not company:
+            continue
+        if entry.get("error_class") == LOCATION_ERROR_CLASS:
+            errors[company] += 1
+        if entry.get("status") in ENGAGED_STATUSES:
+            engaged.add(company)
+    threshold = location_blocklist_min_errors()
+    return {c for c, n in errors.items() if n >= threshold and c not in engaged}
 
 # Embedding scope gate: a job is dropped only when BOTH signals are weak — the
 # title is far from every role you search (score_title) AND the description is
@@ -574,6 +624,15 @@ def main():
     if scope_blocklist:
         logger.info(f"Learned scope blocklist: {len(scope_blocklist)} title(s) from your 'Escopo incorreto' marks.")
 
+    # Same learn-from-your-marks idea, applied to the work-model leak: companies you
+    # repeatedly flagged "Localidade/Modelo incorreto" and never engaged with.
+    location_blocklist = learned_location_blocklist(job_history)
+    if location_blocklist:
+        logger.info(
+            f"Learned location blocklist: {len(location_blocklist)} company(ies) with "
+            f">={location_blocklist_min_errors()} 'Localidade/Modelo incorreto' marks and no viewed/applied job."
+        )
+
     # Config-driven title scope SEED (escopo_fora_de_alvo), unioned with the
     # learned blocklist above at the two deterministic gates in the matcher.
     scope_patterns = build_scope_patterns(config)
@@ -594,6 +653,10 @@ def main():
             filter_location = search_filter.get("localizacao", location)
             workplace_type = search_filter.get("modelo_trabalho")
             filter_geo_id = search_filter.get("geo_id")
+            # Search radius in miles around geo_id (LinkedIn's `distance`). Only
+            # meaningful for a CITY geoId (hybrid/on-site filters); omitted when
+            # absent so LinkedIn's default applies.
+            filter_distance = search_filter.get("distancia")
             try:
                 jobs = scrape_linkedin_jobs(
                     term,
@@ -603,8 +666,10 @@ def main():
                     workplace_type=workplace_type,
                     excluded_links=history_links | collected_links,
                     excluded_title_companies=triaged_keys,
+                    excluded_companies=location_blocklist,
                     geo_id=filter_geo_id,
                     time_filter=posting_period,
+                    distance=filter_distance,
                 )
                 for job in jobs:
                     job_link = job.get("job_link")

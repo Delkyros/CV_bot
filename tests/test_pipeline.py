@@ -117,23 +117,284 @@ def test_workplace_matches_remote_rejected_countries_configurable_via_env(monkey
     assert scraper.workplace_matches("Campinas, SP", "remoto") is True
 
 
-def test_description_conflicts_with_remote_flags_explicit_hybrid_onsite():
+def test_conflicts_with_remote_flags_explicit_hybrid_onsite():
     # LinkedIn's f_WT=2 leaks hybrid/on-site jobs; an explicit declaration with
     # no remote option must be flagged (real case: hybrid São Paulo job tagged
     # "remoto" / "Localidade/Modelo incorreto").
-    assert scraper.description_conflicts_with_remote(
+    assert scraper.conflicts_with_remote(
         "The work location of this role is hybrid, both from home and a LinkedIn office."
     ) is True
-    assert scraper.description_conflicts_with_remote("Vaga 100% presencial em nosso escritório.") is True
-    assert scraper.description_conflicts_with_remote("Modelo híbrido, 3 dias no escritório.") is True
+    assert scraper.conflicts_with_remote("Vaga 100% presencial em nosso escritório.") is True
+    assert scraper.conflicts_with_remote("Modelo híbrido, 3 dias no escritório.") is True
 
 
-def test_description_conflicts_with_remote_is_conservative():
+def test_conflicts_with_remote_is_conservative():
     # A remote possibility vetoes the guard; silence about the model does too.
-    assert scraper.description_conflicts_with_remote("Trabalho remoto ou híbrido, você escolhe.") is False
-    assert scraper.description_conflicts_with_remote("100% remoto, home office.") is False
-    assert scraper.description_conflicts_with_remote("Ótima vaga de analista, sem menção a modelo.") is False
-    assert scraper.description_conflicts_with_remote("") is False
+    assert scraper.conflicts_with_remote("Trabalho remoto ou híbrido, você escolhe.") is False
+    assert scraper.conflicts_with_remote("100% remoto, home office.") is False
+    assert scraper.conflicts_with_remote("Ótima vaga de analista, sem menção a modelo.") is False
+    assert scraper.conflicts_with_remote("") is False
+
+
+# --------------------------------------------------------------------------- #
+# Work-model leak through f_WT=2, proven against REAL history data.
+#
+# Titles below are verbatim from vagas_historico.json, every one of them stored
+# with workplace_type="remoto" and hand-flagged by the user as
+# error_class="Localidade/Modelo incorreto" -- i.e. the search said remote and
+# the ad was not. All 219 flagged records were workplace_type="remoto"; none came
+# from the hybrid search, so f_WT=2 is the leak. These 16 announce the model in
+# the TITLE, which the pipeline used to ignore entirely (only the description was
+# checked, and a stray "home office" in a benefits list vetoed that check).
+# --------------------------------------------------------------------------- #
+
+REAL_MISLABELED_REMOTE_TITLES = [
+    "AI/ML Junior Developer - Híbrido",
+    "Estatístico(a) - (Híbrido - Curitiba/PR)",
+    "Data Scientist Senior - Presencial Brasília",
+    "Consultor AI Sênior | Híbrido | Blumenau/SC",
+    "Engenharia de Dados Sênior | Híbrido/SP - 134479",
+    "Pessoa Engenheira de Machine Learning - Pleno (Modelo Híbrido)",
+    "Pessoa Engenheira de Machine Learning - Sênior (Modelo Híbrido)",
+    "Especialista em IA I Modelo Híbrido",
+    "Engenheiro MLOps Pleno (Híbrido em BH)",
+    "Engenheiro(a) de Inteligência Artificial e Machine Learning – Pleno (Híbrido)",
+    "Engenheiro(a) de Inteligência Artificial e Machine Learning – Sênior (Hibrido)",
+    "Cientista de Dados Sênior (Híbrido/BH)",
+    "Consultor Especialista em Transformação Digital II - Rio de Janeiro - Híbrido",
+    "Desenvolvedor IA Pleno( hibrido 3 x presencial Berrini)",
+    "Engenheiro de Dados Databricks Pleno (Híbrido/Eldorado do Sul- RS)",
+    "Engenheiro de IA Pleno | Híbrido| São Paulo/SP",
+]
+
+
+@pytest.mark.parametrize("title", REAL_MISLABELED_REMOTE_TITLES)
+def test_title_gate_catches_real_mislabeled_remote_jobs(title):
+    assert scraper.conflicts_with_remote(title) is True
+
+
+# Verbatim titles of genuinely remote ads from the same history -- most of them
+# jobs the user applied to. The gate must not touch these.
+REAL_GENUINE_REMOTE_TITLES = [
+    "AI Engineer - Remote Work",
+    "Cientista de Dados - Trabalho Remoto",
+    "Engenheiro de Dados - Trabalho Remoto",
+    "Machine Learning Engineer (Python) - Remote Work",
+    "AI Engineer (Remote, International)",
+    "Engenharia de Software Pleno - Python | RD Station (Remoto) afirmativa para mulheres",
+    "Cientista de Dados (Home Office/Brasil)",
+    "Pessoa Cientista de Dados - Pleno (Remoto)",
+    "AI Data Engineer Mid/Senior",
+    "Data Scientist (Brazil)",
+    "Site Reliability Engineer",  # "Site" must not trip the \bon[\s-]?site\b pattern
+    "Data Scientist Senior - Remoto ou Híbrido",  # synthetic: remote option vetoes the drop
+]
+
+
+@pytest.mark.parametrize("title", REAL_GENUINE_REMOTE_TITLES)
+def test_title_gate_keeps_genuinely_remote_jobs(title):
+    assert scraper.conflicts_with_remote(title) is False
+
+
+def _search_card(job_id, title, company, location):
+    """One search-result card in the shape the Guest API actually returns
+    (verified live: title/company/location/date only -- there is NO work-model
+    field on the card, which is why the title has to carry the signal)."""
+    return f"""
+    <div class="base-card relative base-search-card job-search-card"
+         data-entity-urn="urn:li:jobPosting:{job_id}">
+      <a class="base-card__full-link" href="https://br.linkedin.com/jobs/view/slug-{job_id}?refId=x"></a>
+      <div class="base-search-card__info">
+        <h3 class="base-search-card__title">{title}</h3>
+        <h4 class="base-search-card__subtitle">{company}</h4>
+        <div class="base-search-card__metadata">
+          <span class="job-search-card__location">{location}</span>
+        </div>
+      </div>
+    </div>
+    """
+
+
+def test_remote_search_drops_hybrid_titled_cards_before_downloading(monkeypatch):
+    """End-to-end through scrape_linkedin_jobs: the two leaked ads are dropped
+    from a remote search and -- critically -- cost no description request."""
+    html = "<html><body>" + "".join([
+        _search_card("111", "Engenheiro de IA Pleno | Híbrido| São Paulo/SP", "Empresa A", "São Paulo, SP"),
+        _search_card("222", "Data Scientist Senior - Presencial Brasília", "Empresa B", "Brasília, DF"),
+        _search_card("333", "AI Engineer - Remote Work", "Empresa C", "São Paulo, SP"),
+    ]) + "</body></html>"
+
+    class FakeResponse:
+        status_code = 200
+        content = html.encode("utf-8")
+
+    fetched = []
+
+    def fake_fetch(job_id):
+        fetched.append(job_id)
+        return "Descrição da vaga, sem menção a modelo de trabalho.", False
+
+    monkeypatch.setattr(scraper, "request_with_retry", lambda *a, **k: FakeResponse())
+    monkeypatch.setattr(scraper, "fetch_job_description", fake_fetch)
+    monkeypatch.setattr(scraper, "_sleep_between_requests", lambda: None)
+
+    jobs = scraper.scrape_linkedin_jobs(
+        "AI Engineer", location="Brasil", max_jobs=10,
+        contract_type=None, workplace_type="remoto", max_pages=1,
+    )
+
+    assert [j["job_title"] for j in jobs] == ["AI Engineer - Remote Work"]
+    # The hybrid/on-site pair never reached the network: gated on the card title.
+    assert fetched == ["333"]
+
+
+def test_search_url_carries_distance_only_when_configured(monkeypatch):
+    """`distance` is LinkedIn's radius in miles around geo_id. It must reach the
+    URL when configured and be absent otherwise, so LinkedIn's own default holds."""
+    urls = []
+
+    class Empty:
+        status_code = 200
+        content = b"<html><body></body></html>"
+
+    def record(url, *a, **k):
+        urls.append(url)
+        return Empty()
+
+    monkeypatch.setattr(scraper, "request_with_retry", record)
+    monkeypatch.setattr(scraper, "_sleep_between_requests", lambda: None)
+
+    scraper.scrape_linkedin_jobs("AI Engineer", geo_id="106636575", workplace_type="hibrido",
+                                 distance=50, max_pages=1)
+    assert "&distance=50" in urls[-1]
+
+    scraper.scrape_linkedin_jobs("AI Engineer", geo_id="106636575", workplace_type="hibrido",
+                                 max_pages=1)
+    assert "distance" not in urls[-1]
+
+    # 0 is a real radius LinkedIn honours (it returns nothing), not "unset".
+    scraper.scrape_linkedin_jobs("AI Engineer", geo_id="106636575", distance=0, max_pages=1)
+    assert "&distance=0" in urls[-1]
+
+
+def test_remote_conflict_evidence_separates_silence_from_veto():
+    """conflicts_with_remote returns False for two very different reasons; the
+    evidence helper must tell them apart, since only the vetoed case is a suspect."""
+    silent = scraper.remote_conflict_evidence("Ótima vaga de analista, sem menção a modelo.")
+    assert silent == ([], [])
+
+    onsite, remote = scraper.remote_conflict_evidence(
+        "Modelo híbrido, 3 dias no escritório. Oferecemos auxílio home office."
+    )
+    assert onsite and remote          # both fired -> the guard was VETOED
+    assert scraper.conflicts_with_remote(
+        "Modelo híbrido, 3 dias no escritório. Oferecemos auxílio home office."
+    ) is False
+
+    onsite, remote = scraper.remote_conflict_evidence("Vaga 100% presencial.")
+    assert onsite and not remote      # unambiguous conflict
+
+
+@pytest.mark.parametrize("job_location,expected", [
+    ("Brasil", "country"),                    # documented Remote shape
+    ("São Paulo, Brasil", "city_country"),    # also valid for Remote
+    ("São Paulo e Região", "metro"),
+    ("Belo Horizonte e Região", "metro"),
+    ("São Paulo, SP", "city_state"),          # documented Hybrid/On-site shape
+    ("Barueri, SP", "city_state"),
+    ("Minas Gerais, Brasil", "city_country"),
+])
+def test_remote_location_shape(job_location, expected):
+    assert scraper.remote_location_shape(job_location, "Brasil") == expected
+
+
+def test_remote_location_shape_uses_the_configured_country(monkeypatch):
+    # The country is the LAST component of the searched location, so no country
+    # table is needed and another region works unchanged.
+    assert scraper.remote_location_shape("Lisboa, Portugal", "Portugal") == "city_country"
+    assert scraper.remote_location_shape("Lisboa, LSB", "Portugal") == "city_state"
+    assert scraper.remote_location_shape("Portugal", "Portugal") == "country"
+    # Hybrid filters pass a city as the search location; the country is still last.
+    assert scraper.remote_location_shape("Brasil", "São José, Santa Catarina, Brasil") == "country"
+    assert scraper.remote_location_shape("Anywhere", None) is None
+
+
+def test_learned_location_blocklist_needs_repeats_and_no_engagement():
+    LOC, SCOPE = main.LOCATION_ERROR_CLASS, main.SCOPE_ERROR_CLASS
+    history = {
+        # 2 location errors, never engaged -> blocked
+        "l1": {"company": "TDW BI Consulting", "status": "error", "error_class": LOC},
+        "l2": {"company": "TDW BI Consulting", "status": "error", "error_class": LOC},
+        # 2 location errors BUT the user applied to another of its ads -> spared
+        "l3": {"company": "Serasa Experian", "status": "error", "error_class": LOC},
+        "l4": {"company": "Serasa Experian", "status": "error", "error_class": LOC},
+        "l5": {"company": "Serasa Experian", "status": "applied"},
+        # a single error cannot generalize (80% of offenders offend once) -> spared
+        "l6": {"company": "Koin", "status": "error", "error_class": LOC},
+        # a different error class is irrelevant here
+        "l7": {"company": "Qlik Shop", "status": "error", "error_class": SCOPE},
+        "l8": {"company": "Qlik Shop", "status": "error", "error_class": SCOPE},
+    }
+    assert main.learned_location_blocklist(history) == {"tdw bi consulting"}
+
+
+def test_learned_location_blocklist_threshold_is_env_tunable(monkeypatch):
+    history = {"a": {"company": "Koin", "status": "error", "error_class": main.LOCATION_ERROR_CLASS}}
+    assert main.learned_location_blocklist(history) == set()
+    monkeypatch.setenv("LOCATION_BLOCKLIST_MIN_ERRORS", "1")
+    assert main.learned_location_blocklist(history) == {"koin"}
+
+
+def test_scrape_skips_blocklisted_companies_and_records_model_evidence(monkeypatch):
+    html = "<html><body>" + "".join([
+        _search_card("111", "Data Scientist", "TDW BI Consulting", "São Paulo, SP"),
+        _search_card("222", "AI Engineer", "Empresa Boa", "Brasil"),
+    ]) + "</body></html>"
+
+    class FakeResponse:
+        status_code = 200
+        content = html.encode("utf-8")
+
+    fetched = []
+
+    def fake_fetch(job_id):
+        fetched.append(job_id)
+        # On-site wording plus a stray "home office" benefit: the classic VETOED case.
+        return "Atuação híbrida no escritório. Benefícios: auxílio home office.", False
+
+    monkeypatch.setattr(scraper, "request_with_retry", lambda *a, **k: FakeResponse())
+    monkeypatch.setattr(scraper, "fetch_job_description", fake_fetch)
+    monkeypatch.setattr(scraper, "_sleep_between_requests", lambda: None)
+
+    jobs = scraper.scrape_linkedin_jobs(
+        "AI Engineer", location="Brasil", max_jobs=10, contract_type=None,
+        workplace_type="remoto", max_pages=1,
+        excluded_companies={"tdw bi consulting"},
+    )
+
+    # Blocklisted company skipped before its description was ever downloaded.
+    assert [j["company"] for j in jobs] == ["Empresa Boa"]
+    assert fetched == ["222"]
+
+    kept = jobs[0]
+    assert kept["location_shape"] == "country"
+    ev = kept["workplace_evidence"]
+    assert ev["desc_onsite"] > 0 and ev["desc_remote"] > 0   # the veto is now on record
+    assert ev["title_onsite"] == 0
+
+
+def test_workplace_matches_hybrid_accepts_metro_area_strings():
+    # LinkedIn labels metro areas "<City> e Região" (seen live: "Porto Alegre e
+    # Região", "Belo Horizonte e Região"). The history holds 7 hybrid ads at
+    # "Florianópolis e Região"; whole-component matching alone rejected them,
+    # silently dropping valid jobs in the target region.
+    assert scraper.workplace_matches("Florianópolis e Região", "hibrido") is True
+    assert scraper.workplace_matches("Grande Florianópolis", "hibrido") is True
+    assert scraper.workplace_matches("Região Metropolitana de Florianópolis", "hibrido") is True
+    # The qualifier must not become a backdoor for the homonyms or for other cities.
+    assert scraper.workplace_matches("São José dos Campos e Região", "hibrido") is False
+    assert scraper.workplace_matches("Grande São Paulo", "hibrido") is False
+    assert scraper.workplace_matches("Joinville e Região", "hibrido") is False
 
 
 def test_job_is_closed_detects_banner_and_phrases():

@@ -31,6 +31,18 @@ tempo_publicacao: "24h"
 # TARGET CITY so LinkedIn pre-restricts the region (otherwise Brazil-wide jobs
 # bury the few local ones). Look a geoId up with:
 #   https://www.linkedin.com/jobs-guest/api/typeaheadHits?typeaheadType=GEO&query=<city>
+#
+# `distancia` is LinkedIn's search radius in MILES around geo_id (its `distance`
+# parameter). Verified against the Guest API on a Florianópolis geoId: 0 returns
+# nothing, 25 and 50 keep the city plus its immediate neighbours, 100 reaches the
+# next cities over (which the hub gate then rejects — wasted cards). The implicit
+# default when the key is omitted was not stable across probes, so set it
+# explicitly when the radius matters.
+#
+# It only bites when geo_id is a CITY — on a country-level geoId (the remote
+# filter) it is a no-op, so it is left off there. Widening it raises recall; the
+# hub-city gate (SCRAPER_HYBRID_HUB_CITIES) still has the final say on the job's
+# location.
 filtros_busca:
   - modelo_trabalho: "remoto"
     localizacao: "Brasil"
@@ -38,6 +50,7 @@ filtros_busca:
   - modelo_trabalho: "hibrido"
     localizacao: "São Paulo, São Paulo, Brasil"
     geo_id: "104746682"   # São Paulo city geoId (example)
+    distancia: 25
 #
 # For HYBRID jobs, the geo_id above only biases LinkedIn's results — the actual
 # location gate is the env var SCRAPER_HYBRID_HUB_CITIES (see the README Tunables

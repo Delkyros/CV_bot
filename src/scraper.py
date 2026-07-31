@@ -140,6 +140,13 @@ def _remote_rejected_countries():
     return [normalize_text(c) for c in env_list("SCRAPER_REMOTE_REJECTED_COUNTRIES", DEFAULT_REMOTE_REJECTED_COUNTRIES)]
 
 
+# LinkedIn labels metro areas as "<City> e Região" / "Grande <City>" (seen live:
+# "Porto Alegre e Região", "Belo Horizonte e Região"). Stripping the qualifier
+# lets those match a hub city while keeping the whole-component check that
+# rejects the "São José dos Campos" homonyms.
+_METRO_AREA_QUALIFIER = re.compile(r"^(?:grande|regiao metropolitana de)\s+|\s+e\s+regiao$")
+
+
 def workplace_matches(location_text, workplace_type):
     """
     Confirm the accepted workplace models: remote (rejecting the configured
@@ -176,8 +183,10 @@ def workplace_matches(location_text, workplace_type):
         # "São José, SC" but NOT the longer homonyms "São José dos Campos" /
         # "São José do Rio Preto", which are distinct components. No city is
         # special-cased. (Default Grande Florianopolis set rejects other SC cities.)
+        # The metro-area qualifier is stripped first so LinkedIn's own
+        # "<City> e Região" / "Grande <City>" strings still match the hub.
         cities = set(_hybrid_hub_cities())
-        segments = [seg.strip() for seg in location_norm.split(",")]
+        segments = [_METRO_AREA_QUALIFIER.sub("", seg.strip()) for seg in location_norm.split(",")]
         return any(seg in cities for seg in segments)
 
     return True
@@ -209,29 +218,75 @@ _REMOTE_PATTERNS = (
 )
 
 
-def description_conflicts_with_remote(description_text):
+def conflicts_with_remote(text):
     """
-    True when a job description EXPLICITLY declares a hybrid/on-site model and
-    gives no sign of remote work.
+    True when `text` EXPLICITLY declares a hybrid/on-site model and gives no
+    sign of remote work. Applied to both the job TITLE and the description.
 
-    LinkedIn's f_WT=2 (remote) filter is leaky and occasionally returns
-    hybrid/on-site jobs. A remote search trusts f_WT for the model and accepts
-    any Brazilian location, so such a leak gets mislabeled "remoto" and slips
-    through (see history: hybrid São Paulo jobs flagged "Localidade/Modelo
-    incorreto"). This is the only model signal the Guest API exposes per job.
+    LinkedIn's f_WT=2 (remote) filter is leaky: measured against the Guest API,
+    ~3 of 24 paired samples returned the same result set as an unfiltered query,
+    i.e. f_WT was silently ignored. A remote search trusts f_WT for the model and
+    accepts any Brazilian location, so such a leak gets mislabeled "remoto" and
+    slips through (see history: 219 jobs flagged "Localidade/Modelo incorreto",
+    all of them workplace_type="remoto"). Free text is the only model signal the
+    Guest API exposes per job -- neither the search card nor the jobPosting
+    criteria list carries a work-model field.
 
-    Conservative by design: a posting that mentions any remote possibility, or
-    that says nothing about the work model, is left for f_WT to decide and
-    returns False.
+    Conservative by design: text that mentions any remote possibility ("remoto ou
+    híbrido"), or that says nothing about the work model, is left for f_WT to
+    decide and returns False.
     """
-    if not description_text:
-        return False
-    norm = normalize_text(description_text)
-    has_onsite = any(re.search(p, norm) for p in _ONSITE_HYBRID_PATTERNS)
-    if not has_onsite:
-        return False
-    has_remote = any(re.search(p, norm) for p in _REMOTE_PATTERNS)
-    return not has_remote
+    onsite, remote = remote_conflict_evidence(text)
+    return bool(onsite) and not remote
+
+
+def remote_conflict_evidence(text):
+    """
+    (onsite_hits, remote_hits) -- the raw pattern matches behind
+    conflicts_with_remote, so callers can tell its two very different False cases
+    apart: "no work-model signal at all" vs "on-site signal present but VETOED by
+    a remote word". Only the second is a suspect, and collapsing them into one
+    bool is why the description guard's effectiveness was unmeasurable.
+    """
+    if not text:
+        return [], []
+    norm = normalize_text(text)
+    return (
+        [p for p in _ONSITE_HYBRID_PATTERNS if re.search(p, norm)],
+        [p for p in _REMOTE_PATTERNS if re.search(p, norm)],
+    )
+
+
+# Location shapes for a job found in a REMOTE search, ordered worst-to-best by the
+# error rate measured over 3348 remote records in the history (jobs the user
+# hand-flagged "Localidade/Modelo incorreto"):
+#   city_state   13.5% wrong   "São Paulo, SP"        -- the documented Hybrid/On-site shape
+#   city_country  6.8% wrong   "São Paulo, Brasil"
+#   metro         6.0% wrong   "São Paulo e Região"
+#   country       1.4% wrong   "Brasil"               -- the documented Remote shape
+# LinkedIn's own Job Posting schema ties format to work model: Remote takes
+# Country / City+Country / Country Cluster, Hybrid/On-site take CITY,STATE. So a
+# remote hit narrower than the country is shaped like a hybrid/on-site ad. This is
+# a RANKING signal, not a gate -- at 12% precision a hard drop would take ~7 good
+# jobs per bad one (255 of the user's viewed/applied jobs sit in city_state).
+def remote_location_shape(job_location, search_location):
+    """
+    Classify a remote job's location against the searched country. Returns
+    "country" | "city_country" | "metro" | "city_state", or None with no input.
+
+    The country is taken as the LAST comma component of `search_location`, which
+    follows LinkedIn's own "CITY, STATE, COUNTRY" convention, so this needs no
+    country table and works for any configured region.
+    """
+    if not job_location or not search_location:
+        return None
+    country = normalize_text(search_location).split(",")[-1].strip()
+    segments = [seg.strip() for seg in normalize_text(job_location).split(",")]
+    if segments[-1] == country:
+        return "country" if len(segments) == 1 else "city_country"
+    if len(segments) == 1 and _METRO_AREA_QUALIFIER.search(segments[0]):
+        return "metro"
+    return "city_state"
 
 
 def linkedin_time_filter(period):
@@ -382,9 +437,11 @@ def scrape_linkedin_jobs(
     workplace_type=None,
     excluded_links=None,
     excluded_title_companies=None,
+    excluded_companies=None,
     geo_id=None,
     time_filter=None,
     max_pages=None,
+    distance=None,
 ):
     """
     Search LinkedIn jobs using the public search Guest API.
@@ -393,6 +450,17 @@ def scrape_linkedin_jobs(
     The geo_id parameter (LinkedIn geoId) is what actually restricts the search
     country; the `location` text parameter alone is not reliably honored by the
     Guest API (it returns US jobs even with location=Brasil).
+
+    distance is LinkedIn's search radius in MILES around geo_id. Verified against
+    the Guest API on a Florianopolis geoId: 0 -> no results, 25/50 -> Florianopolis
+    + Sao Jose only, 100 -> Blumenau appears. The implicit default when the
+    parameter is omitted was NOT stable across probes, so it is not relied on --
+    pass an explicit value when the radius matters.
+
+    It only bites when geo_id is a CITY. On a country-level geoId (the remote
+    search) it is a no-op: in a controlled test, fetching the same URL twice
+    differed as often as adding distance did (3/6 vs 3/6), i.e. the variation is
+    the endpoint's own instability. Left unset when not configured.
     """
     if max_pages is None:
         max_pages = scraper_max_pages()
@@ -406,6 +474,7 @@ def scrape_linkedin_jobs(
     headers = get_headers()
     excluded_links = set(excluded_links or [])
     excluded_title_companies = set(excluded_title_companies or [])
+    excluded_companies = set(excluded_companies or [])
 
     # LinkedIn Guest search URL
     encoded_keyword = urllib.parse.quote(search_keyword)
@@ -422,6 +491,8 @@ def scrape_linkedin_jobs(
             url += f"&f_WT={workplace_filter}"
         if tpr_filter:
             url += f"&f_TPR={tpr_filter}"
+        if distance is not None:
+            url += f"&distance={distance}"
 
         try:
             _sleep_between_requests()
@@ -491,12 +562,29 @@ def scrape_linkedin_jobs(
                         logger.info(f"Repost of an already-triaged job, skipping: {title} | {company} ({job_id})")
                         continue
 
+                    # Companies that repeatedly advertise hybrid/on-site ads as
+                    # remote and that the user has never engaged with (see
+                    # main.learned_location_blocklist).
+                    if normalize_text(company) in excluded_companies:
+                        logger.info(f"Company on the learned location blocklist, skipping: {title} | {company} | {loc}")
+                        continue
+
                     # Filter model/location BEFORE downloading the description: the
                     # location already comes in the card, so we avoid requests (and
                     # the risk of 429) downloading descriptions of jobs that will be
                     # discarded.
                     if not workplace_matches(loc, workplace_type):
                         logger.info(f"Job outside the target model/location, skipping: {title} | {company} | {loc}")
+                        continue
+
+                    # Leaked hybrid/on-site ads often spell the model out in the
+                    # TITLE ("Engenheiro de IA Pleno | Híbrido| São Paulo/SP").
+                    # Checked here, before the download: it is the only per-job
+                    # model signal that costs no request. The title is also a far
+                    # cleaner signal than the description, whose stray "home
+                    # office" in a benefits list vetoes the same check below.
+                    if normalize_text(workplace_type) == "remoto" and conflicts_with_remote(title):
+                        logger.info(f"Job title declares hybrid/on-site in a remote search, skipping: {title} | {company} | {loc}")
                         continue
 
                     logger.info(f"Collecting job description: {title} | {company} (ID: {job_id})...")
@@ -513,7 +601,7 @@ def scrape_linkedin_jobs(
                     # field, so the description is the only per-job signal: in a
                     # remote search, drop jobs that explicitly declare hybrid/
                     # on-site with no remote option.
-                    if normalize_text(workplace_type) == "remoto" and description_conflicts_with_remote(description):
+                    if normalize_text(workplace_type) == "remoto" and conflicts_with_remote(description):
                         logger.info(f"Job declared hybrid/on-site in a remote search, skipping: {title} | {company} | {loc}")
                         continue
 
@@ -528,11 +616,29 @@ def scrape_linkedin_jobs(
                     if normalize_text(contract_type) == "clt":
                         contract_inference = classify_contract(description, title=title, company=company)
 
+                    # Work-model diagnostics for the kept jobs. The guards above
+                    # already dropped the clear conflicts, so what survives here is
+                    # the ambiguous middle -- most usefully the VETOED case
+                    # (desc_onsite > 0 and desc_remote > 0), which is the leading
+                    # suspect for a job the user will later flag
+                    # "Localidade/Modelo incorreto". Persisted so the next round can
+                    # measure it instead of guessing.
+                    title_onsite, title_remote = remote_conflict_evidence(title)
+                    desc_onsite, desc_remote = remote_conflict_evidence(description)
+                    is_remote_search = normalize_text(workplace_type) == "remoto"
+
                     job_info = {
                         "job_title": title,
                         "company": company,
                         "location": loc,
                         "workplace_type": workplace_type or "N/A",
+                        "location_shape": remote_location_shape(loc, location) if is_remote_search else None,
+                        "workplace_evidence": {
+                            "title_onsite": len(title_onsite),
+                            "title_remote": len(title_remote),
+                            "desc_onsite": len(desc_onsite),
+                            "desc_remote": len(desc_remote),
+                        },
                         "contract_type": contract_inference.get("inferred_contract_type", contract_type or "N/A"),
                         "inferred_contract_type": contract_inference.get("inferred_contract_type", "N/A"),
                         "score_clt": contract_inference.get("score_clt", "N/A"),

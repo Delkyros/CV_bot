@@ -116,6 +116,10 @@
     .rep-detail ul { margin: 0 0 8px; padding-left: 18px; }
     .score-cell { font-variant-numeric: tabular-nums; font-weight: 700; }
     .score-na { color: var(--muted); font-weight: 400; }
+    .shape { font-weight: 600; font-size: 12px; cursor: help; }
+    .shape-city_state { color: #b3261e; }
+    .shape-city_country, .shape-metro { color: #8a6100; }
+    .shape-country { color: #1a6b34; }
   </style>
 </head>
 <body>
@@ -187,6 +191,7 @@
           <th data-rsort="score_gemini">Gemini</th>
           <th data-rsort="score_vetor_desc">Vetor·descrição</th>
           <th data-rsort="score_title">Título</th>
+          <th data-rsort="location_shape">Local·risco</th>
         </tr>
       </thead>
       <tbody id="repRows"></tbody>
@@ -551,8 +556,12 @@
         return true;
       });
     }
+    // Risk rank, not alphabetical: sorting location_shape by name would order it
+    // city_country < city_state < country < metro, which means nothing.
+    const SHAPE_RANK = { country: 1.4, metro: 6.0, city_country: 6.8, city_state: 13.5 };
     const repVal = (j) => {
       if (REP_SORT.key === "job_title") return String(j.job_title ?? "");
+      if (REP_SORT.key === "location_shape") return SHAPE_RANK[j.location_shape] ?? -Infinity;
       const n = parseFloat(j[REP_SORT.key]); return isNaN(n) ? -Infinity : n;
     };
     function repCmp(a, b) {
@@ -564,6 +573,23 @@
     const fmtScore = (v, cosine) =>
       (v === null || v === undefined || v === "") ? '<span class="score-na">—</span>'
         : (cosine ? Number(v).toFixed(2) : esc(v));
+
+    // Risk that a job the remote search returned is not actually remote, from the
+    // shape of its location. Percentages are the measured error rate on the
+    // history: LinkedIn's f_WT=2 filter leaks, and the location format is the only
+    // signal left (the work-model tag is login-only). A hint for the eye, not a
+    // filter — most city+estado jobs are fine.
+    const SHAPE_LABEL = {
+      city_state:   ['alto',  '13,5% erradas · formato de vaga híbrida/presencial (ex. "São Paulo, SP")'],
+      city_country: ['médio', '6,8% erradas · cidade + país (ex. "São Paulo, Brasil")'],
+      metro:        ['médio', '6,0% erradas · região metropolitana (ex. "São Paulo e Região")'],
+      country:      ['baixo', '1,4% erradas · país inteiro (ex. "Brasil") — formato de vaga remota'],
+    };
+    const fmtShape = (s) => {
+      const it = SHAPE_LABEL[s];
+      if (!it) return '<span class="score-na">—</span>';
+      return `<span class="shape shape-${esc(s)}" title="${esc(it[1])}">${esc(it[0])}</span>`;
+    };
 
     function renderReport() {
       const list = reportList().sort(repCmp);
@@ -586,20 +612,21 @@
             <div class="company">${esc(j.company)}</div></td>
           <td class="score-cell">${fmtScore(j.score_gemini, false)}</td>
           <td class="score-cell">${fmtScore(j.score_vetor_desc, true)}</td>
-          <td class="score-cell">${fmtScore(j.score_title, true)}</td>`;
+          <td class="score-cell">${fmtScore(j.score_title, true)}</td>
+          <td class="score-cell">${fmtShape(j.location_shape)}</td>`;
         rows.appendChild(tr);
         if (open) {
           const det = document.createElement("tr");
           det.className = "rep-detail";
           const li = (xs) => (xs && xs.length ? xs.map((s) => `<li>${esc(s)}</li>`).join("") : "<li>—</li>");
-          det.innerHTML = `<td colspan="4" class="rep-detail">
+          det.innerHTML = `<td colspan="5" class="rep-detail">
             <h4>Pontos fortes</h4><ul>${li(j.strengths)}</ul>
             <h4>Gaps</h4><ul>${li(j.gaps)}</ul>
             <h4>Veredito</h4><div class="rep-verdict">${esc(j.verdict || "—")}</div></td>`;
           rows.appendChild(det);
         }
       }
-      el("stats").innerHTML = `Relatório · <b>${list.length}</b> vaga(s) · Gemini 0–100, Vetor/Título cosseno 0–1`;
+      el("stats").innerHTML = `Relatório · <b>${list.length}</b> vaga(s) · Gemini 0–100, Vetor/Título cosseno 0–1 · Local·risco = chance de a vaga "remota" não ser remota`;
     }
 
     el("repTbl").querySelector("thead").addEventListener("click", (ev) => {

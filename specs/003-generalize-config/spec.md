@@ -258,3 +258,31 @@ the example config shows a non-DS, non-Florianópolis example.
 - **The example config gains a non-DS, non-Florianópolis illustration** (or comments) so
   the generalization is demonstrated, without changing the current user's real (git-ignored)
   `keywords.yaml`.
+
+## Post-ship correction (2026-07-31)
+
+**FR-006 was violated by this feature's own implementation and is fixed in feature
+[004-workplace-model-accuracy](../004-workplace-model-accuracy/spec.md) (its FR-004).**
+
+FR-006 requires that with an empty `.env` the observable behavior be equivalent to the
+pre-feature behavior. Commit `1d6de95` changed `scraper.workplace_matches` from substring
+matching (`if city in location_norm`) to exact comma-component matching, in order to reject
+the São José-SP homonyms required by FR-001. That was the right intent, but the method also
+rejected LinkedIn's **metro-area location strings**:
+
+```
+workplace_matches("Florianópolis, SC",      "hibrido") -> True
+workplace_matches("Florianópolis e Região", "hibrido") -> False   # regression
+workplace_matches("Grande Florianópolis",   "hibrido") -> False   # regression
+```
+
+`"<City> e Região"` is a real and common LinkedIn location (confirmed live: "Porto Alegre e
+Região", "Belo Horizonte e Região", "São Paulo e Região"). The user's history holds **7**
+hybrid records at `Florianópolis e Região`, all collected before 2026-07-24 under the old
+substring logic; from that date they were silently dropped — a valid job in the target
+region being discarded, the failure mode Constitution Principle II exists to prevent.
+
+Root cause of the miss: FR-001's acceptance criteria named the homonyms to reject but never
+enumerated the location *formats* LinkedIn actually emits, and no test covered a metro-area
+string. Feature 004 strips the metro qualifier before the whole-component match, so both
+requirements hold at once, and adds the regression test that was missing.
