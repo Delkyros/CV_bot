@@ -21,6 +21,7 @@ os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS", "1")
 os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
 
 from src.settings import env_float, env_str
+from src.text_signals import title_head
 
 logger = logging.getLogger(__name__)
 
@@ -93,12 +94,14 @@ def title_scope_similarity(title, search_terms):
 
     High = the title looks like a role you're hunting (termos_busca); low = the
     title is a different career track. The scope signal behind score_title.
-    Drops the city/work-model suffix LinkedIn appends after '|' or a newline.
+    Strips LinkedIn's title noise via text_signals.title_head — a bracketed company
+    tag ("|LOJAS RENNER| ...") used to leave an EMPTY head here, scoring 0.0 and
+    pushing the job into the weak-title half of the scope gate on formatting alone.
     """
     if not search_terms:
         return 0.0
     model, _ = _load()
-    head = (str(title or "").split("|")[0].splitlines() or [""])[0].strip()
+    head = title_head(title)
     if not head:
         return 0.0
     tv = model.embed(head)

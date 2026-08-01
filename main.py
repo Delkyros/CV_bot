@@ -9,7 +9,7 @@ import yaml
 from dotenv import load_dotenv
 
 from src.scraper import scrape_linkedin_jobs, normalize_text
-from src.text_signals import out_of_scope_title
+from src.text_signals import out_of_scope_title, title_head
 from src.matcher import analyze_match, has_provider
 from src.local_match import local_match_analysis, description_similarity, title_scope_similarity
 from src.run_controller import emit_progress
@@ -47,52 +47,63 @@ def _prettify_label(key):
     return " ".join(words)
 
 
+# English headers for the profile keys the matcher prompt has always used. Any
+# OTHER key falls back to _prettify_label, so `perfil_candidato` can grow in the
+# YAML (experiencia, formacao, idiomas, preferencias, ...) with no code change.
+_PROFILE_LABELS = {
+    "resumo_profissional": "Professional Summary",
+    "competencias_tecnicas": "Technical Skills (Hard Skills)",
+    "soft_skills": "Soft Skills",
+    "nivel_experiencia": "Experience Level",
+}
+
+
+def _inline(value):
+    """One-line form of a YAML value, for use inside a bullet. Nested dicts/lists
+    are flattened (a list of dicts — e.g. experiencia entries — reads as
+    'Cargo: X | Empresa: Y')."""
+    if isinstance(value, dict):
+        return " | ".join(f"{_prettify_label(k)}: {_inline(v)}" for k, v in value.items() if v)
+    if isinstance(value, (list, tuple)):
+        return ", ".join(_inline(v) for v in value if v)
+    return str(value).strip()
+
+
 def format_candidate_profile(profile):
     """
     Convert the candidate profile (structured dict from the YAML, or plain text
     for backward compatibility) into a readable running text for the matcher
     prompt. The LLM receives formatted text, not the repr of a dict.
 
+    Every key present is rendered, in YAML order — there is no allowlist, so
+    adding depth to `perfil_candidato` needs no change here. Scalars become
+    "Label: value", lists a bullet each, dicts one "- SubLabel: values" line per
+    entry. Empty values are skipped.
+
     NOTE: the profile dict keys come from config/keywords.yaml and are kept in
-    Portuguese on purpose (that file is not translated).
+    Portuguese on purpose (that file is not translated); only the four historical
+    keys get an English header (_PROFILE_LABELS).
     """
     if profile is None:
         return ""
-    if isinstance(profile, str):
-        return profile.strip()
     if not isinstance(profile, dict):
         return str(profile).strip()
 
     sections = []
-
-    summary = profile.get("resumo_profissional")
-    if summary:
-        sections.append("Professional Summary:\n" + str(summary).strip())
-
-    skills = profile.get("competencias_tecnicas")
-    if isinstance(skills, dict):
-        skill_lines = ["Technical Skills (Hard Skills):"]
-        for category, items in skills.items():
-            title = _prettify_label(category)
-            if isinstance(items, (list, tuple)):
-                items_txt = ", ".join(str(i) for i in items)
-            else:
-                items_txt = str(items)
-            skill_lines.append(f"- {title}: {items_txt}")
-        sections.append("\n".join(skill_lines))
-    elif skills:
-        sections.append("Technical Skills (Hard Skills):\n" + str(skills).strip())
-
-    soft_skills = profile.get("soft_skills")
-    if isinstance(soft_skills, (list, tuple)):
-        soft_lines = ["Soft Skills:"] + [f"- {s}" for s in soft_skills]
-        sections.append("\n".join(soft_lines))
-    elif soft_skills:
-        sections.append("Soft Skills:\n" + str(soft_skills).strip())
-
-    level = profile.get("nivel_experiencia")
-    if level:
-        sections.append(f"Experience Level: {level}")
+    for key, value in profile.items():
+        if not value:
+            continue
+        label = _PROFILE_LABELS.get(key, _prettify_label(key))
+        if isinstance(value, dict):
+            lines = [f"- {_prettify_label(k)}: {_inline(v)}" for k, v in value.items() if v]
+            sections.append(f"{label}:\n" + "\n".join(lines))
+        elif isinstance(value, (list, tuple)):
+            lines = [f"- {_inline(v)}" for v in value if v]
+            sections.append(f"{label}:\n" + "\n".join(lines))
+        else:
+            text = str(value).strip()
+            # Multi-line scalars (YAML `|` blocks) keep the header on its own line.
+            sections.append(f"{label}:\n{text}" if "\n" in text else f"{label}: {text}")
 
     return "\n\n".join(sections).strip()
 
@@ -339,11 +350,10 @@ def scope_desc_min():
 
 def _scope_title_key(title):
     """Normalized title key for the learned scope blocklist: role portion only
-    (drop the city / work-model suffixes LinkedIn appends after '|' or a newline),
+    (see text_signals.title_head for the LinkedIn title noise it strips),
     accent-stripped and whitespace-collapsed, so a repost of the same role under a
     new link/city still matches."""
-    head = (str(title or "").split("|")[0].splitlines() or [""])[0]
-    return " ".join(normalize_text(head).split())
+    return " ".join(normalize_text(title_head(title)).split())
 
 
 def learned_scope_blocklist(history):
