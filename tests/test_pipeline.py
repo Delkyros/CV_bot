@@ -499,6 +499,19 @@ def test_format_candidate_profile_renders_sections():
     assert "Experience Level: Sênior" in text
 
 
+def test_format_candidate_profile_renders_arbitrary_keys():
+    """No allowlist: keys the code never heard of still reach the prompt, so the
+    YAML profile can be deepened without touching format_candidate_profile."""
+    text = main.format_candidate_profile({
+        "idiomas": ["Português (nativo)", "Inglês (avançado)"],
+        "experiencia": [{"cargo": "Data Scientist", "empresa": "ACME", "periodo": "2021-2024"}],
+        "pretensao_salarial": "R$ 20k",
+    })
+    assert "Idiomas:\n- Português (nativo)\n- Inglês (avançado)" in text
+    assert "- Cargo: Data Scientist | Empresa: ACME | Periodo: 2021-2024" in text
+    assert "Pretensao Salarial: R$ 20k" in text
+
+
 def test_format_candidate_profile_passthrough_string():
     assert main.format_candidate_profile("plain text") == "plain text"
 

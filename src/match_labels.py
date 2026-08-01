@@ -21,6 +21,8 @@ English):
 A scope error wins even over an `applied` status (explicit "wrong role" mark).
 """
 
+from src.text_signals import title_head
+
 SCOPE_ERROR_CLASS = "Escopo incorreto"
 
 
@@ -62,9 +64,9 @@ def is_probably_pt(text):
 
 
 def _title_head(title):
-    """Role portion of a LinkedIn title (drop the '|'/newline city-model suffix)."""
-    head = (str(title or "").split("|")[0].splitlines() or [""])[0]
-    return head.strip()
+    """Role portion of a LinkedIn title. Thin alias kept so the module's public
+    surface does not change; the logic lives in text_signals.title_head."""
+    return title_head(title)
 
 
 def nearest_term(title, search_terms):

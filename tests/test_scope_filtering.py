@@ -261,6 +261,20 @@ def test_learned_blocklist_derives_normalized_role_keys():
     assert bl == {"designer grafico", "gerente de loja"}
 
 
+# Title noise that used to break the key: a bracketed company tag made segment 0
+# empty (key dropped, the mark lost) and a requisition ID made the key the number.
+@pytest.mark.parametrize("raw,expected", [
+    ("|LOJAS RENNER| Assistente de Loja - BEIRAMAR", "assistente de loja - beiramar"),
+    ("28446 | Pessoa Analista de Produto II | Teletrabalho", "pessoa analista de produto ii"),
+    ("Cientista de Dados | Florianópolis, SC", "cientista de dados"),
+    # No caps heuristic on purpose: an all-caps role must survive intact.
+    ("ANALISTA DE DADOS | Floripa", "analista de dados"),
+    ("Data Scientist\nSão Paulo | hybrid", "data scientist"),
+])
+def test_scope_title_key_survives_linkedin_title_noise(raw, expected):
+    assert main._scope_title_key(raw) == expected
+
+
 def test_learned_blocklist_drops_reposts_before_llm(monkeypatch):
     def _boom(*a, **k):
         raise AssertionError("analyze_match must not run for a learned-blocked job")

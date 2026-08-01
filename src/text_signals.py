@@ -61,6 +61,36 @@ _STRONG_PATTERNS = [
 _INTERNSHIP_PATTERN = r"\bestagi\w*|\binternship\b|\bintern\b"
 
 
+def title_head(title):
+    """The ROLE portion of a LinkedIn job title, raw (not normalized).
+
+    LinkedIn titles carry noise around the role, and `split("|")[0]` is not enough
+    because the noise also comes BEFORE it. Observed in the history:
+      "Cientista de Dados | Florianópolis, SC"        -> role first, suffix after '|'
+      "|LOJAS RENNER| Assistente de Loja - SHOPPING"  -> bracketed company tag first
+      "28446 | Pessoa Analista de Produto II | Remoto" -> requisition ID first
+    Taking segment 0 blindly yielded "" for the tag form (the caller then dropped
+    the entry entirely) and "28446" for the ID form. So: drop a leading bracketed
+    tag, then drop leading segments with no letters, then take the first line.
+
+    ponytail: no all-caps heuristic — a segment like "CAS |" (an internal program
+    code) still wins over the real role, but so does a legitimately uppercase
+    "ANALISTA DE DADOS | Floripa" title, and breaking the second to fix the first
+    is a bad trade (1 case in ~1100 marks). Add one only if the caps form spreads.
+    """
+    line = (str(title or "").splitlines() or [""])[0]
+    # "|TAG| role" — only when the title actually STARTS with '|', so a normal
+    # title can never lose its first segment here.
+    if line.lstrip().startswith("|"):
+        parts = line.lstrip()[1:].split("|", 1)
+        line = parts[1] if len(parts) == 2 else parts[0]
+    segments = line.split("|")
+    for segment in segments:
+        if re.search(r"[^\W\d_]", segment):  # any letter, accents included
+            return segment.strip()
+    return segments[0].strip()
+
+
 def _match_labels(normalized, patterns):
     return [label for label, pattern in patterns if re.search(pattern, normalized)]
 

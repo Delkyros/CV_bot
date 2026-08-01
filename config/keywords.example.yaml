@@ -97,6 +97,25 @@ perfil_candidato:
     - "Turning complex business requirements into reliable software."
     - "Fast problem understanding."
 
+  # ANY extra key you add under perfil_candidato is rendered into the match prompt
+  # (main.py:format_candidate_profile has no allowlist — scalars become
+  # "Label: value", lists one bullet each, nested dicts get flattened). The four
+  # keys above are the only ones with a fixed English header; the rest are
+  # prettified from the key name. Use this to give the LLM more to score against:
+  #
+  #   idiomas: ["Português (nativo)", "Inglês (avançado)"]
+  #   formacao: "Mestrado em Engenharia (UFSC)"
+  #   experiencia:
+  #     - cargo: "Data Scientist"
+  #       empresa: "ACME"
+  #       periodo: "2021-2024"
+  #       destaques: "RAG em produção, pipelines ETL"
+  #   preferencias: "Prefere produto sobre consultoria; evita on-call 24x7"
+  #   nao_quero: "Vagas majoritariamente de BI/dashboards"
+  #
+  # Keep it factual and short — it is prepended to every match call, so long prose
+  # costs tokens on every job.
+
 # Deterministic title scope blocklist (SEED). Each entry has a human-readable
 # `motivo` (shown in logs / the web UI) and a `padrao` (regex matched against the
 # accent-stripped, lowercased job TITLE). A title matching any padrao is dropped
